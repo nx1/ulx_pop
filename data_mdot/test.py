@@ -20,6 +20,7 @@ eta = 0.1   #Efficiency factor for Eddington Mass
 c = 3E10     #Speed of Light in cm/s
 Msol = 1.989E33 #Mass of sun in g
 Myr = 31557600 * 1E6 #1 Myr in Seconds
+yr = 31557600 #1 yr in Seconds
 
 
 '''
@@ -151,7 +152,7 @@ df_master=pd.concat(df_dict, ignore_index=True)
 m = df_master['m']
 mdot = df_master['mdot']
 
-df_master['mdot_gs'] = mdot * (Msol/Myr)   #Mass accretion rate in g/s
+df_master['mdot_gs'] = mdot * (Msol/yr)   #Mass accretion rate in g/s
 mdot_gs = df_master['mdot_gs']        
 
 df_master['LEdd'] = 1.2E38 * m #ERG/S            
@@ -159,7 +160,7 @@ LEdd = df_master['LEdd']
 df_master['MEdd'] = np.where(m <= 2.5, LEdd / (0.2 * c**2), LEdd / (1/12 * c**2))   
 #Ledd = eta * M_dot_eddington * c^2 where eta = 0.2 for NS and 1/12 for bh    
 MEdd = df_master['MEdd']            
-df_master['mdot_ratio'] = mdot_gs / MEdd #AKA Eddington Ratio            
+df_master['mdot_ratio'] = mdot_gs / MEdd #AKA Eddington Ratio
 mdot_ratio = df_master['mdot_ratio'] 
 
 df_master['XLsph'] = abs(2.2E39 * (m/10) * (mdot_ratio/10)**2 * (1 + np.log(mdot_ratio)))            
@@ -201,10 +202,10 @@ for tage, i in zip(df_master.tage.unique(), range(len(df_master.tage.unique())))
         df_ns = Z_dict[z][is_ns]
         df_bh = Z_dict[z][~is_ns]
         
-        axarr[j, i].scatter(df_ns['m'], df_ns['Lx'], s=1.0, color='b')
-        axarr[j, i].scatter(df_bh['m'], df_bh['Lx'], s=1.0, color='black')
+        axarr[j, i].scatter(df_ns['m'], df_ns['b'], s=1.0, color='b')
+        axarr[j, i].scatter(df_bh['m'], df_bh['b'], s=1.0, color='black')
 
-        axarr[j, i].axhline(y=1E39, color='r')
+        #axarr[j, i].axhline(y=1E39, color='r')
         
         #axarr[j, i].text(5, 0.9E39, str(len(df_bh) + len(df_ns)), color='purple')
         
