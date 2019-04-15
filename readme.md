@@ -17,17 +17,22 @@ eg:
     initpackage ulxlc /home/nk7g14/Desktop/gitbox/ulx_pop/ulxlc_code_v0.1/lmodel_ulxlc.dat /home/nk7g14/Desktop/gitbox/ulx_pop/ulxlc_code_v0.1
 
 #Program structure
+
 The code currently consists of 3 files
+
 ##test.py
+
 Currently this code takes in the raw files, combines them into one large data
 frame, and calculates the required values for use in the simulation.
 
 ##Batch.py
+
 This code takes in the dataframe.csv file from test.py and then runs through each
 of the required systems creating light curves for both inclination = 0 and inclination = random
 using the xspec model [ulxlc](http://www.sternwarte.uni-erlangen.de/~dauser/research/ulxlc/ "ulxlc").
 
 ##plotter.py
+
 This code takes all the output lightcurve files from batch.py in txt form and the associated
 .info file which contains information about the system, then performs alive/dead time
 analysis on each of the sytems.
