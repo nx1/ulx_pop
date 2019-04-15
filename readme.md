@@ -1,4 +1,4 @@
-# Code for ULX population estimate.
+# ULX population estimate.
 
 This github repo contains all the files required to perform a ulx population estimate using the xspec model ulxlc: http://www.sternwarte.uni-erlangen.de/~dauser/research/ulxlc/
 

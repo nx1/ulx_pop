@@ -87,6 +87,7 @@ def AliveTime(df_dict, key, limit):
     return Alive, Dead
 
     
+
 #Importing Files
 info_files = glob.glob('./info/*.info')
 txt_files = glob.glob('*.txt')
@@ -189,38 +190,8 @@ for i in range(len(df_dict)):
 
 df_a = pd.DataFrame.from_dict(df_alive, orient='index')
 df_a.columns = ['alive', 'dead', 'percent','b','z','tage','Lx','dincl','inclination']
-
 df_a = df_a[df_a['inclination']!=0]
 
-df_a_5 = df_a[df_a['dincl']==5]
-df_a_10 = df_a[df_a['dincl']==10]
-df_a_15 = df_a[df_a['dincl']==15]
-df_a_20 = df_a[df_a['dincl']==20]
-df_a_25 = df_a[df_a['dincl']==25]
-df_a_30 = df_a[df_a['dincl']==30]
-df_a_35 = df_a[df_a['dincl']==35]
-df_a_40 = df_a[df_a['dincl']==40]
-df_a_45 = df_a[df_a['dincl']==45]
-
-print('dincl = 5, ratio = ', (df_a_5['percent'].sum() + (992 - 240))/992)
-print('dincl = 10, ratio = ', (df_a_10['percent'].sum() + (992 - 240))/992)
-print('dincl = 15, ratio = ', (df_a_15['percent'].sum() + (992 - 240))/992)
-print('dincl = 20, ratio = ', (df_a_20['percent'].sum() + (992 - 240))/992)
-print('dincl = 25, ratio = ', (df_a_25['percent'].sum() + (992 - 240))/992)
-print('dincl = 30, ratio = ', (df_a_30['percent'].sum() + (992 - 240))/992)
-print('dincl = 35, ratio = ', (df_a_35['percent'].sum() + (992 - 240))/992)
-print('dincl = 40, ratio = ', (df_a_40['percent'].sum() + (992 - 240))/992)
-print('dincl = 45, ratio = ', (df_a_45['percent'].sum() + (992 - 240))/992)
-
-print(df_a_5['percent'].mean())
-print(df_a_10['percent'].mean())
-print(df_a_15['percent'].mean())
-print(df_a_20['percent'].mean())
-print(df_a_25['percent'].mean())
-print(df_a_30['percent'].mean())
-print(df_a_35['percent'].mean())
-print(df_a_40['percent'].mean())
-print(df_a_45['percent'].mean())
 
 '''
 Things you can plot:
@@ -231,14 +202,3 @@ Things you can plot:
         beaming vs alive time
         
 '''
-
-plt.plot(curves_dict[5.0]['0-5.0-66.18.txt']['Time'], curves_dict[5.0]['0-5.0-66.18.txt']['Flux'], label = '5.0')
-plt.plot(curves_dict[10.0]['0-10.0-84.83.txt']['Time'], curves_dict[10.0]['0-10.0-84.83.txt']['Flux'], label = '10.0')
-plt.plot(curves_dict[15.0]['0-15.0-81.34.txt']['Time'], curves_dict[15.0]['0-15.0-81.34.txt']['Flux'], label = '15.0')
-plt.plot(curves_dict[20.0]['0-20.0-0.txt']['Time'], curves_dict[20.0]['0-20.0-0.txt']['Flux'], label = '20.0')
-plt.plot(curves_dict[25.0]['0-25.0-0.txt']['Time'], curves_dict[25.0]['0-25.0-0.txt']['Flux'], label = '25.0')
-plt.plot(curves_dict[30.0]['0-30.0-0.txt']['Time'], curves_dict[30.0]['0-30.0-0.txt']['Flux'], label = '30.0')
-plt.plot(curves_dict[35.0]['0-35.0-0.txt']['Time'], curves_dict[35.0]['0-35.0-0.txt']['Flux'], label = '35.0')
-plt.plot(curves_dict[40.0]['0-40.0-0.txt']['Time'], curves_dict[40.0]['0-40.0-0.txt']['Flux'], label = '40.0')
-plt.plot(curves_dict[45.0]['0-45.0-0.txt']['Time'], curves_dict[45.0]['0-45.0-0.txt']['Flux'], label = '45.0')
-plt.show()

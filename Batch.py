@@ -24,9 +24,6 @@ df.columns
 df = df.drop(columns=['index', 'Unnamed: 0'])
 
 
-dincls = [5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0]
-
-
 def MakeString(df, index, dincl):
     '''
     Creates long string of column names for appending to output file.
