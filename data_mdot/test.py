@@ -152,7 +152,7 @@ df_master=pd.concat(df_dict, ignore_index=True)
 m = df_master['m']
 mdot = df_master['mdot']
 
-df_master['mdot_gs'] = mdot * (Msol/yr)   #Mass accretion rate in g/s
+df_master['mdot_gs'] = mdot * (Msol/Myr)   #Mass accretion rate in g/s
 mdot_gs = df_master['mdot_gs']        
 
 df_master['LEdd'] = 1.2E38 * m #ERG/S            
@@ -202,10 +202,10 @@ for tage, i in zip(df_master.tage.unique(), range(len(df_master.tage.unique())))
         df_ns = Z_dict[z][is_ns]
         df_bh = Z_dict[z][~is_ns]
         
-        axarr[j, i].scatter(df_ns['m'], df_ns['b'], s=1.0, color='b')
-        axarr[j, i].scatter(df_bh['m'], df_bh['b'], s=1.0, color='black')
+        axarr[j, i].scatter(df_ns['m'], df_ns['Lx'], s=1.0, color='b')
+        axarr[j, i].scatter(df_bh['m'], df_bh['Lx'], s=1.0, color='black')
 
-        #axarr[j, i].axhline(y=1E39, color='r')
+        axarr[j, i].axhline(y=1E39, color='r')
         
         #axarr[j, i].text(5, 0.9E39, str(len(df_bh) + len(df_ns)), color='purple')
         

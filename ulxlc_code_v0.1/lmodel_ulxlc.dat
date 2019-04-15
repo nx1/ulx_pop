@@ -1,0 +1,8 @@
+ulxlc       7  0.         1.e20            c_ulxlcmodxspec     add  0
+period   days  100      1e-10    0.001     1e10       1e10     0.1
+phase   " "    0.0    -1e10    -10.    10       1e10       0.001
+theta   deg    5.    3.    3.    45.       45.       0.01
+incl   deg    30   0.0    0.0     45.      90.      0.001
+dincl   deg   10   0.0    0.0     30.      45.      0.001
+beta   c      0    0.0    0.0     0.9      0.9      0.01
+$dopulse 0
