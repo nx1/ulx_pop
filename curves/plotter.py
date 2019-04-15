@@ -27,7 +27,6 @@ value, N_lim.
 
 c = Lx / max(curves[key]['Flux']) #Scaling factor
 N_lim = 1E39 / c                  #Limiting value
-
 """
 import pandas as pd
 import matplotlib.pyplot as plt
