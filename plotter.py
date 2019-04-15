@@ -89,9 +89,9 @@ def AliveTime(df_dict, key, limit):
     
 
 #Importing Files
-info_files = glob.glob('./info/*.info')
-txt_files = glob.glob('*.txt')
-                
+info_files = glob.glob('./curves/info/*.info')
+txt_files = glob.glob('./curves/*.txt')
+               
 print('Loading info files...')
 try:
     info_dict #Saves time by checking if the dict is already loaded in
@@ -101,7 +101,7 @@ except:
         F = open(filename, 'r')
         info_dict[filename[7:]] = F.read()
         F.close()
-print('DONE!')
+print('Loading info files...DONE!')
 
 print('Loading curve files...')
 try:
@@ -111,7 +111,17 @@ except:
     for filename in txt_files:
         df_dict[filename] = pd.read_csv(filename, delimiter=' ',
                header=None, names=['Time', 'Time_Err', 'Flux'], skiprows=3)
-print('DONE!')
+print('Loading curve files...DONE!')
+
+
+df_master = pd.read_csv('dataframe.csv')
+
+df = df_master[df_master['Lx'] < 1E39]
+df = df_master[df_master['b'] < 1]
+df = df.reset_index()
+df.columns
+df = df.drop(columns=['index', 'Unnamed: 0'])
+
     
 #Paramaters we wish to test
 dincl_list = [5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0] 
@@ -126,41 +136,20 @@ for i in range(len(df_dict)):
     print('==========',i,'/',len(df_dict),'==========')
     for dincl in dincl_list:    #Loop over all precession angles
         curves = FindCurves(df_dict, i, dincl)
+        print('hello')
         for key in curves:  #Loop through the found curves
-#            print('File:', key)
-            
-            info = info_dict[key[:-4]+'.info']        #Find info file
-            b_position = info.find('b')               #Find 'b' String
-            Lx_position = info.rfind('Lx')            #Find 'Lx' String
-            ratio_position = info.rfind('ratio:')     #Find 'ratio' String
-            z_position = info.find('Z')               #Find 'Z' String
-            tage_position = info.find('tage')         #Find 'tage' String
-            mdot_gs_position = info.find('mdot_gs')   #Find 'mdot_gs' String
-
-            Lx = float(info[Lx_position+3:ratio_position-1])
-            b = float(info[b_position+2:Lx_position-1])
-            z = float(info[z_position+2:tage_position-1])
-            tage = float(info[tage_position+5:mdot_gs_position-1])
-            
-#            print('Lx:', Lx)
-#            print('b:', b)
-#            print('z:', z)
-#            print('tage:', tage)
-            
-#            print('Max Flux:', max(curves[key]['Flux']))
-#            print('Min Flux:', min(curves[key]['Flux']) )
-            
+            print('key')
             inclination = key[:-4].split('-')[2]  #Split key name for incl
-#            print('inclination:', inclination)
+            print('inclination:', inclination)
             if inclination == '0':
                 max_flux = max(curves[key]['Flux']) #Maximum Flux
                 c = Lx / max_flux                   #Scaling factor
                 N_lim = 1E39 / c                    #Limiting value
                 
-#                print('max flux:', max_flux)
-#                print('min flux:', min(curves[key]['Flux']))
-#                print('c:', c)
-#                print('N_lim:', N_lim)
+                print('max flux:', max_flux)
+                print('min flux:', min(curves[key]['Flux']))
+                print('c:', c)
+                print('N_lim:', N_lim)
             else:
                 pass
             
@@ -192,6 +181,34 @@ df_a = pd.DataFrame.from_dict(df_alive, orient='index')
 df_a.columns = ['alive', 'dead', 'percent','b','z','tage','Lx','dincl','inclination']
 df_a = df_a[df_a['inclination']!=0]
 
+
+
+
+
+
+
+
+
+
+
+
+
+def PlotCurve(key):
+    time = df_dict[key]['Time']
+    flux = df_dict[key]['Flux']
+    return plt.plot(time,flux)
+
+def GetSimulationInfo(key):
+    split_key = key.split('-')
+    sim_number = int(split_key[0].split('/')[-1])
+    dincl = split_key[1]
+    inclination = split_key[2].split('.')[0]
+    row = df.loc[sim_number] 
+    row['dincl'] = dincl
+    row['inclination'] = inclination
+    return row
+
+    
 
 '''
 Things you can plot:
