@@ -20,7 +20,11 @@ df_master = pd.read_csv('dataframe.csv')
 df = df_master[df_master['Lx'] < 1E39]
 df = df_master[df_master['b'] < 1]
 df = df.reset_index()
+df.columns
+df = df.drop(columns=['index', 'Unnamed: 0'])
 
+
+dincls = [5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0]
 
 
 def MakeString(df, index, dincl):
@@ -102,4 +106,3 @@ for i in range(len(df)):
         
         print('Calling xspec')
         subprocess.call(['xspec - xspec.xcm'], shell=True)
-    
