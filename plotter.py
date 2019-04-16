@@ -32,29 +32,64 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import glob
 import numpy as np
+import time
 
+def LoadSystems():
+    df_master = pd.read_csv('dataframe.csv')
+    df = df_master[df_master['Lx'] < 1E39]
+    df = df_master[df_master['b'] < 1]
+    df = df.reset_index()
+    df.columns
+    df = df.drop(columns=['index', 'Unnamed: 0'])
+    return df
 
-def FindCurves(df, index, dincl):
+def LoadCurves():
+    #Importing Files
+    curve_files = glob.glob('./curves/*.txt')
+    print('Loading curve files...')
+    df_dict={}      #Dictionary for storing dataframes for lightcurves
+    for filename in curve_files:
+        df_dict[filename[9:-4]] = pd.read_csv(filename, delimiter=' ',
+               header=None, names=['Time', 'Time_Err', 'Flux'], skiprows=3)
+    print('Loading curve files...DONE!')
+    return df_dict
+
+def FindCurves(df, num, dincl):
     '''
-    Finds the two curves for a given simulation number and dincl
-    corresponding two different inclinations, 0 and random.
-    
-    df -- dictionary containing all light curves
+    For a given simulation number, this function returns all associated
+    lightcurves
     '''
-    print('Finding Curves for df: {}, index: {}, dincl: {}'.format(df,index,dincl))
     CurveDict = {}
-    for i in df:
-        print('key:', i)
+    for i in df.keys():
+
         split_key = i.split('-')
-        num = int(split_key[0].split('/')[-1])
-        print('simulation number:', num)
-        incl = split_key[-1][:-4]
-        print('inclination:', incl)
-        if num == str(index) and incl == str(dincl):
+        sim_num = split_key[0]
+        sim_dincl = split_key[1]
+        sim_inclination = split_key[2]
+#        print('key:', i)
+#        print('num {} sim_num {}'.format(num,sim_num))
+#        print('dincl {} sim_dincl {}'.format(dincl, sim_dincl))
+#        print('inclination', sim_inclination)
+        if str(num) == str(sim_num) and str(sim_dincl) == str(dincl):
+#            print('found')
             CurveDict[i] = df[i]
     return CurveDict
 
 
+def GetSimulationInfo(key):
+    split_key = key.split('-')
+    
+    sim_number = int(split_key[0])
+    dincl = split_key[1]
+    inclination = split_key[2]
+    
+    row = df.loc[sim_number] 
+    row['dincl'] = dincl
+    row['inclination'] = inclination
+    return row
+
+def GetLx(num):
+        return df.loc[num]['Lx']
 
 def AliveTime(df_dict, key, limit):
     '''
@@ -94,123 +129,164 @@ def AliveTime(df_dict, key, limit):
     return Alive, Dead
 
     
-def LoadCurves():
-    #Importing Files
-    curve_files = glob.glob('./curves/*.txt')
-                   
-    print('Loading curve files...')
-    df_dict={}      #Dictionary for storing dataframes for lightcurves
-    for filename in curve_files:
-        df_dict[filename] = pd.read_csv(filename, delimiter=' ',
-               header=None, names=['Time', 'Time_Err', 'Flux'], skiprows=3)
-    print('Loading curve files...DONE!')
-    return df_dict
+def PlotCurve(key):
+    splitkey  = key.split('-')
+    sim_num = splitkey[0]
+    dincl =  splitkey[1]
+    inclination =  splitkey[2]
     
+    curves = FindCurves(df_dict, sim_num, dincl)
     
+    N_lim = Normalise(curves)
     
-def LoadSystems():
-    df_master = pd.read_csv('dataframe.csv')
-    df = df_master[df_master['Lx'] < 1E39]
-    df = df_master[df_master['b'] < 1]
-    df = df.reset_index()
-    df.columns
-    df = df.drop(columns=['index', 'Unnamed: 0'])
-    return df
+    for i in curves.keys():
+        plt.plot(curves[i]['Time'],curves[i]['Flux'], label = i)
+        
+    plt.axhline(y=N_lim, color='r', linestyle='-', label = 'limit')
+    plt.legend()
+    return plt.show()
+    
+
+def Normalise(curves):
+    '''
+    Takes two curves and Normalises them based on inclination
+    '''
+    for key in curves:
+        splitkey = key.split('-')
+        sim_num = int(splitkey[0])
+        inclination = splitkey[-1]
+        Lx = GetLx(sim_num)
+        
+        print('Curve:', key)
+        print('Lx:', Lx)
+        if inclination == '0':
+            
+            max_flux = max(curves[key]['Flux']) #Maximum Flux
+            c = Lx / max_flux                   #Scaling factor
+            N_lim = 1E39 / c                    #Limiting value
+            print('Curve Maximum:', max_flux)
+            print('Normalisation factor c:', c)
+            print('Resulting N_lim:', N_lim)
+        else:
+            pass
+    return N_lim
+            
 
 try:
     df_dict
 except:
     df_dict = LoadCurves()
 
+df = LoadSystems()
 
 #Paramaters we wish to test
 dincl_list = [5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0] 
 z_list = [0.02, 0.002, 0.0002]
 tage_list = [10,20,50,100,200,500,1000,2000,5000,10000]
 
-df_alive = {}   #Dictionary for storing Alive/Dead times for each lightcurve
-#fig, axarr = plt.subplots(3, 10)
+results_dict = {}
 
 N_lim = 0
-for i in range(len(df_dict)):
-    print('==========',i,'/',len(df_dict),'==========')
-    for dincl in dincl_list:    #Loop over all precession angles
+for i in range(len(df)):
+    t1 = time.time()
+    Lx = GetLx(i)
+    for dincl in dincl_list:
         curves = FindCurves(df_dict, i, dincl)
-        
-        print('hello')
-        for key in curves:  #Loop through the found curves
-            info = GetSimulationInfo(key)
-            print(info)
-            
-            print('inclination:', inclination)
+        for key in curves:
+            inclination = key.split('-')[-1]
             if inclination == '0':
                 max_flux = max(curves[key]['Flux']) #Maximum Flux
                 c = Lx / max_flux                   #Scaling factor
                 N_lim = 1E39 / c                    #Limiting value
                 
-                print('max flux:', max_flux)
-                print('min flux:', min(curves[key]['Flux']))
-                print('c:', c)
-                print('N_lim:', N_lim)
+#                print('max flux:', max_flux)
+#                print('min flux:', min(curves[key]['Flux']))
+#                print('c:', c)
+#                print('N_lim:', N_lim)
             else:
                 pass
             
-#            print('c:', c)
-#            print('N_lim:', N_lim)
-            
             Alive, Dead = AliveTime(df_dict, key, N_lim)
-#            print('Alive:', Alive, 'Dead:', Dead, 'total:', Alive+Dead)
-#            print('=====================')
-#            plt.scatter(b, np.divide(Alive, Dead),
-#                        color=color_dict[dincl], marker='.')
-            '''
-            if np.divide(Alive, Dead) > 0.5:
-                axarr[z_list.index(z), tage_list.index(tage)].scatter(dincl,
-                      np.divide(Alive, Dead), marker='.')
-                '''
-            try:
-                percent = Alive/(Alive+Dead)
-                df_alive[key] = [Alive, Dead, percent,b,z,tage,Lx,dincl,inclination]
-            except:
-                df_alive[key] = [Alive, Dead, 'n/a',b,z,tage,Lx,dincl,inclination]
-                
-            
-            
-            #print(df_alive[key])
-
-
-df_a = pd.DataFrame.from_dict(df_alive, orient='index')
-df_a.columns = ['alive', 'dead', 'percent','b','z','tage','Lx','dincl','inclination']
-df_a = df_a[df_a['inclination']!=0]
-
-
-
-
-
-
-
-
-
-
-
-
-
-def PlotCurve(key):
-    time = df_dict[key]['Time']
-    flux = df_dict[key]['Flux']
-    return plt.plot(time,flux)
-
-def GetSimulationInfo(key):
-    split_key = key.split('-')
-    sim_number = int(split_key[0].split('/')[-1])
-    dincl = split_key[1]
-    inclination = split_key[2].split('.')[0]
-    row = df.loc[sim_number] 
-    row['dincl'] = dincl
-    row['inclination'] = inclination
-    return row
-
+            results_dict[key] = Alive, Dead
+    timeleft = round(((time.time() - t1) * 4320 - i)/3600, 2)
+    print(i,'/', len(df), '| time remaining:', timeleft, 'hours')
     
+
+
+
+
+df_a = pd.DataFrame.from_dict(results_dict, orient='index')
+
+
+incls = []
+dincls_list = []
+for i, row in df_a.iterrows():
+    split_key = i.split('-')
+    inclination = split_key[-1]
+    dincl = split_key[1]
+    incls.append(float(inclination))
+    dincls_list.append(float(dincl))
+df_a['inclination'] = incls
+df_a['dincl'] = dincls_list
+
+df_a.columns = ['Alive', 'Dead', 'inclination', 'dincl']
+df_a = df_a[df_a['inclination']!=0]
+df_a_nonzero = df_a[df_a['Alive']!=0]
+df_a_nonzero = df_a_nonzero[df_a_nonzero['Dead']!=0]
+
+# =============================================================================
+# ALL SYSTEMS HISTOGRAM
+# =============================================================================
+plt.title('Alive time distribution for {} sources'.format(len(df_a)))
+plt.hist(df_a['Alive'], bins=30)
+plt.show()
+
+# =============================================================================
+# ALL NONZERO SYSTEMS HISTOGRAM
+# =============================================================================
+plt.title('Alive time distribution for {} sources'.format(len(df_a_nonzero)))
+plt.hist(df_a_nonzero['Alive'], bins=30)
+plt.show()
+
+# =============================================================================
+# ALL SYSTEMS ALIVE TIME VS DINCL (PRECESSION ANGLE)
+# =============================================================================
+plt.scatter(df_a['dincl'], df_a['Alive'])
+
+# =============================================================================
+# ALL NON-ZERO SYSTEMS ALIVE TIME VS DINCL (PRECESSION ANGLE)
+# =============================================================================
+df_a_nonzero_5 = df_a_nonzero[df_a['dincl']==5]
+df_a_nonzero_10 = df_a_nonzero[df_a['dincl']==10]
+df_a_nonzero_15 = df_a_nonzero[df_a['dincl']==15]
+df_a_nonzero_20 = df_a_nonzero[df_a['dincl']==20]
+df_a_nonzero_25 = df_a_nonzero[df_a['dincl']==25]
+df_a_nonzero_30 = df_a_nonzero[df_a['dincl']==30]
+df_a_nonzero_35 = df_a_nonzero[df_a['dincl']==35]
+df_a_nonzero_40 = df_a_nonzero[df_a['dincl']==40]
+df_a_nonzero_45 = df_a_nonzero[df_a['dincl']==45]
+
+for i in dincl_list:
+    cut = df_a_nonzero[df_a['dincl']==i]
+    plt.scatter(cut['dincl'], cut['Alive'], label=i)
+    
+plt.legend()
+
+# =============================================================================
+# ALL NON-ZERO SYSTEMS ALIVE TIME VS DINCL (PRECESSION ANGLE) MEANS
+# =============================================================================
+for i in dincl_list:
+    cut = df_a_nonzero[df_a['dincl']==i]
+    plt.scatter(np.mean(cut['dincl']), np.mean(cut['Alive']), label=i)
+    
+plt.legend()
+
+# =============================================================================
+# SPECIFIC LIGHTCURVES and LIMIT
+# =============================================================================
+PlotCurve('0-10.0-0')
+
+
 
 '''
 Things you can plot:
