@@ -23,7 +23,6 @@ df = df.reset_index()
 df.columns
 df = df.drop(columns=['index', 'Unnamed: 0'])
 
-
 def MakeXCM(theta, incl, dincl, filename):
     '''
     Creates xcm script file for use in xspec

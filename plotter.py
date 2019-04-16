@@ -33,6 +33,7 @@ import matplotlib.pyplot as plt
 import glob
 import numpy as np
 
+
 def FindCurves(df, index, dincl):
     '''
     Finds the two curves for a given simulation number and dincl
@@ -40,13 +41,19 @@ def FindCurves(df, index, dincl):
     
     df -- dictionary containing all light curves
     '''
+    print('Finding Curves for df: {}, index: {}, dincl: {}'.format(df,index,dincl))
     CurveDict = {}
     for i in df:
-        num = i[:-4].split('-')[0]
-        incl = i[:-4].split('-')[1]
+        print('key:', i)
+        split_key = i.split('-')
+        num = int(split_key[0].split('/')[-1])
+        print('simulation number:', num)
+        incl = split_key[-1][:-4]
+        print('inclination:', incl)
         if num == str(index) and incl == str(dincl):
             CurveDict[i] = df[i]
     return CurveDict
+
 
 
 def AliveTime(df_dict, key, limit):
@@ -87,42 +94,35 @@ def AliveTime(df_dict, key, limit):
     return Alive, Dead
 
     
-
-#Importing Files
-info_files = glob.glob('./curves/info/*.info')
-txt_files = glob.glob('./curves/*.txt')
-               
-print('Loading info files...')
-try:
-    info_dict #Saves time by checking if the dict is already loaded in
-except:
-    info_dict={}    #Dictonary for storing info associated info files
-    for filename in info_files:
-        F = open(filename, 'r')
-        info_dict[filename[7:]] = F.read()
-        F.close()
-print('Loading info files...DONE!')
-
-print('Loading curve files...')
-try:
-    df_dict     #Saves time by checking if the dict is already loaded in
-except:
+def LoadCurves():
+    #Importing Files
+    curve_files = glob.glob('./curves/*.txt')
+                   
+    print('Loading curve files...')
     df_dict={}      #Dictionary for storing dataframes for lightcurves
-    for filename in txt_files:
+    for filename in curve_files:
         df_dict[filename] = pd.read_csv(filename, delimiter=' ',
                header=None, names=['Time', 'Time_Err', 'Flux'], skiprows=3)
-print('Loading curve files...DONE!')
-
-
-df_master = pd.read_csv('dataframe.csv')
-
-df = df_master[df_master['Lx'] < 1E39]
-df = df_master[df_master['b'] < 1]
-df = df.reset_index()
-df.columns
-df = df.drop(columns=['index', 'Unnamed: 0'])
-
+    print('Loading curve files...DONE!')
+    return df_dict
     
+    
+    
+def LoadSystems():
+    df_master = pd.read_csv('dataframe.csv')
+    df = df_master[df_master['Lx'] < 1E39]
+    df = df_master[df_master['b'] < 1]
+    df = df.reset_index()
+    df.columns
+    df = df.drop(columns=['index', 'Unnamed: 0'])
+    return df
+
+try:
+    df_dict
+except:
+    df_dict = LoadCurves()
+
+
 #Paramaters we wish to test
 dincl_list = [5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0] 
 z_list = [0.02, 0.002, 0.0002]
@@ -136,10 +136,12 @@ for i in range(len(df_dict)):
     print('==========',i,'/',len(df_dict),'==========')
     for dincl in dincl_list:    #Loop over all precession angles
         curves = FindCurves(df_dict, i, dincl)
+        
         print('hello')
         for key in curves:  #Loop through the found curves
-            print('key')
-            inclination = key[:-4].split('-')[2]  #Split key name for incl
+            info = GetSimulationInfo(key)
+            print(info)
+            
             print('inclination:', inclination)
             if inclination == '0':
                 max_flux = max(curves[key]['Flux']) #Maximum Flux
