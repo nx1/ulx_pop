@@ -202,10 +202,14 @@ for tage, i in zip(df_master.tage.unique(), range(len(df_master.tage.unique())))
         df_ns = Z_dict[z][is_ns]
         df_bh = Z_dict[z][~is_ns]
         
+        #mass vs luminosity
         axarr[j, i].scatter(df_ns['m'], df_ns['Lx'], s=1.0, color='b')
         axarr[j, i].scatter(df_bh['m'], df_bh['Lx'], s=1.0, color='black')
-
         axarr[j, i].axhline(y=1E39, color='r')
+        
+        #Mass Distribution Histograms
+#        axarr[j, i].hist(df_ns['m'])
+#        axarr[j, i].hist(df_ns['m'])
         
         #axarr[j, i].text(5, 0.9E39, str(len(df_bh) + len(df_ns)), color='purple')
         
@@ -221,6 +225,18 @@ plt.show()
 
 
 '''
+#Add type column:
+df_master['type'] = np.where(df_master['m'] < 2.5, 'NS' , 'BH')
+
+#PIVOT TABLE TO COUNT
+pd.pivot_table(df_master, index = ['Z','tage'], aggfunc='count')
+pd.pivot_table(df_master, index = ['Z','tage'], aggfunc='count', columns='type')
+
+
+#Mass Distribution Histrogram;
+plt.hist(df_bh['m'], bins = 10)
+plt.hist(df_ns['m'], bins = 10)
+
 plt.xlabel('m ($M_{\odot}$)')
 #plt.ylabel('m_dot ($M_{\odot} Myr^{-1}$)')
 #plt.ylabel('b/x')

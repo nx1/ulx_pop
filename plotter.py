@@ -10,7 +10,7 @@ ulxlc and performs alive/dead time analysis for each of them.
 
 Lightcurves are stored in .txt files
 Each lightcurve has an associated .info file stored in /info/
-
+.
 The filename format goes as:
     simulation_number - dincl - inclination.txt
 
@@ -61,17 +61,16 @@ def FindCurves(df, num, dincl):
     '''
     CurveDict = {}
     for i in df.keys():
-
         split_key = i.split('-')
         sim_num = split_key[0]
         sim_dincl = split_key[1]
         sim_inclination = split_key[2]
 #        print('key:', i)
-#        print('num {} sim_num {}'.format(num,sim_num))
+#        print('num: {} sim_num: {}'.format(num,sim_num))
 #        print('dincl {} sim_dincl {}'.format(dincl, sim_dincl))
 #        print('inclination', sim_inclination)
         if str(num) == str(sim_num) and str(sim_dincl) == str(dincl):
-#            print('found')
+            #print('found')
             CurveDict[i] = df[i]
     return CurveDict
 
@@ -139,11 +138,13 @@ def PlotCurve(key):
     
     N_lim = Normalise(curves)
     
+    fig, ax = plt.subplots()
+    
     for i in curves.keys():
-        plt.plot(curves[i]['Time'],curves[i]['Flux'], label = i)
+        ax.plot(curves[i]['Time'],curves[i]['Flux'], label = i)
         
-    plt.axhline(y=N_lim, color='r', linestyle='-', label = 'limit')
-    plt.legend()
+    ax.axhline(y=N_lim, color='r', linestyle='-', label = 'limit')
+    ax.legend()
     return plt.show()
     
 
@@ -151,12 +152,13 @@ def Normalise(curves):
     '''
     Takes two curves and Normalises them based on inclination
     '''
+    N_lim = 0
     for key in curves:
         splitkey = key.split('-')
         sim_num = int(splitkey[0])
         inclination = splitkey[-1]
         Lx = GetLx(sim_num)
-        
+        print('-----------------')
         print('Curve:', key)
         print('Lx:', Lx)
         if inclination == '0':
@@ -209,7 +211,7 @@ for i in range(len(df)):
             Alive, Dead = AliveTime(df_dict, key, N_lim)
             results_dict[key] = Alive, Dead
     timeleft = round(((time.time() - t1) * 4320 - i)/3600, 2)
-    print(i,'/', len(df), '| time remaining:', timeleft, 'hours')
+    print(i,'/', len(df), '| eta:', timeleft, 'hours')
     
 
 
@@ -226,33 +228,42 @@ for i, row in df_a.iterrows():
     dincl = split_key[1]
     incls.append(float(inclination))
     dincls_list.append(float(dincl))
+
 df_a['inclination'] = incls
 df_a['dincl'] = dincls_list
 
-df_a.columns = ['Alive', 'Dead', 'inclination', 'dincl']
+df_a.columns = ['alive', 'dead', 'inclination', 'dincl']
+df_a['ratio'] = df_a['alive']/(df_a['dead']+df_a['alive'])
 df_a = df_a[df_a['inclination']!=0]
-df_a_nonzero = df_a[df_a['Alive']!=0]
-df_a_nonzero = df_a_nonzero[df_a_nonzero['Dead']!=0]
+df_a_nonzero = df_a[df_a['alive']!=0]
+df_a_nonzero = df_a_nonzero[df_a_nonzero['dead']!=0]
 
 # =============================================================================
 # ALL SYSTEMS HISTOGRAM
 # =============================================================================
 plt.title('Alive time distribution for {} sources'.format(len(df_a)))
-plt.hist(df_a['Alive'], bins=30)
+plt.hist(df_a['alive'], bins=30)
 plt.show()
 
+#plt.savefig('figures/alive_hist_all.eps', format='eps', dpi=1000)
+#plt.savefig('figures/alive_hist_all.png', format='png', dpi=1000)
+#
 # =============================================================================
 # ALL NONZERO SYSTEMS HISTOGRAM
 # =============================================================================
 plt.title('Alive time distribution for {} sources'.format(len(df_a_nonzero)))
-plt.hist(df_a_nonzero['Alive'], bins=30)
+plt.hist(df_a_nonzero['alive'], bins=30)
 plt.show()
+
+#plt.savefig('figures/alive_hist_nonzero.eps', format='eps', dpi=1000)
+#plt.savefig('figures/alive_hist_nonzero.png', format='png', dpi=1000)
 
 # =============================================================================
 # ALL SYSTEMS ALIVE TIME VS DINCL (PRECESSION ANGLE)
 # =============================================================================
-plt.scatter(df_a['dincl'], df_a['Alive'])
-
+plt.scatter(df_a['dincl'], df_a['alive'])
+#plt.savefig('figures/dincl_alive_all.eps', format='eps', dpi=1000)
+#plt.savefig('figures/dincl_alive_all.png', format='png', dpi=1000)
 # =============================================================================
 # ALL NON-ZERO SYSTEMS ALIVE TIME VS DINCL (PRECESSION ANGLE)
 # =============================================================================
@@ -266,27 +277,38 @@ df_a_nonzero_35 = df_a_nonzero[df_a['dincl']==35]
 df_a_nonzero_40 = df_a_nonzero[df_a['dincl']==40]
 df_a_nonzero_45 = df_a_nonzero[df_a['dincl']==45]
 
+
 for i in dincl_list:
     cut = df_a_nonzero[df_a['dincl']==i]
-    plt.scatter(cut['dincl'], cut['Alive'], label=i)
-    
-plt.legend()
+    plt.scatter(cut['dincl'], cut['alive'], label=i)
+
+plt.xlabel('dincl')
+plt.ylabel('alive/dead')
+#plt.savefig('figures/dincl_alive_nonzero.eps', format='eps', dpi=1000)
+#plt.savefig('figures/dincl_alive_nonzero.png', format='png', dpi=1000)
 
 # =============================================================================
 # ALL NON-ZERO SYSTEMS ALIVE TIME VS DINCL (PRECESSION ANGLE) MEANS
 # =============================================================================
 for i in dincl_list:
     cut = df_a_nonzero[df_a['dincl']==i]
-    plt.scatter(np.mean(cut['dincl']), np.mean(cut['Alive']), label=i)
-    
+    plt.scatter(np.mean(cut['dincl']), np.mean(cut['alive']), label=i)
+
+
+plt.xlabel('dincl')
+plt.ylabel('alive/dead')
 plt.legend()
+#plt.savefig('figures/dincl_alive_nonzero_mean.eps', format='eps', dpi=1000)
+#plt.savefig('figures/dincl_alive_nonzero_mean.png', format='png', dpi=1000)
 
 # =============================================================================
 # SPECIFIC LIGHTCURVES and LIMIT
 # =============================================================================
 PlotCurve('0-10.0-0')
 
-
+for i in np.arange(30,40):
+    print(str(i)+'-10.0-0')
+    PlotCurve(str(i)+'-10.0-0')
 
 '''
 Things you can plot:
