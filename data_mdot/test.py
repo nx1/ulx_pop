@@ -183,13 +183,15 @@ df_master['theta_half_deg'] = df_master['theta_deg'] / 2 #Half opening angle
 
 
 
-#==========================================================================#
+# =============================================================================
+# All systems by tage and metallicity Lx vs Mass
+# =============================================================================
 tage_dict={}
 Z_dict={}
 df_master = df_master.sort_values('Z')
 df_master = df_master.sort_values('tage')
-#df_master = df_master[df_master['Lx'] > 1E39]
-#df_master = df_master[df_master['b'] < 1]
+df_master = df_master[df_master['Lx'] > 1E39]
+df_master = df_master[df_master['b'] < 1]
 
 fig, axarr = plt.subplots(3, 10)
 
@@ -221,6 +223,17 @@ for tage, i in zip(df_master.tage.unique(), range(len(df_master.tage.unique())))
 
 plt.show()
 
+
+# =============================================================================
+# All systems histogram of theta distribution
+# =============================================================================
+
+plt.xlabel('Half opening angle ' + r'$ \theta $')
+plt.ylabel('Count')
+plt.hist(df_master['theta_half_deg'], bins=int(180/5))
+#plt.savefig('beamed_ulxs_half_theta_hist.eps', format='eps', dpi=1000)
+#plt.savefig('beamed_ulxs_half_theta_hist.png', format='png', dpi=1000)
+plt.show()
 
 
 

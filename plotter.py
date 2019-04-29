@@ -277,6 +277,28 @@ df_a_nonzero_35 = df_a_nonzero[df_a['dincl']==35]
 df_a_nonzero_40 = df_a_nonzero[df_a['dincl']==40]
 df_a_nonzero_45 = df_a_nonzero[df_a['dincl']==45]
 
+biglist = [df_a_nonzero_5 ,
+df_a_nonzero_10,
+df_a_nonzero_15,
+df_a_nonzero_20,
+df_a_nonzero_25,
+df_a_nonzero_30,
+df_a_nonzero_35,
+df_a_nonzero_40,
+df_a_nonzero_45]
+
+print('{} {} {} {}'.format('dincl', 'mean', 'std', '# systems'))
+for i in biglist:
+    print('{} {} {} {}'.format(
+            np.mean( i['dincl']),
+            round(np.mean(i['ratio']), 3),
+            round(np.std(i['ratio']), 3),
+            len(i['ratio']),
+            ))
+
+
+
+
 
 for i in dincl_list:
     cut = df_a_nonzero[df_a['dincl']==i]
