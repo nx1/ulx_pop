@@ -17,7 +17,6 @@ The filename format goes as:
 where dincl is the precession angle
 
 1) Load in all lightcurves into df_dict
-2) Load in all info files into info_dict
 
 For each simulation_number dincl combo there is a 0 inclination system and
 a random inclination system.
@@ -82,7 +81,7 @@ def GetSimulationInfo(key):
     dincl = split_key[1]
     inclination = split_key[2]
     
-    row = df.loc[sim_number] 
+    row = df.loc[sim_number]
     row['dincl'] = dincl
     row['inclination'] = inclination
     return row
