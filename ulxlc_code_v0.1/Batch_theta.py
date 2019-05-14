@@ -39,7 +39,7 @@ def MakeXCM(theta, incl, dincl, filename):
     
     string='''lmod ulxlc /home/nk7g14/Desktop/gitbox/ulx_pop/ulxlc_code_v0.1
 model ulxlc & /*
-newpar 1  1.0
+newpar 1  10.0
 newpar 2  0.0
 newpar 3  %s
 newpar 4  %s

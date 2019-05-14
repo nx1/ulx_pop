@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import numpy as np
 
-
 fig, ax = plt.subplots()
 ax.set_ylim(-1,25)
 

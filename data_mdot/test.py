@@ -23,6 +23,14 @@ Myr = 31557600 * 1E6 #1 Myr in Seconds
 yr = 31557600 #1 yr in Seconds
 
 
+a_bh = 0.998 #Black hole max spin
+a_ns = 0.001 #NS average spin
+
+G_SI = 6.67408E-11 #N.(m^2)/(kg)^2 
+G = 6.674E-8 #(cm)^3 g^-1 s^-2
+pi = np.pi
+
+
 '''
 FILE NAMES:
     eg: 'Z_0.002_tage_20.dat'
@@ -181,8 +189,25 @@ df_master['theta'] = 2 * np.arccos(1-df_master['b']) #full opening angle in rad
 df_master['theta_deg'] = df_master['theta'] * 180/np.pi #deg
 df_master['theta_half_deg'] = df_master['theta_deg'] / 2 #Half opening angle
 
+df_master['schw_r'] = 2 * G * m * Msol / c**2   #Schwarzschild radius (cm)
+df_master['r_isco_nospin'] = (6 * G * m * Msol) / c**2 #ISCO (nospin) (cm)
 
-
+'''
+For now we will use:
+    r_in = 6 for a = 0.001 (NS)
+    r_in = 1.25 for a =  0.998 (BH)
+    we will also set a floor of zeta = 2 
+'''
+df_master['zeta'] = np.tan((pi/2) - np.arccos(1 - (73/(df_master['mdot_ratio']**2))))
+df_master['r_isco'] = np.where(m < 2.5, 6, 1.25)    #Units of R_g (i think)
+e_wind = 0.25 #Normally between 0.25 to 0.95 (check latex)
+beta = 1.4 #Velocity of the wind, distinct from the beta used in ulxlc
+df_master['r_sph'] = df_master['r_isco'] * df_master['mdot_ratio']
+df_master['r_out'] = 3 * e_wind / (beta * df_master['zeta']) * df_master['mdot_ratio']**3/2 * df_master['r_isco']
+df_master['P_wind'] = np.where(m < 2.5,
+         G * m * Msol * pi / (3 * c**3 * a_ns) * df_master['r_out']**3 * ((1 - (df_master['r_isco']/df_master['r_out']))**3)/(np.log(df_master['r_out']/df_master['r_isco'])),
+         G * m * Msol * pi / (3 * c**3 * a_bh) * df_master['r_out']**3 * ((1 - (df_master['r_isco']/df_master['r_out']))**3)/(np.log(df_master['r_out']/df_master['r_isco'])))
+df_master['f_wind'] = 1 / df_master['P_wind']
 # =============================================================================
 # All systems by tage and metallicity Lx vs Mass
 # =============================================================================
@@ -191,7 +216,7 @@ Z_dict={}
 df_master = df_master.sort_values('Z')
 df_master = df_master.sort_values('tage')
 df_master = df_master[df_master['Lx'] > 1E39]
-df_master = df_master[df_master['b'] < 1]
+#df_master = df_master[df_master['b'] < 1]
 
 fig, axarr = plt.subplots(3, 10)
 
@@ -224,17 +249,25 @@ for tage, i in zip(df_master.tage.unique(), range(len(df_master.tage.unique())))
 plt.show()
 
 
+'''
+plt.xlabel('$P_{wind}$')
+plt.ylabel('N')
+plt.hist(np.log10(df_bh['P_wind']), bins = 25, label = 'BH')
+plt.hist(np.log10(df_ns['P_wind']), bins = 25, label = 'NS')
+plt.legend()
+plt.show()
+'''
 # =============================================================================
 # All systems histogram of theta distribution
 # =============================================================================
-
+'''
 plt.xlabel('Half opening angle ' + r'$ \theta $')
 plt.ylabel('Count')
 plt.hist(df_master['theta_half_deg'], bins=int(180/5))
 #plt.savefig('beamed_ulxs_half_theta_hist.eps', format='eps', dpi=1000)
 #plt.savefig('beamed_ulxs_half_theta_hist.png', format='png', dpi=1000)
 plt.show()
-
+'''
 
 
 '''
