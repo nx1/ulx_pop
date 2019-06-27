@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import glob
 
 
-df_dict={}  #Dictionary for storing dataframes for m_dot
+df_dict = {}  #Dictionary for storing dataframes for m_dot
 
 
 #CGS UNITS
@@ -148,30 +148,30 @@ files = glob.glob('*.dat')
 
 for filename in files:
     print(filename)
-    df_dict[filename]=pd.read_csv(filename, delim_whitespace=True, header=None,
-           names=['mdot', 'm', 'idum', 'iidd'])
+    df_dict[filename] = pd.read_csv(filename, delim_whitespace=True,
+           header=None, names=['mdot', 'm', 'idum', 'iidd'])
 
     cut_string = filename.split(sep='_', maxsplit=4)
     df_dict[filename]['Z'] = float(cut_string[1])
     df_dict[filename]['tage'] = float(cut_string[3][:-4])
 
 
-df_master=pd.concat(df_dict, ignore_index=True)
+df_master = pd.concat(df_dict, ignore_index=True)
 m = df_master['m']
 mdot = df_master['mdot']
 
 df_master['mdot_gs'] = mdot * (Msol/Myr)   #Mass accretion rate in g/s
-mdot_gs = df_master['mdot_gs']        
+mdot_gs = df_master['mdot_gs']
 
-df_master['LEdd'] = 1.2E38 * m #ERG/S            
-LEdd = df_master['LEdd']       
-df_master['MEdd'] = np.where(m <= 2.5, LEdd / (0.2 * c**2), LEdd / (1/12 * c**2))   
-#Ledd = eta * M_dot_eddington * c^2 where eta = 0.2 for NS and 1/12 for bh    
-MEdd = df_master['MEdd']            
+df_master['LEdd'] = 1.2E38 * m #ERG/S
+LEdd = df_master['LEdd']
+df_master['MEdd'] = np.where(m <= 2.5, LEdd / (0.2 * c**2), LEdd / (1/12 * c**2))
+#Ledd = eta * M_dot_eddington * c^2 where eta = 0.2 for NS and 1/12 for bh
+MEdd = df_master['MEdd']    
 df_master['mdot_ratio'] = mdot_gs / MEdd #AKA Eddington Ratio
-mdot_ratio = df_master['mdot_ratio'] 
+mdot_ratio = df_master['mdot_ratio']
 
-df_master['XLsph'] = abs(2.2E39 * (m/10) * (mdot_ratio/10)**2 * (1 + np.log(mdot_ratio)))            
+df_master['XLsph'] = abs(2.2E39 * (m/10) * (mdot_ratio/10)**2 * (1 + np.log(mdot_ratio)))
 df_master['XLsph2'] = 2.2E39 * (m/10) * (mdot_ratio/10)**2
 df_master['LXtot'] = np.where(mdot_ratio > 1, LEdd * (1 + np.log(mdot_ratio)), LEdd * mdot_ratio)
 #df_master['LXtot'] = LEdd * (1 + np.log(mdot_ratio))
@@ -196,7 +196,7 @@ df_master['r_isco_nospin'] = (6 * G * m * Msol) / c**2 #ISCO (nospin) (cm)
 For now we will use:
     r_in = 6 for a = 0.001 (NS)
     r_in = 1.25 for a =  0.998 (BH)
-    we will also set a floor of zeta = 2 
+    we will also set a floor of zeta = 2
 '''
 df_master['zeta'] = np.tan((pi/2) - np.arccos(1 - (73/(df_master['mdot_ratio']**2))))
 df_master['r_isco'] = np.where(m < 2.5, 6, 1.25)    #Units of R_g (i think)
