@@ -10,19 +10,18 @@ different model parameters.
 import pandas as pd
 import subprocess
 import numpy as np
-from multiprocessing import Pool
 import os
 import glob
+import matplotlib.pyplot as plt
 
 #df_master contains the whole dataset from the STARTRACK population synthesis
 #code
-df_master = pd.read_csv('dataframe.csv')
 
+df_master = pd.read_csv('../dataframe.csv')
 df = df_master[df_master['Lx'] > 1E39]  #Only ULX
 df = df[df['b'] < 1]                    #Only Beamed
 df = df[df['theta_half_deg'] < 45]      #Only half opening angle of > 45
 df = df.reset_index()
-df.columns
 df = df.drop(columns=['index', 'Unnamed: 0'])
 
 def MakeXCM(filename, parameters):
@@ -41,13 +40,13 @@ def MakeXCM(filename, parameters):
     newpar 8  --> norm
     '''
     F = open(filename, 'w')
-    
+
     params_rounded = np.round(parameters)
     output_file_name = params_rounded
-    
+
     output_file_name = str(i) + '-' + str(params_rounded[4]) + '-' + str(params_rounded[3])
-    
-    
+
+
     string = '''lmod ulxlc /home/nk7g14/Desktop/gitbox/ulx_pop/ulxlc_code_v0.1
 model ulxlc & /*
 newpar 1  {}
@@ -68,7 +67,7 @@ exit''' .format(*params_rounded, output_file_name)
     F.close()
     print('Made XCM file to : {:<10}'.format(filename))
     header = '{:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<10}'
-    print(header.format('period', 'phase', 'theta','incl', 'dincl', 'beta', 'dopulse', 'norm'))
+    print(header.format('period', 'phase', 'theta', 'incl', 'dincl', 'beta', 'dopulse', 'norm'))
     print(header.format(*params_rounded))
 
 
@@ -77,7 +76,7 @@ def RunXCM(XCMfile):
     XCMfile: XCM file including extension
     '''
     subprocess.call(['xspec - {}'.format(XCMfile)], shell=True)
-    
+
 def DeleteAllXCMFiles():
     os.chdir('/home/nk7g14/Desktop/gitbox/ulx_pop/ulxlc_code_v0.1')
     files = glob.glob('*.xcm')
@@ -86,7 +85,7 @@ def DeleteAllXCMFiles():
     else:
         for file in files:
             os.remove(file)
-            
+
 def DeleteAlltxtFiles():
     os.chdir('/home/nk7g14/Desktop/gitbox/ulx_pop/ulxlc_code_v0.1')
     files = glob.glob('*.txt')
@@ -99,9 +98,9 @@ def DeleteAlltxtFiles():
 
 def ReadLightCurve(filename):
     df = pd.read_csv(filename, delimiter=' ',
-               header=None, names=['Time', 'Time_Err', 'Flux'], skiprows=3)
+                     header=None, names=['Time', 'Time_Err', 'Flux'], skiprows=3)
     return df
-        
+
 period = 10.0
 phase = 0.0
 theta = None
@@ -122,15 +121,15 @@ for i in range(len(df)):
             else:
                 incl = 0
             parameters = [period, phase, theta, incl, dincl, beta, dopulse, norm]
-            
+
             print('Making XCM file')
-            
+
             XCM_file_name = 'xspec.xcm'
             MakeXCM(XCM_file_name, parameters)
-            
+
             print('Calling xspec')
             RunXCM(XCM_file_name)
-   
+
 '''
 #MultiProcessing Function
 def mp(i):
@@ -176,11 +175,13 @@ beta = 0.2
 dopulse = 0
 norm = 1.0
 
+i=1
+
 par = [period, phase, theta, incl, dincl, beta, dopulse, norm]
 
 MakeXCM('xspec.xcm', par)
 RunXCM('xspec.xcm')
 
-df = ReadLightCurve('1-10.0-5.0.txt')
-plt.errorbar(df['Time'], df['Flux'], xerr=df['Time_Err'])
+lc = ReadLightCurve('1-10.0-5.0.txt')
+plt.step(lc['Time'], lc['Flux'])
 

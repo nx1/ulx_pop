@@ -9,8 +9,8 @@ This script runs through the output curves generated from the xspec model
 ulxlc and performs alive/dead time analysis for each of them.
 
 Lightcurves are stored in .txt files
-Each lightcurve has an associated .info file stored in /info/
-.
+
+
 The filename format goes as:
     simulation_number - dincl - inclination.txt
 
