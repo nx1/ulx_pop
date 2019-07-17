@@ -235,35 +235,35 @@ def swingAngleTest():
     period = 120
 
     
-    swing_angles = np.arange(0,240)
+    swing_angles = np.arange(0,45, 0.2)
     alive_deads = np.empty(len(swing_angles))
     for i, swing_angle in tqdm(enumerate(swing_angles)):
         alive_deads[i] = model(inclination_angle, opening_angle, swing_angle, period)
     
     return swing_angles, alive_deads
 
-'''
-opening_angles, alive_deads1 = openingAngleTest()
-periods, alive_deads2 = periodTest()
-swing_angles, alive_deads3 = swingAngleTest()
 
-plt.title('inclination_angle = 10, swing_angle = 20, period = 120')
-plt.xlabel('opening_angle')
-plt.ylabel('Alive/Dead Ratio')
-plt.plot(opening_angles, alive_deads1)
+# opening_angles, alive_deads1 = openingAngleTest()
+# periods, alive_deads2 = periodTest()
+# swing_angles, alive_deads3 = swingAngleTest()
 
-
-plt.title('inclination_angle = 10, swing_angle = 20, opening_angle = 20')
-plt.xlabel('period')
-plt.ylabel('Alive/Dead Ratio')
-plt.plot(periods, alive_deads2)
+# plt.title('inclination_angle = 10, swing_angle = 20, period = 120')
+# plt.xlabel('opening_angle')
+# plt.ylabel('Alive/Dead Ratio')
+# plt.plot(opening_angles, alive_deads1)
 
 
-plt.title('inclination_angle = 10, opening_angle = 20, period = 120')
-plt.xlabel('swing_angle')
-plt.ylabel('Alive/Dead Ratio')
-plt.plot(swing_angles, alive_deads3)
-'''
+# plt.title('inclination_angle = 10, swing_angle = 20, opening_angle = 20')
+# plt.xlabel('period')
+# plt.ylabel('Alive/Dead Ratio')
+# plt.plot(periods, alive_deads2)
+
+
+# plt.title('inclination_angle = 10, opening_angle = 20, period = 120')
+# plt.xlabel('swing_angle')
+# plt.ylabel('Alive/Dead Ratio')
+# plt.plot(swing_angles, alive_deads3)
+
 
 
 
@@ -287,7 +287,7 @@ def GetSwingAngleFromDistribution():
 # =============================================================================
 # ulx observation test
 # =============================================================================
-
+'''
 NUMBER_OF_ULXS = 1000
 period = 120
 alive_deads = np.empty(NUMBER_OF_ULXS)
@@ -307,7 +307,8 @@ alive_deads_nonzero = alive_deads[alive_deads != 0]
 plt.figure()
 plt.hist(alive_deads_nonzero)
 plt.title(len(alive_deads_nonzero))
-    
+
+'''
 #distribution of thetas
 #distribution of swing angles
 #how many of the 1000 can we see?

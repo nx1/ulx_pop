@@ -32,6 +32,7 @@ import matplotlib.pyplot as plt
 import glob
 import numpy as np
 from multiprocessing import Pool
+from tqdm import tqdm
 
 # =============================================================================
 # Functions
@@ -55,14 +56,14 @@ def LoadCurves(folder):
     '''
     #Importing Files
     curve_files = glob.glob('./{}/*.txt'.format(folder))
-    print('Loading curve files...')
     df_dict = {}      #Dictionary for storing dataframes for lightcurves
-    for filename in curve_files:
+    pbar = tqdm(curve_files)
+    for filename in pbar:
+        pbar.set_description('Loading %s' % filename)
         split1 = filename.split('/')
         split2 = split1[-1][:-4]
         df_dict[split2] = pd.read_csv(filename, delimiter=' ',
                header=None, names=['Time', 'Time_Err', 'Flux'], skiprows=3)
-    print('Loading curve files...DONE!')
     return df_dict
 
 
@@ -240,6 +241,7 @@ def LookAtULX(df_dict, key):
                 alive = 0
     return alive
 
+
 def ResultsDictToPandas(r_dict):
     incls = []
     dincls_list = []
@@ -266,6 +268,7 @@ def ResultsDictToPandas(r_dict):
     df_a['folder_num'] = folder_list 
     return df_a
 
+
 ###############################################################################
 ###############################################################################
 #########################====MAIN CODE====#####################################
@@ -276,6 +279,8 @@ def ResultsDictToPandas(r_dict):
 # =============================================================================
 # Loading curves & Systems df
 # =============================================================================
+
+
 try:
     df_dict
 except:
@@ -368,6 +373,8 @@ for key, i in zip(df_dict.keys(),range(len(df_dict))):
 # =============================================================================
 # MULTIPROCESSING
 # =============================================================================
+
+'''
 '''
 p = Pool(6)
 
@@ -386,6 +393,8 @@ for key in df_dict.keys():
     maped = p.map(multiprocess, key)
     print('Alive_sum:', list(maped))
 '''
+'''
+
 #Splitting by dincl
 df_a_looking = pd.DataFrame.from_dict(alive_dict_looking, orient='index')
 df_a_looking.columns = ['alive', 'observed', 'ratio']
@@ -533,6 +542,10 @@ plt.legend()
 # SPECIFIC LIGHTCURVES and LIMIT
 # =============================================================================
 PlotCurve('0-10.0-0')
+'''
+
+
+
 
 '''
 for i in np.arange(30,40):

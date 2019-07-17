@@ -236,8 +236,6 @@ df_master['theta_half_deg'] = df_master['theta_deg'] / 2 #Half opening angle
 
 
 
-
-
 # Zeta is the opening angle of the wind
 # we will also set a floor of zeta = 2
 df_master['zeta'] = np.tan((pi/2) - np.arccos(1 - (73/(df_master['mdot_ratio']**2))))

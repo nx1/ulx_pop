@@ -101,6 +101,8 @@ def ReadLightCurve(filename):
                      header=None, names=['Time', 'Time_Err', 'Flux'], skiprows=3)
     return df
 
+
+'''
 period = 10.0
 phase = 0.0
 theta = None
@@ -129,39 +131,7 @@ for i in range(len(df)):
 
             print('Calling xspec')
             RunXCM(XCM_file_name)
-
 '''
-#MultiProcessing Function
-def mp(i):
-    
-    dincls = [5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0]
-
-#    print(incl, dincl, fileName)
-    for dincl in dincls:
-        incl = 0
-        fileName = str(i) + '-' + str(round(dincl,2)) + '-' + str(round(incl,2))
-        
-        print('Making XCM file')
-        MakeXCM(df['theta_half_deg'][i], incl, dincl, fileName, i)
-        
-        print('Calling xspec')
-        
-        XCMfile = 'xspec{}.xcm'.format(i)
-        RunXCM(XCMfile)
-        
-    for dincl in dincls:
-        incl = np.random.uniform(0,90)
-        fileName = str(i) + '-' + str(round(dincl,2)) + '-' + str(round(incl,2))
-        
-        print('Making XCM file')
-        MakeXCM(df['theta_half_deg'][i], incl, dincl, fileName, i)
-        
-        print('Calling xspec')
-        XCMfile = 'xspec{}.xcm'.format(i)
-        RunXCM(XCMfile)
-'''
-
-
 
 # =============================================================================
 # Single Run Test
