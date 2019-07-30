@@ -42,9 +42,10 @@ def LoadSystems():
     '''
     Loads all systems from STARTRACK from csv files
     '''
-    df_master = pd.read_csv('dataframe.csv')
-    df = df_master[df_master['Lx'] < 1E39]
-    df = df_master[df_master['b'] < 1]
+    df_master = pd.read_csv('dataframe.csv') #36420 SYSTEMS
+    df = df_master[df_master['Lx'] > 1E39]  #Only ULX -     992 ULXs
+    df = df[df['b'] < 1]                    #Only Beamed -  227 Beamed ULXs
+    df = df[df['theta_half_deg'] < 45]      #thetha < 45 -  151 Beamed ULXs with half opening angles < 45
     df = df.reset_index()
     df = df.drop(columns=['index', 'Unnamed: 0'])
     return df
@@ -59,7 +60,7 @@ def LoadCurves(folder):
     df_dict = {}      #Dictionary for storing dataframes for lightcurves
     pbar = tqdm(curve_files)
     for filename in pbar:
-        pbar.set_description('Loading %s' % filename)
+        pbar.set_description('Loading curve: %s' % filename)
         split1 = filename.split('/')
         split2 = split1[-1][:-4]
         df_dict[split2] = pd.read_csv(filename, delimiter=' ',
@@ -167,7 +168,7 @@ def PlotCurve(key):
     return plt.show()
 
 
-def Normalise(curves):
+def Normalise(curves, Lx):
     '''
     inputs :
         curves = dictionary of two curves
@@ -178,18 +179,17 @@ def Normalise(curves):
         splitkey = key.split('-')
         sim_num = int(splitkey[0])
         inclination = splitkey[-1]
-        Lx = GetLx(sim_num)
-#        print('-----------------')
-#        print('Curve:', key)
-#        print('Lx:', Lx)
-        if inclination == '0':
+        # print('-----------------')
+        # print('Curve:', key)
+        # print('Lx:', Lx)
+        if inclination == '0.0':
 
             max_flux = max(curves[key]['Flux']) #Maximum Flux
             c = Lx / max_flux                   #Scaling factor
             N_lim = 1E39 / c                    #Limiting value
-#            print('Curve Maximum:', max_flux)
-#            print('Normalisation factor c:', c)
-#            print('Resulting N_lim:', N_lim)
+            # print('Curve Maximum:', max_flux)
+            # print('Normalisation factor c:', c)
+            # print('Resulting N_lim:', N_lim)
         else:
             pass
     return N_lim
@@ -245,29 +245,30 @@ def LookAtULX(df_dict, key):
 def ResultsDictToPandas(r_dict):
     incls = []
     dincls_list = []
-    folder_list = []
+    sim_num_list = []
     df_a = pd.DataFrame.from_dict(results_dict, orient='index')
 
-    for i, row in df_a.iterrows():
-        split1 = i.split(':')
-        folder_num = split1[0]
-        sim_things = split1[1]
-
-        split_key = sim_things.split('-')
+    for key, row in tqdm(df_a.iterrows()):
+        split_key = key.split('-')
+        sim_num = split_key[0]
         inclination = split_key[-1]
         dincl = split_key[1]
         incls.append(float(inclination))
         dincls_list.append(float(dincl))
-        folder_list.append(int(folder_num))
-
-
+        sim_num_list.append(int(sim_num))
+    df_a['sim_num'] = sim_num_list
     df_a['inclination'] = incls
     df_a['dincl'] = dincls_list
-    df_a.columns = ['alive', 'dead', 'inclination', 'dincl']
+
+    
+    df_a.columns = ['alive', 'dead', 'sim_num', 'inclination', 'dincl']
     df_a['ratio'] = df_a['alive']/(df_a['dead']+df_a['alive'])
-    df_a['folder_num'] = folder_list 
     return df_a
 
+
+def stripper(inp):
+    components = inp.split('-')
+    return float(components[1])
 
 ###############################################################################
 ###############################################################################
@@ -279,51 +280,92 @@ def ResultsDictToPandas(r_dict):
 # =============================================================================
 # Loading curves & Systems df
 # =============================================================================
-
-
-try:
-    df_dict
-except:
-    df_dict = LoadCurves('curves0')
-df = LoadSystems()
-
-# =============================================================================
-# Calculate Alive/Dead time for systems
-# =============================================================================
-dincl_list = [5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0]
-z_list = [0.02, 0.002, 0.0002]
-tage_list = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000]
 results_dict = {}
+df = LoadSystems()
+Lx_arr = df['Lx']
 
-for i in range(1):
-    folder = 'curves{}'.format(i)   #Folder String
+for sim_num in df.index: #Cycle through all systems
+    folder = 'ulxlc_code_v0.1/curves/{}'.format(sim_num)   #Folder String
     df_dict = LoadCurves(folder)    #Load Curves from folder to dict
-    #Paramaters we wish to test
+    Lx = Lx_arr[sim_num]
+    
+    zero_inclinations = {k:v for (k,v) in df_dict.items() if '0.0' in k.split('-')[2]}
+    pbar = tqdm(zero_inclinations)
+    for key in pbar:
+        dincl = float(key.split('-')[1])
+        curves = {k: v for k, v in df_dict.items() if dincl == stripper(k)}
+        N_lim = Normalise(curves, Lx) #Find normalization limit
+        pbar.set_description('dincl:{} N_lim:{}'.format(dincl, N_lim))
+        for key in curves:
+            Alive, Dead = AliveTime(df_dict, key, N_lim)
+            results_dict[key] = Alive, Dead
 
-    for sim_num in range(len(df)):  #Go through all systems
-        Lx = GetLx(sim_num)         #Get Lx for system
-        for dincl in dincl_list:    #Run through all precession angles
-            curves = FindCurves(df_dict, sim_num, dincl) #Two curves
-            N_lim = Normalise(curves) #Find normalization limit
-            for key in curves:
-                Alive, Dead = AliveTime(df_dict, key, N_lim)
-                results_dict[str(i)+':'+key] = Alive, Dead
-        print(sim_num, '/', len(df))
 
+
+
+
+
+
+def PlotHistogramResults():
+    plt.figure()
+    # plt.hist2d(df_a['dincl'].values, df_a['ratio'].values,bins=80)
+    corner.hist2d(df_a_nonzero['dincl'].values, df_a_nonzero['ratio'].values,bins=20)
+    plt.xlabel('Precession angle')
+    plt.ylabel('alive/dead ratio')
+    plt.title('151 Beamed BH ULXs, 1000 iterations per ulx in the range 0 - 45 dincl')
+    plt.colorbar()
+    
+    
+
+
+
+def filterdfabytype():
+    mask_ns = df_a_nonzero['sim_num'].isin(ns_df.index)
+    mask_bh = df_a_nonzero['sim_num'].isin(bh_df.index)
+    
+    ns_df_a_nonzero = df_a_nonzero[mask_ns]
+    bh_df_a_nonzero = df_a_nonzero[mask_bh]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+'''
 df_a = ResultsDictToPandas(results_dict)
 df_a = df_a[df_a['inclination'] != 0]
 df_a_nonzero = df_a[df_a['alive'] != 0]
 df_a_nonzero = df_a_nonzero[df_a_nonzero['dead'] != 0]
 
-pivot = pd.pivot_table(df_a_nonzero, index=['dincl'],
+pivot = pd.pivot_table(df_a, index=['sim_num'],
                        aggfunc=('count', 'mean', 'std'))
 
 for index, mean in zip(pivot.index, pivot[('ratio', 'mean')]):
     plt.scatter(index, mean, label=index)
 
+plt.ylabel('alive/dead ratio')
+plt.xlabel('dincl mean')
 plt.legend()
 
-
+'''
+'''
 # =============================================================================
 # dincl vs ratio all for each simulation
 # =============================================================================
@@ -335,8 +377,8 @@ for i in range(28):
     plt.plot(chunk, label=str(i))
 
 #dincl vs ratio for all simulations averaged
-pivot2 = pd.pivot_table(df_a_nonzero, index =['dincl'], aggfunc=('count', 'mean', 'std'))
-plt.plot(pivot2.index, pivot2['ratio', 'mean'],color='black', linewidth=5.0)
+pivot2 = pd.pivot_table(df_a_nonzero, index=['dincl'], aggfunc=('count', 'mean', 'std'))
+plt.plot(pivot2.index, pivot2['ratio', 'mean'], color='black', linewidth=5.0)
 
 
 # =============================================================================
@@ -351,7 +393,8 @@ for sim_num in range(len(df)):
         for key in curves:
             Alive, Dead = AliveTime(df_dict, key, N_lim)
             results_dict[key] = Alive, Dead
-    print(sim_num,'/',len(df))
+            
+    print(sim_num, '/', len(df))
 
 
 
@@ -361,13 +404,13 @@ for sim_num in range(len(df)):
 alive_dict_looking = {}
 observations = 1000 #Number of observations per system
 
-for key, i in zip(df_dict.keys(),range(len(df_dict))):
+for key, i in zip(df_dict.keys(), range(len(df_dict))):
     print(i, '/', len(df_dict))
     #print(key)
     alive_sum = 0
     for i in range(observations):
         alive = LookAtULX(df_dict, key)
-        alive_sum+=alive
+        alive_sum += alive
     alive_dict_looking[key] = [alive_sum, observations, alive_sum/observations]
 
 # =============================================================================
@@ -384,7 +427,7 @@ def multiprocess(key):
     alive_sum = 0
     for i in range(observations):
         alive = LookAtULX(df_dict, key)
-        alive_sum+=alive
+        alive_sum += alive
     return alive_sum
 
 
@@ -416,16 +459,16 @@ df_a_looking = df_a_looking[df_a_looking['alive'] != 0]
 df_a_looking = df_a_looking[df_a_looking['alive'] != observations]
 
 
-pivot = pd.pivot_table(df_a_looking, index = ['dincl'], aggfunc=('count', 'mean', 'std'))
+pivot = pd.pivot_table(df_a_looking, index=['dincl'], aggfunc=('count', 'mean', 'std'))
 plt.scatter(pivot.index, pivot['ratio']['mean'])
 #Histogram of dincl
 dincl_plot = 15.0
-plt.hist(df_a_looking[df_a_looking['dincl']==dincl_plot]['ratio'], label=dincl_plot)
+plt.hist(df_a_looking[df_a_looking['dincl'] == dincl_plot]['ratio'], label=dincl_plot)
 plt.legend()
 
 
 # =============================================================================
-# Dictionary to pandas and analysis    
+# Dictionary to pandas and analysis
 # =============================================================================
 df_a = pd.DataFrame.from_dict(results_dict, orient='index')
 
@@ -443,18 +486,18 @@ df_a['inclination'] = incls
 df_a['dincl'] = dincls_list
 
 df_a.columns = ['alive', 'dead', 'inclination', 'dincl']
-df_a['ratio'] = df_a['alive']/(df_a['dead']+df_a['alive'])
-df_a = df_a[df_a['inclination']!=0]
-df_a_nonzero = df_a[df_a['alive']!=0]
-df_a_nonzero = df_a_nonzero[df_a_nonzero['dead']!=0]
+df_a['ratio'] = df_a['alive'] / (df_a['dead'] + df_a['alive'])
+df_a = df_a[df_a['inclination'] != 0]
+df_a_nonzero = df_a[df_a['alive'] != 0]
+df_a_nonzero = df_a_nonzero[df_a_nonzero['dead'] !=0 ]
 
-piv1 = pd.pivot_table(df_a, index = ['dincl'], aggfunc=('count', 'mean', 'std'))
-piv2 = pd.pivot_table(df_a_nonzero, index = ['dincl'], aggfunc=('count', 'mean', 'std'))
+piv1 = pd.pivot_table(df_a, index=['dincl'], aggfunc=('count', 'mean', 'std'))
+piv2 = pd.pivot_table(df_a_nonzero, index=['dincl'], aggfunc=('count', 'mean', 'std'))
 
 plt.xlabel('dincl $ \Delta i $')
 plt.ylabel('Alive/Dead Ratio')
-plt.plot(piv1.index, piv1[('ratio', 'mean')], label = 'all i=0 sources')
-plt.plot(piv2.index, piv2[('ratio', 'mean')], label = 'all nonzero i=0 sources')
+plt.plot(piv1.index, piv1[('ratio', 'mean')], label='all i=0 sources')
+plt.plot(piv2.index, piv2[('ratio', 'mean')], label='all nonzero i=0 sources')
 plt.legend()
 
 # =============================================================================
@@ -486,17 +529,17 @@ plt.scatter(df_a['dincl'], df_a['alive'])
 # =============================================================================
 # ALL NON-ZERO SYSTEMS ALIVE TIME VS DINCL (PRECESSION ANGLE)
 # =============================================================================
-df_a_nonzero_5 = df_a_nonzero[df_a['dincl']==5]
-df_a_nonzero_10 = df_a_nonzero[df_a['dincl']==10]
-df_a_nonzero_15 = df_a_nonzero[df_a['dincl']==15]
-df_a_nonzero_20 = df_a_nonzero[df_a['dincl']==20]
-df_a_nonzero_25 = df_a_nonzero[df_a['dincl']==25]
-df_a_nonzero_30 = df_a_nonzero[df_a['dincl']==30]
-df_a_nonzero_35 = df_a_nonzero[df_a['dincl']==35]
-df_a_nonzero_40 = df_a_nonzero[df_a['dincl']==40]
-df_a_nonzero_45 = df_a_nonzero[df_a['dincl']==45]
+df_a_nonzero_5 = df_a_nonzero[df_a['dincl'] == 5]
+df_a_nonzero_10 = df_a_nonzero[df_a['dincl'] == 10]
+df_a_nonzero_15 = df_a_nonzero[df_a['dincl'] == 15]
+df_a_nonzero_20 = df_a_nonzero[df_a['dincl'] == 20]
+df_a_nonzero_25 = df_a_nonzero[df_a['dincl'] == 25]
+df_a_nonzero_30 = df_a_nonzero[df_a['dincl'] == 30]
+df_a_nonzero_35 = df_a_nonzero[df_a['dincl'] == 35]
+df_a_nonzero_40 = df_a_nonzero[df_a['dincl'] == 40]
+df_a_nonzero_45 = df_a_nonzero[df_a['dincl'] == 45]
 
-biglist = [df_a_nonzero_5 ,
+biglist = [df_a_nonzero_5,
 df_a_nonzero_10,
 df_a_nonzero_15,
 df_a_nonzero_20,
@@ -509,7 +552,7 @@ df_a_nonzero_45]
 print('{} {} {} {}'.format('dincl', 'mean', 'std', '# systems'))
 for i in biglist:
     print('{} {} {} {}'.format(
-            np.mean( i['dincl']),
+            np.mean(i['dincl']),
             round(np.mean(i['ratio']), 3),
             round(np.std(i['ratio']), 3),
             len(i['ratio']),
@@ -528,7 +571,7 @@ plt.ylabel('alive/dead')
 # ALL NON-ZERO SYSTEMS ALIVE TIME VS DINCL (PRECESSION ANGLE) MEANS
 # =============================================================================
 for i in dincl_list:
-    cut = df_a_nonzero[df_a['dincl']==i]
+    cut = df_a_nonzero[df_a['dincl'] == i]
     plt.scatter(np.mean(cut['dincl']), np.mean(cut['ratio']), label=i)
 
 
@@ -542,10 +585,10 @@ plt.legend()
 # SPECIFIC LIGHTCURVES and LIMIT
 # =============================================================================
 PlotCurve('0-10.0-0')
+
+
+
 '''
-
-
-
 
 '''
 for i in np.arange(30,40):
@@ -560,5 +603,5 @@ Things you can plot:
         Dead Time vs dincl
         Ratio vs dincl
         beaming vs alive time
-        
+
 '''

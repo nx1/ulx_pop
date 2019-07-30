@@ -263,32 +263,51 @@ df_master['P_wind'] = np.where(m < 2.5,
          G * m * Msol * pi / (3 * c**3 * a_ns) * df_master['r_out']**3 * ((1 - (df_master['r_isco']/df_master['r_out']))**3)/(np.log(df_master['r_out']/df_master['r_isco'])),
          G * m * Msol * pi / (3 * c**3 * a_bh) * df_master['r_out']**3 * ((1 - (df_master['r_isco']/df_master['r_out']))**3)/(np.log(df_master['r_out']/df_master['r_isco'])))
 df_master['f_wind'] = 1 / df_master['P_wind']
-
-
-# =============================================================================
-# All systems by tage and metallicity Lx vs Mass
-# =============================================================================
 df_master = df_master.sort_values('Z')
 df_master = df_master.sort_values('tage')
-# df_master = df_master[df_master['Lx'] > 1E39]
-# df_master = df_master[df_master['b'] < 1]
-# df_master.to_csv('../dataframe.csv')
+df_master = df_master.reset_index()
+df_master = df_master.drop('index', axis=1)
+df_master.to_csv('../dataframe.csv')
 
+# =============================================================================
+# Plotting Functions
+# =============================================================================
+def Plot_Mass_Lx(df):
+    """
+    Plots Mass vs Luminosity for all systems in a specified dataframe
+    splits into subplots according to Z and tage and colors them based on if
+    they are black holes or neutron stars.
 
-# Counting pivot tables
-pd.pivot_table(df_master, index = ['Z','tage'], aggfunc='count')
-pd.pivot_table(df_master, index = ['Z','tage'], aggfunc='count', columns='is_bh')
+    Parameters
+    ----------
+    df : Pandas Dataframe
+        Pandas dataframe containing the simulation output
+    """
+    fig, axarr = plt.subplots(3, 10)
+    for i, tage in enumerate(df['tage'].unique()):
+        for j, Z in enumerate(df['Z'].unique()):
+            # print(i, j, Z, tage)
+            mask = (df['Z'] == Z) & (df['tage'] == tage)
+            
+            m = np.log10(df[mask]['m'])
+            Lx = np.log10(df[mask]['Lx'])
+            is_bh = df[mask]['is_bh']
+            axarr[j, i].scatter(m, Lx , s=1.0, c=is_bh, cmap='coolwarm')
+            axarr[0, i].set_title('t = %s' % tage)
+            axarr[j, 0].set_ylabel('Z = %s' % Z)
 
-
-fig, axarr = plt.subplots(3, 10)
-for i, tage in enumerate(df_master['tage'].unique()):
-    for j, Z in enumerate(df_master['Z'].unique()):
-        print(i, j, Z, tage)
-        mask = (df_master['Z'] == Z) & (df_master['tage'] == tage)
-        
-        m = np.log10(df_master[mask]['m'])
-        Lx = np.log10(df_master[mask]['Lx'])
-        is_bh = df_master[mask]['is_bh']
-        axarr[j, i].scatter(m, Lx , s=1.0, c=is_bh, cmap='coolwarm')
-        axarr[0, i].set_title('t = %s' % tage)
-        axarr[j, 0].set_ylabel('Z = %s' % Z)
+def Plot_Evolution(df):
+    plt.figure()
+    pivot = pd.pivot_table(df, index = ['Z','tage'], aggfunc='count', columns='is_bh')
+    
+if __name__ == '__main__':
+    # df_master = df_master[df_master['Lx'] > 1E39]
+    # df_master = df_master[df_master['b'] < 1]
+    # df_master.to_csv('../dataframe.csv')
+    
+    
+    # Counting pivot tables
+    pd.pivot_table(df_master, index = ['Z','tage'], aggfunc='count')
+    pd.pivot_table(df_master, index = ['Z','tage'], aggfunc='count', columns='is_bh')
+    Plot_Mass_Lx(df_master)
+    
