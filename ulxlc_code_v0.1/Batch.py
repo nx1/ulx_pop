@@ -42,9 +42,10 @@ def MakeXCM(filename, parameters):
     params_rounded = np.round(parameters, 2)
 
     output_file_name = CreateOutputFileName(parameters)
+    
+    cwd = os.getcwd()
 
-
-    string = '''lmod ulxlc /home/nk7g14/Desktop/gitbox/ulx_pop/ulxlc_code_v0.1
+    string = '''lmod ulxlc {}
 model ulxlc & /*
 newpar 1  {}
 newpar 2  {}
@@ -58,7 +59,7 @@ cpd /xw
 plot model
 setplot command wdata {}.txt
 plot
-exit''' .format(*params_rounded, output_file_name)
+exit''' .format(cwd, *params_rounded, output_file_name)
 
     F.write(string)
     F.close()
@@ -76,7 +77,8 @@ def RunXCM(XCMfile):
 
 
 def DeleteAllXCMFiles():
-    os.chdir('/home/nk7g14/Desktop/gitbox/ulx_pop/ulxlc_code_v0.1')
+    cwd = os.getcwd()
+    os.chdir(cwd)
     files = glob.glob('*.xcm')
     if files == []:
         print('No XCM files to delete')
@@ -86,7 +88,8 @@ def DeleteAllXCMFiles():
 
 
 def DeleteAlltxtFiles():
-    os.chdir('/home/nk7g14/Desktop/gitbox/ulx_pop/ulxlc_code_v0.1')
+    cwd = os.getcwd()
+    os.chdir(cwd)
     files = glob.glob('*.txt')
     if files == []:
         print('No txt files to delete')
@@ -191,6 +194,9 @@ if __name__ == '__main__':
     
     
     '''
+
+
+
 # =============================================================================
 # Single Run Test
 # =============================================================================
