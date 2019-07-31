@@ -12,17 +12,18 @@ import subprocess
 import numpy as np
 import os
 import glob
-import matplotlib.pyplot as plt
-import time
+from multiprocessing import Pool
+import shutil
+from functools import partial
 
-def CreateOutputFileName(parameters):
+def CreateOutputFileName(i, parameters):
     params_rounded = np.round(parameters, 2)
 
     output_file_name = str(i) + '-' + str(params_rounded[4]) + '-' + str(params_rounded[3])
     return output_file_name
 
 
-def MakeXCM(filename, parameters):
+def MakeXCM(filename, parameters, index, save_folder):
     '''
     Creates xcm script file for use in xspec
         filename: name of xcm file with extension
@@ -41,8 +42,8 @@ def MakeXCM(filename, parameters):
 
     params_rounded = np.round(parameters, 2)
 
-    output_file_name = CreateOutputFileName(parameters)
-    
+    output_file_name = CreateOutputFileName(index, parameters)
+    savedir = str(save_folder) + '/' + output_file_name
     cwd = os.getcwd()
 
     string = '''lmod ulxlc {}
@@ -59,7 +60,7 @@ cpd /xw
 plot model
 setplot command wdata {}.txt
 plot
-exit''' .format(cwd, *params_rounded, output_file_name)
+exit''' .format(cwd, *params_rounded, savedir)
 
     F.write(string)
     F.close()
@@ -73,7 +74,8 @@ def RunXCM(XCMfile):
     '''
     XCMfile: XCM file including extension
     '''
-    subprocess.call(['xspec - {}'.format(XCMfile)], shell=True)
+    devnull = open(os.devnull, 'w')
+    subprocess.call(['xspec - {}'.format(XCMfile)], shell=True, stdout=devnull)
 
 
 def DeleteAllXCMFiles():
@@ -141,18 +143,68 @@ def AliveTime(lc, limit):
 
     return Alive, Dead
 
+def FilterNSBH(df):
+    df_bh = df[df['is_bh'] == 1]
+    df_ns = df[df['is_bh'] == 0]
+    return df_bh, df_ns
+    
+
+def ChooseSystem(BH_NS, df_bh, df_ns):
+    draw = np.random.random()
+    if draw > BH_NS:
+        choice = np.random.choice(df_ns.index)
+    else:
+        choice = np.random.choice(df_bh.index)
+    return choice
+
+
+def isAlwaysVisible(df, index):
+    if (df['b'][index] >= 1) or (df['theta_half_deg'][index] > 45):
+        return True
+    else:
+        return False
+
+    
+def simulate(simulation_number):
+    os.makedirs('{}'.format(simulation_number), exist_ok=True)
+    c = ChooseSystem(BH_NS, df_bh, df_ns)
+    
+    if isAlwaysVisible(df, c):
+        print('always visible!')
+    else:
+        dincls = np.linspace(1.0, 45, 500)
+        theta = df['theta_half_deg'][c]
+        for isRandom in range(2):
+            for dincl in dincls:
+                if isRandom:
+                    incl = np.random.uniform(0,90)
+                else:
+                    incl = 0
+                    
+                parameters = [period, phase, theta, incl, dincl, beta, dopulse, norm]
+                
+                print('Making XCM file')
+                XCM_file_name = 'xspec.xcm'
+                MakeXCM(XCM_file_name, parameters, c, simulation_number)
+    
+                print('Calling xspec')
+                RunXCM(XCM_file_name)
+                
+    shutil.move('./{}'.format(simulation_number), './curves/{}'.format(BH_NS))
+
 # =============================================================================
 # Main Code
 # =============================================================================
-'''
+
 if __name__ == '__main__':
     df_master = pd.read_csv('../dataframe.csv') #36420 SYSTEMS
     df = df_master[df_master['Lx'] > 1E39]  #Only ULX -     992 ULXs
-    df = df[df['b'] < 1]                    #Only Beamed -  227 Beamed ULXs
-    df = df[df['theta_half_deg'] < 45]      #thetha < 45 -  151 Beamed ULXs with half opening angles < 45
+    # df = df[df['b'] < 1]                    #Only Beamed -  227 Beamed ULXs
+    # df = df[df['theta_half_deg'] < 45]      #thetha < 45 -  151 Beamed ULXs with half opening angles < 45
     df = df.reset_index()
     df = df.drop(columns=['index', 'Unnamed: 0'])
     
+    number_of_simulations = 500
     
     period = 10.0
     phase = 0.0
@@ -163,40 +215,20 @@ if __name__ == '__main__':
     dopulse = 0
     norm = 1.0
     
+    df_bh, df_ns = FilterNSBH(df)
     
     os.makedirs('./curves', exist_ok=True)
-    # dincls = [5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0]
-    dincls = np.random.uniform(low=1.0, high=45, size=1000)
-    for i in range(147,152):
-        theta = df['theta_half_deg'][i]
-        for isRandom in range(2):
-            for dincl in dincls:
-                if isRandom:
-                    incl = np.random.uniform(0,90)
-                else:
-                    incl = 0
-                parameters = [period, phase, theta, incl, dincl, beta, dopulse, norm]
-    
-                print('Making XCM file')
-    
-                XCM_file_name = 'xspec.xcm'
-                MakeXCM(XCM_file_name, parameters)
-    
-                print('Calling xspec')
-                RunXCM(XCM_file_name)
+    df_bh, df_ns = FilterNSBH(df)
+    for BH_NS in np.arange(0.9, 1.0, 0.01):
+        os.makedirs('./curves/{}'.format(BH_NS), exist_ok=True)
+        pool = Pool(15)
+        pool.map(simulate, range(number_of_simulations))
+        pool.join()
+        pool.close()
         
-        os.makedirs('./curves/{}'.format(i))
-        curve_files = glob.glob('*.txt')
-        for file in curve_files:
-            os.rename(file, './curves/{}/{}'.format(i, file))
-    
-           
-    
-    
-    '''
 
 
-
+'''
 # =============================================================================
 # Single Run Test
 # =============================================================================
@@ -224,9 +256,9 @@ alive_deads = []
 # incl = np.random.randint(0, high=90)
 par = [period, phase, theta, incl, dincl, beta, dopulse, norm]
 
-MakeXCM('xspec.xcm', par)
+MakeXCM('xspec.xcm', par, i)
 RunXCM('xspec.xcm')
-output_file_name = CreateOutputFileName(par) + '.txt'
+output_file_name = CreateOutputFileName(i, par) + '.txt'
 
 lc = ReadLightCurve(output_file_name)
 
@@ -244,3 +276,4 @@ plt.legend()
 plt.axhline(y=limit, c='r')
 plt.title("""period, phase, theta, incl, dincl, beta, dopulse, norm
           {}""".format(par))
+'''
