@@ -56,7 +56,7 @@ newpar 5  {}
 newpar 6  {}
 newpar 7  {}
 newpar 8  {}
-cpd /xw
+cpd /null
 plot model
 setplot command wdata {}.txt
 plot
@@ -173,11 +173,12 @@ def simulate(dincl):
     parameters = [period, phase, theta, incl, dincl, beta, dopulse, norm]
     
     print('Making XCM file')
-    XCM_file_name = 'xspec.xcm'
+    XCM_file_name = str(round(dincl,2)) + 'xspec.xcm'
     MakeXCM(XCM_file_name, parameters, c, simulation_number)
     
     print('Calling xspec')
     RunXCM(XCM_file_name)
+    os.remove(XCM_file_name)
 
 # =============================================================================
 # Main Code
@@ -218,7 +219,7 @@ if __name__ == '__main__':
                 dincls = np.linspace(1.0, 45, 500)
                 theta = df['theta_half_deg'][c]
                 for isRandom in range(2):
-                    pool = Pool(3)
+                    pool = Pool()
                     pool.map(simulate, dincls)
                     pool.close()
             shutil.move('./{}'.format(simulation_number), './curves/{}'.format(BH_NS))

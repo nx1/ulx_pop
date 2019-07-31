@@ -2,14 +2,14 @@ lmod ulxlc /home/nk7g14/Desktop/gitbox/ulx_pop/ulxlc_code_v0.1
 model ulxlc & /*
 newpar 1  10.0
 newpar 2  0.0
-newpar 3  4.58
+newpar 3  32.15
 newpar 4  0.0
-newpar 5  13.87
+newpar 5  34.15
 newpar 6  0.2
 newpar 7  0.0
 newpar 8  1.0
 cpd /xw
 plot model
-setplot command wdata 7/897-13.87-0.0.txt
+setplot command wdata 354/985-34.15-0.0.txt
 plot
 exit
