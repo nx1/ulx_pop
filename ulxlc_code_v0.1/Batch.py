@@ -76,7 +76,7 @@ def RunXCM(XCMfile):
     '''
     devnull = open(os.devnull, 'w')
     subprocess.call(['xspec - {}'.format(XCMfile)], shell=True, stdout=devnull)
-
+    # subprocess.call(['xspec - {}'.format(XCMfile)], shell=True)
 
 def DeleteAllXCMFiles():
     cwd = os.getcwd()
@@ -164,33 +164,20 @@ def isAlwaysVisible(df, index):
     else:
         return False
 
-    
-def simulate(simulation_number):
-    os.makedirs('{}'.format(simulation_number), exist_ok=True)
-    c = ChooseSystem(BH_NS, df_bh, df_ns)
-    
-    if isAlwaysVisible(df, c):
-        print('always visible!')
+def simulate(dincl):
+    if isRandom:
+        incl = np.random.uniform(0,90)
     else:
-        dincls = np.linspace(1.0, 45, 500)
-        theta = df['theta_half_deg'][c]
-        for isRandom in range(2):
-            for dincl in dincls:
-                if isRandom:
-                    incl = np.random.uniform(0,90)
-                else:
-                    incl = 0
-                    
-                parameters = [period, phase, theta, incl, dincl, beta, dopulse, norm]
-                
-                print('Making XCM file')
-                XCM_file_name = 'xspec.xcm'
-                MakeXCM(XCM_file_name, parameters, c, simulation_number)
+        incl = 0
+        
+    parameters = [period, phase, theta, incl, dincl, beta, dopulse, norm]
     
-                print('Calling xspec')
-                RunXCM(XCM_file_name)
-                
-    shutil.move('./{}'.format(simulation_number), './curves/{}'.format(BH_NS))
+    print('Making XCM file')
+    XCM_file_name = 'xspec.xcm'
+    MakeXCM(XCM_file_name, parameters, c, simulation_number)
+    
+    print('Calling xspec')
+    RunXCM(XCM_file_name)
 
 # =============================================================================
 # Main Code
@@ -221,11 +208,21 @@ if __name__ == '__main__':
     df_bh, df_ns = FilterNSBH(df)
     for BH_NS in np.arange(0.9, 1.0, 0.01):
         os.makedirs('./curves/{}'.format(BH_NS), exist_ok=True)
-        pool = Pool(15)
-        pool.map(simulate, range(number_of_simulations))
-        pool.join()
-        pool.close()
-        
+        for simulation_number in range(number_of_simulations):
+            os.makedirs('{}'.format(simulation_number), exist_ok=True)
+            c = ChooseSystem(BH_NS, df_bh, df_ns)
+            print('c:', c)
+            if isAlwaysVisible(df, c):
+                print('always visible!')
+            else:
+                dincls = np.linspace(1.0, 45, 500)
+                theta = df['theta_half_deg'][c]
+                for isRandom in range(2):
+                    pool = Pool(3)
+                    pool.map(simulate, dincls)
+                    pool.close()
+            shutil.move('./{}'.format(simulation_number), './curves/{}'.format(BH_NS))
+    
 
 
 '''
