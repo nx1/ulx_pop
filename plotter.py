@@ -44,10 +44,10 @@ def LoadSystems():
     '''
     df_master = pd.read_csv('dataframe.csv') #36420 SYSTEMS
     df = df_master[df_master['Lx'] > 1E39]  #Only ULX -     992 ULXs
-    df = df[df['b'] < 1]                    #Only Beamed -  227 Beamed ULXs
-    df = df[df['theta_half_deg'] < 45]      #thetha < 45 -  151 Beamed ULXs with half opening angles < 45
+    # df = df[df['b'] < 1]                    #Only Beamed -  227 Beamed ULXs
+    # df = df[df['theta_half_deg'] < 45]      #thetha < 45 -  151 Beamed ULXs with half opening angles < 45
     df = df.reset_index()
-    df = df.drop(columns=['index', 'Unnamed: 0'])
+    # df = df.drop(columns=['index', 'Unnamed: 0'])
     return df
 
 
@@ -270,6 +270,24 @@ def stripper(inp):
     components = inp.split('-')
     return float(components[1])
 
+
+def AliveDeadFolder(folder):
+    df_dict = LoadCurves(folder)    #Load Curves from folder to dict
+    Lx = Lx_arr[sim_num]
+    
+    zero_inclinations = {k:v for (k,v) in df_dict.items() if '0.0' in k.split('-')[2]}
+    pbar = tqdm(zero_inclinations)
+    for key in pbar:
+        dincl = float(key.split('-')[1])
+        curves = {k: v for k, v in df_dict.items() if dincl == stripper(k)}
+        N_lim = Normalise(curves, Lx) #Find normalization limit
+        pbar.set_description('dincl:{} N_lim:{}'.format(dincl, N_lim))
+        for key in curves:
+            Alive, Dead = AliveTime(df_dict, key, N_lim)
+            results_dict[key] = Alive, Dead
+    return results_dict
+
+
 ###############################################################################
 ###############################################################################
 #########################====MAIN CODE====#####################################
@@ -284,6 +302,25 @@ results_dict = {}
 df = LoadSystems()
 Lx_arr = df['Lx']
 
+for BH_NS in [0.9, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98 , 0.99]:
+    for folder_number in range(500):
+        working_dir = 'ulxlc/curves/{}/{}'.format(BH_NS, folder_number)
+        df_dict = LoadCurves(working_dir)    #Load Curves from folder to dict
+        zero_inclinations = {k:v for (k,v) in df_dict.items() if '0.0' in k.split('-')[2]}
+        for key in zero_inclinations:
+            sim_num = int(key.split('-')[0])
+            Lx = Lx_arr[sim_num]
+            dincl = float(key.split('-')[1])
+            curves = {k: v for k, v in df_dict.items() if dincl == stripper(k)}
+            N_lim = Normalise(curves, Lx) #Find normalization limit
+            
+            for key in curves:
+                Alive, Dead = AliveTime(df_dict, key, N_lim)
+                results_dict[key] = Alive, Dead, BH_NS
+        
+
+
+'''
 for sim_num in df.index: #Cycle through all systems
     folder = 'ulxlc_code_v0.1/curves/{}'.format(sim_num)   #Folder String
     df_dict = LoadCurves(folder)    #Load Curves from folder to dict
@@ -299,6 +336,8 @@ for sim_num in df.index: #Cycle through all systems
         for key in curves:
             Alive, Dead = AliveTime(df_dict, key, N_lim)
             results_dict[key] = Alive, Dead
+
+'''
 
 
 
@@ -316,9 +355,6 @@ def PlotHistogramResults():
     plt.colorbar()
     
     
-
-
-
 def filterdfabytype():
     mask_ns = df_a_nonzero['sim_num'].isin(ns_df.index)
     mask_bh = df_a_nonzero['sim_num'].isin(bh_df.index)
