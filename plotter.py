@@ -261,7 +261,7 @@ def ResultsDictToPandas(r_dict):
     df_a['dincl'] = dincls_list
 
     
-    df_a.columns = ['alive', 'dead', 'sim_num', 'inclination', 'dincl']
+    df_a.columns = ['alive', 'dead', 'BH_NS', 'sim_num', 'inclination', 'dincl']
     df_a['ratio'] = df_a['alive']/(df_a['dead']+df_a['alive'])
     return df_a
 
@@ -304,10 +304,10 @@ Lx_arr = df['Lx']
 
 for BH_NS in [0.9, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98 , 0.99]:
     for folder_number in range(500):
-        working_dir = 'ulxlc/curves/{}/{}'.format(BH_NS, folder_number)
+        working_dir = 'ulxlc_code_v0.1/curves/{}/{}'.format(BH_NS, folder_number)
         df_dict = LoadCurves(working_dir)    #Load Curves from folder to dict
         zero_inclinations = {k:v for (k,v) in df_dict.items() if '0.0' in k.split('-')[2]}
-        for key in zero_inclinations:
+        for key in tqdm(zero_inclinations):
             sim_num = int(key.split('-')[0])
             Lx = Lx_arr[sim_num]
             dincl = float(key.split('-')[1])
@@ -317,37 +317,15 @@ for BH_NS in [0.9, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98 , 0.99]:
             for key in curves:
                 Alive, Dead = AliveTime(df_dict, key, N_lim)
                 results_dict[key] = Alive, Dead, BH_NS
-        
 
-
-'''
-for sim_num in df.index: #Cycle through all systems
-    folder = 'ulxlc_code_v0.1/curves/{}'.format(sim_num)   #Folder String
-    df_dict = LoadCurves(folder)    #Load Curves from folder to dict
-    Lx = Lx_arr[sim_num]
-    
-    zero_inclinations = {k:v for (k,v) in df_dict.items() if '0.0' in k.split('-')[2]}
-    pbar = tqdm(zero_inclinations)
-    for key in pbar:
-        dincl = float(key.split('-')[1])
-        curves = {k: v for k, v in df_dict.items() if dincl == stripper(k)}
-        N_lim = Normalise(curves, Lx) #Find normalization limit
-        pbar.set_description('dincl:{} N_lim:{}'.format(dincl, N_lim))
-        for key in curves:
-            Alive, Dead = AliveTime(df_dict, key, N_lim)
-            results_dict[key] = Alive, Dead
-
-'''
-
-
-
-
+df_a = ResultsDictToPandas(results_dict)
+df_a.to_csv('df_a.csv')
 
 
 
 def PlotHistogramResults():
     plt.figure()
-    # plt.hist2d(df_a['dincl'].values, df_a['ratio'].values,bins=80)
+    # plt.hist2d(df_a_nonzero['dincl'].values, df_a_nonzero['ratio'].values,bins=80)
     corner.hist2d(df_a_nonzero['dincl'].values, df_a_nonzero['ratio'].values,bins=20)
     plt.xlabel('Precession angle')
     plt.ylabel('alive/dead ratio')

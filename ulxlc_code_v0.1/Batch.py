@@ -14,7 +14,7 @@ import os
 import glob
 from multiprocessing import Pool
 import shutil
-from functools import partial
+from tqdm import tqdm
 
 def CreateOutputFileName(i, parameters):
     params_rounded = np.round(parameters, 2)
@@ -64,10 +64,10 @@ exit''' .format(cwd, *params_rounded, savedir)
 
     F.write(string)
     F.close()
-    print('Made XCM file to : {:<10}'.format(filename))
+    # print('Made XCM file to : {:<10}'.format(filename))
     header = '{:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<10}'
-    print(header.format('period', 'phase', 'theta', 'incl', 'dincl', 'beta', 'dopulse', 'norm'))
-    print(header.format(*params_rounded))
+    # print(header.format('period', 'phase', 'theta', 'incl', 'dincl', 'beta', 'dopulse', 'norm'))
+    # print(header.format(*params_rounded))
 
 
 def RunXCM(XCMfile):
@@ -165,18 +165,14 @@ def isAlwaysVisible(df, index):
         return False
 
 def simulate(dincl):
-    if isRandom:
-        incl = np.random.uniform(0,90)
-    else:
-        incl = 0
-        
+    
     parameters = [period, phase, theta, incl, dincl, beta, dopulse, norm]
     
-    print('Making XCM file')
+    # print('Making XCM file')
     XCM_file_name = str(round(dincl,2)) + 'xspec.xcm'
     MakeXCM(XCM_file_name, parameters, c, simulation_number)
     
-    print('Calling xspec')
+    # print('Calling xspec')
     RunXCM(XCM_file_name)
     os.remove(XCM_file_name)
 
@@ -206,19 +202,25 @@ if __name__ == '__main__':
     df_bh, df_ns = FilterNSBH(df)
     
     os.makedirs('./curves', exist_ok=True)
-    df_bh, df_ns = FilterNSBH(df)
-    for BH_NS in np.arange(0.9, 1.0, 0.01):
+    df_bh, df_ns = FilterNSBH(df)       
+    for BH_NS in np.arange(0.01, 0.1, 0.01):
         os.makedirs('./curves/{}'.format(BH_NS), exist_ok=True)
-        for simulation_number in range(number_of_simulations):
+        pbar = tqdm(range(number_of_simulations))
+        for simulation_number in pbar:
             os.makedirs('{}'.format(simulation_number), exist_ok=True)
             c = ChooseSystem(BH_NS, df_bh, df_ns)
-            print('c:', c)
+            # print('c:', c)
             if isAlwaysVisible(df, c):
-                print('always visible!')
+                pbar.set_description('%s Always Visible!' % c)
             else:
+                pbar.set_description('%s transient!' % c)
                 dincls = np.linspace(1.0, 45, 500)
                 theta = df['theta_half_deg'][c]
                 for isRandom in range(2):
+                    if isRandom:
+                        incl = np.random.uniform(0,90)
+                    else:
+                        incl = 0
                     pool = Pool()
                     pool.map(simulate, dincls)
                     pool.close()

@@ -296,12 +296,24 @@ def Plot_Mass_Lx(df):
             axarr[0, i].set_title('t = %s' % tage)
             axarr[j, 0].set_ylabel('Z = %s' % Z)
 
-def Plot_Evolution(df):
-    plt.figure()
-    pivot = pd.pivot_table(df, index = ['Z','tage'], aggfunc='count', columns='is_bh')
+def Plot_Evolution(df_master):
+    f, (ax1, ax2, ax3) = plt.subplots(3,1)
+    pivot = pd.pivot_table(df_master, index = ['Z','tage'], aggfunc='count', columns='is_bh')
+    pivot['LEdd'][0][:8].plot(ax=ax1, label='NS') # Z: 0.0002 | NS
+    pivot['LEdd'][0][8:15].plot(ax=ax2, label='NS') # Z: 0.002 | NS
+    pivot['LEdd'][0][15:].plot(ax=ax3, label='NS') # Z: 0.002 | NS
+    
+    pivot['LEdd'][0][:8].plot(ax=ax1, label='BH') # Z: 0.0002 | BH
+    pivot['LEdd'][0][8:15].plot(ax=ax2, label='BH') # Z: 0.002 | BH
+    pivot['LEdd'][0][15:].plot(ax=ax3, label='BH') # Z: 0.002 | BH
+   
+    ax1.legend()
+    ax2.legend()
+    ax3.legend()
+    
     
 if __name__ == '__main__':
-    # df_master = df_master[df_master['Lx'] > 1E39]
+    df_master = df_master[df_master['Lx'] > 1E39]
     # df_master = df_master[df_master['b'] < 1]
     # df_master.to_csv('../dataframe.csv')
     
