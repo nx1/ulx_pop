@@ -343,20 +343,27 @@ def filterdfabytype():
 
 
 
+ 
 
 
 
 
 
 
+df_a = pd.read_csv('df_a.csv')
+df_a.set_index('Unnamed: 0.1',inplace=True)
 
 
+plt.scatter(df_a_nonzero['dincl'], df_a_nonzero['ratio'], s=0.1, c=df_a['sim_num'])
 
 
-
-
-
-
+for BH_NS in [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09]:
+    plt.figure(figsize=(12,10))
+    df_cut = df_a[df_a['BH_NS']==BH_NS]
+    plt.scatter(np.log10(df_cut['dincl']), df_cut['ratio'], s=0.1, c=df_cut['sim_num'], cmap='inferno')
+    mean = np.mean(df_cut['dincl'])
+    plt.title(str(BH_NS) + 'mean:' + str(mean))
+    # plt.savefig(str(BH_NS)+'_all.png')
 
 
 

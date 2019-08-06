@@ -78,6 +78,7 @@ def RunXCM(XCMfile):
     subprocess.call(['xspec - {}'.format(XCMfile)], shell=True, stdout=devnull)
     # subprocess.call(['xspec - {}'.format(XCMfile)], shell=True)
 
+
 def DeleteAllXCMFiles():
     cwd = os.getcwd()
     os.chdir(cwd)
@@ -202,30 +203,32 @@ if __name__ == '__main__':
     df_bh, df_ns = FilterNSBH(df)
     
     os.makedirs('./curves', exist_ok=True)
-    df_bh, df_ns = FilterNSBH(df)       
-    for BH_NS in np.arange(0.01, 0.1, 0.01):
-        os.makedirs('./curves/{}'.format(BH_NS), exist_ok=True)
-        pbar = tqdm(range(number_of_simulations))
-        for simulation_number in pbar:
-            os.makedirs('{}'.format(simulation_number), exist_ok=True)
-            c = ChooseSystem(BH_NS, df_bh, df_ns)
-            # print('c:', c)
-            if isAlwaysVisible(df, c):
-                pbar.set_description('%s Always Visible!' % c)
-            else:
-                pbar.set_description('%s transient!' % c)
-                dincls = np.linspace(1.0, 45, 500)
-                theta = df['theta_half_deg'][c]
-                for isRandom in range(2):
-                    if isRandom:
-                        incl = np.random.uniform(0,90)
-                    else:
-                        incl = 0
-                    pool = Pool()
-                    pool.map(simulate, dincls)
-                    pool.close()
-            shutil.move('./{}'.format(simulation_number), './curves/{}'.format(BH_NS))
-    
+    df_bh, df_ns = FilterNSBH(df)
+    for k in range(100):
+        os.makedirs('./curves/{}'.format(k), exist_ok=True)
+        for BH_NS in np.arange(0.01, 0.1, 0.01):
+            os.makedirs('./curves/{}/{}'.format(k, BH_NS), exist_ok=True)
+            pbar = tqdm(range(number_of_simulations))
+            for simulation_number in pbar:
+                os.makedirs('{}'.format(simulation_number), exist_ok=True)
+                c = ChooseSystem(BH_NS, df_bh, df_ns)
+                # print('c:', c)
+                if isAlwaysVisible(df, c):
+                    pbar.set_description('%s %s %s' % (k, BH_NS, c))
+                else:
+                    pbar.set_description('%s %s %s' % (k, BH_NS, c))
+                    dincls = np.linspace(1.0, 45, 45)
+                    theta = df['theta_half_deg'][c]
+                    for isRandom in range(2):
+                        if isRandom:
+                            incl = np.random.uniform(0,90)
+                        else:
+                            incl = 0
+                        pool = Pool()
+                        pool.map(simulate, dincls)
+                        pool.close()
+                shutil.move('./{}'.format(simulation_number), './curves/{}/{}'.format(k, BH_NS))
+        
 
 
 '''
