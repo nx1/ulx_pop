@@ -33,6 +33,8 @@ import glob
 import numpy as np
 from multiprocessing import Pool
 from tqdm import tqdm
+import os
+import pickle
 
 # =============================================================================
 # Functions
@@ -62,9 +64,9 @@ def LoadCurves(folder):
     #Importing Files
     curve_files = glob.glob('./{}/*.txt'.format(folder))
     df_dict = {}      #Dictionary for storing dataframes for lightcurves
-    pbar = tqdm(curve_files)
-    for filename in pbar:
-        pbar.set_description('Loading curve: %s' % filename)
+    # pbar = tqdm(curve_files)
+    for filename in curve_files:
+        # pbar.set_description('Loading curve: %s' % filename)
         filename_split = filename.split('/')[-1][:-4]
         df_dict[filename_split] = LoadCurve(filename)
     return df_dict
@@ -270,6 +272,19 @@ def ResultsDictToPandas(r_dict):
     return df_a
 
 
+def CalculateNormalizationLimit(zero_inclination_curve, Lx):
+    '''
+    Calculates the value a lightcurve for a paticular system and precession angle
+    must exceed in order to be classed as a ULX.
+    
+    This is done by taking the maximum flux from the lightcurve at 0 inclination and
+    normalizing it to it's Lx value and 1e39 erg/s
+    '''
+    max_flux = max(zero_inclination_curve['Flux'])
+    c = Lx / max_flux
+    N_lim = 1E39 / c
+    return N_lim
+
 
 ###############################################################################
 ###############################################################################
@@ -285,8 +300,68 @@ results_dict = {}
 df = LoadSystems()
 Lx_arr = df['Lx']
 
+'''
+ulxlc_folder = 'ulxlc_code_v0.1'
+zero_incl_folder = '0_incl_curves'
+
+path = ulxlc_folder + '/' + zero_incl_folder
+dincls = np.linspace(1.0, 45, 45)
+
+norm_lookup = {}
+for folder in tqdm(df.index):
+    folder_str = str(folder)
+    try:
+        os.listdir(path + '/' + folder_str)
+    except:
+        for key in zero_incl_dict.keys():
+            dincl = key.split('-')[1]
+            norm_lookup[(folder_str, dincl)] = None
+    else:
+        zero_incl_dict = LoadCurves(path + '/' + folder_str)
+        
+        for key in zero_incl_dict.keys():
+            dincl = key.split('-')[1]
+            zero_inclination_curve = zero_incl_dict[key]
+            Lx = Lx_arr[int(folder_str)]
+    
+            N_lim = CalculateNormalizationLimit(zero_inclination_curve, Lx)        
+    
+            norm_lookup[(folder_str, dincl)] = N_lim
+'''
 
 
+with open('norm_lookup.pickle', 'rb') as handle:
+    norm_lookup = pickle.load(handle)
+
+
+ulxlc_folder = 'ulxlc'
+
+results_dict = {}
+
+pbar = tqdm(range(3, 100))
+for MCMC_iteration in pbar:
+    print(MCMC_iteration)
+    working_dir = '{}/curves/{}'.format(ulxlc_folder, MCMC_iteration)
+    BH_NS_folders = os.listdir(working_dir)
+    for BH_NS in BH_NS_folders:
+        for simulation_number in range(500):
+            curve_folder = '{}/{}/{}'.format(working_dir, BH_NS, simulation_number)
+            df_dict = LoadCurves(curve_folder)
+            pbar.set_description('%s %s %s' % (MCMC_iteration, BH_NS, simulation_number))
+            for key in df_dict.keys:
+                system_number = key.split('-')[0]
+                dincl = key.split('-')[1]
+                inclination = key.split('-')[2]
+                
+                N_lim = norm_lookup[(system_number, dincl)]
+                if N_lim == None:
+                    Alive, Dead = 1, 0
+                else:
+                    Alive, Dead = AliveTime(df_dict, key, limit)
+                results_dict[key] = Alive, Dead, MCMC_iteration, BH_NS
+
+df_a = ResultsDictToPandas(results_dict)
+df_a.to_csv('df_a_full.csv')
 
 #Load all curves
 #Find corresponding pairs
@@ -301,7 +376,7 @@ Lx_arr = df['Lx']
 #Would take approximately 992 * 45 = 44640 simulations and they would not have to be repeated.
 
 
-
+'''
 for BH_NS in [0.9, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98 , 0.99]:
     for folder_number in range(500):
         working_dir = 'ulxlc_code_v0.1/curves/{}/{}'.format(BH_NS, folder_number)
@@ -322,9 +397,8 @@ for BH_NS in [0.9, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98 , 0.99]:
             for key in curves:
                 Alive, Dead = AliveTime(df_dict, key, N_lim)
                 results_dict[key] = Alive, Dead, BH_NS
+'''
 
-df_a = ResultsDictToPandas(results_dict)
-df_a.to_csv('df_a.csv')
 
 
 
@@ -354,7 +428,7 @@ def filterdfabytype():
 
 
 
-
+'''
 df_a = pd.read_csv('df_a.csv')
 df_a.set_index('Unnamed: 0.1',inplace=True)
 
@@ -371,7 +445,7 @@ for BH_NS in [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09]:
     # plt.savefig(str(BH_NS)+'_all.png')
 
 
-
+'''
 
 
 '''

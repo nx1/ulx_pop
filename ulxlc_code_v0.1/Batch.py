@@ -229,20 +229,21 @@ if __name__ == '__main__':
                         pool.close()
                 shutil.move('./{}'.format(simulation_number), './curves/{}/{}'.format(k, BH_NS))
         
-    os.makedirs('./0_incl_curves', exist_ok=True)
     ''' 
-    
+    os.makedirs('./0_incl_curves', exist_ok=True)
     for simulation_number in tqdm(df.index):
         c = simulation_number
         theta = df['theta_half_deg'][simulation_number]
-        os.makedirs('{}'.format(simulation_number), exist_ok=True)
-        os.makedirs('./0_incl_curves/{}'.format(simulation_number), exist_ok=True)
-        incl = 0
-        dincls = np.linspace(1.0, 45, 45)
-        pool = Pool()
-        pool.map(simulate, dincls)
-        pool.close()
-        shutil.move('./{}'.format(simulation_number), './0_incl_curves')
+        if isAlwaysVisible(df, c):
+                    print('always visible')
+        else:
+            os.makedirs('{}'.format(simulation_number), exist_ok=True)
+            incl = 0
+            dincls = np.linspace(1.0, 45, 45)
+            pool = Pool()
+            pool.map(simulate, dincls)
+            pool.close()
+            shutil.move('./{}'.format(simulation_number), './0_incl_curves')
 
 '''
 # =============================================================================
