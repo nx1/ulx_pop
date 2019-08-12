@@ -168,7 +168,6 @@ def isAlwaysVisible(df, index):
 def simulate(dincl):
     
     parameters = [period, phase, theta, incl, dincl, beta, dopulse, norm]
-    
     # print('Making XCM file')
     XCM_file_name = str(round(dincl,2)) + 'xspec.xcm'
     MakeXCM(XCM_file_name, parameters, c, simulation_number)
@@ -201,17 +200,18 @@ if __name__ == '__main__':
     norm = 1.0
     
     df_bh, df_ns = FilterNSBH(df)
-    
+    '''  
     os.makedirs('./curves', exist_ok=True)
     df_bh, df_ns = FilterNSBH(df)
     for k in range(100):
         os.makedirs('./curves/{}'.format(k), exist_ok=True)
-        for BH_NS in np.arange(0.01, 0.1, 0.01):
+        for BH_NS in np.arange(0.1, 0.4, 0.1):
             os.makedirs('./curves/{}/{}'.format(k, BH_NS), exist_ok=True)
             pbar = tqdm(range(number_of_simulations))
             for simulation_number in pbar:
                 os.makedirs('{}'.format(simulation_number), exist_ok=True)
                 c = ChooseSystem(BH_NS, df_bh, df_ns)
+                ex
                 # print('c:', c)
                 if isAlwaysVisible(df, c):
                     pbar.set_description('%s %s %s' % (k, BH_NS, c))
@@ -229,7 +229,20 @@ if __name__ == '__main__':
                         pool.close()
                 shutil.move('./{}'.format(simulation_number), './curves/{}/{}'.format(k, BH_NS))
         
-
+    os.makedirs('./0_incl_curves', exist_ok=True)
+    ''' 
+    
+    for simulation_number in tqdm(df.index):
+        c = simulation_number
+        theta = df['theta_half_deg'][simulation_number]
+        os.makedirs('{}'.format(simulation_number), exist_ok=True)
+        os.makedirs('./0_incl_curves/{}'.format(simulation_number), exist_ok=True)
+        incl = 0
+        dincls = np.linspace(1.0, 45, 45)
+        pool = Pool()
+        pool.map(simulate, dincls)
+        pool.close()
+        shutil.move('./{}'.format(simulation_number), './0_incl_curves')
 
 '''
 # =============================================================================

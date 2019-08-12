@@ -50,6 +50,10 @@ def LoadSystems():
     # df = df.drop(columns=['index', 'Unnamed: 0'])
     return df
 
+def LoadCurve(filename):
+    curve = pd.read_csv(filename, delimiter=' ', header=None,
+                names=['Time', 'Time_Err', 'Flux'], skiprows=3)
+    return curve
 
 def LoadCurves(folder):
     '''
@@ -61,10 +65,8 @@ def LoadCurves(folder):
     pbar = tqdm(curve_files)
     for filename in pbar:
         pbar.set_description('Loading curve: %s' % filename)
-        split1 = filename.split('/')
-        split2 = split1[-1][:-4]
-        df_dict[split2] = pd.read_csv(filename, delimiter=' ',
-               header=None, names=['Time', 'Time_Err', 'Flux'], skiprows=3)
+        filename_split = filename.split('/')[-1][:-4]
+        df_dict[filename_split] = LoadCurve(filename)
     return df_dict
 
 
@@ -174,7 +176,8 @@ def Normalise(curves, Lx):
         curves = dictionary of two curves
     Takes two curves and Normalises them based on inclination
     '''
-    N_lim = 0
+    assert len(curve_pair) == 2
+    N_lim = None
     for key in curves:
         splitkey = key.split('-')
         sim_num = int(splitkey[0])
@@ -232,9 +235,10 @@ def LookAtULX(df_dict, key):
 #            print('timebin corresponds to: t =', time[rand])
 #            print('Associated flux is: f = ', flux[rand])
             if flux[rand] > N_lim:
-                alive = 1
+                
 #                print('Flux:', flux[rand], 'N_lim:', N_lim)
 #                print('Alive!')
+                alive = 1
             else:
 #                print('Flux:', flux[rand], 'N_lim:', N_lim)
 #                print('Dead :(')
@@ -266,27 +270,6 @@ def ResultsDictToPandas(r_dict):
     return df_a
 
 
-def stripper(inp):
-    components = inp.split('-')
-    return float(components[1])
-
-
-def AliveDeadFolder(folder):
-    df_dict = LoadCurves(folder)    #Load Curves from folder to dict
-    Lx = Lx_arr[sim_num]
-    
-    zero_inclinations = {k:v for (k,v) in df_dict.items() if '0.0' in k.split('-')[2]}
-    pbar = tqdm(zero_inclinations)
-    for key in pbar:
-        dincl = float(key.split('-')[1])
-        curves = {k: v for k, v in df_dict.items() if dincl == stripper(k)}
-        N_lim = Normalise(curves, Lx) #Find normalization limit
-        pbar.set_description('dincl:{} N_lim:{}'.format(dincl, N_lim))
-        for key in curves:
-            Alive, Dead = AliveTime(df_dict, key, N_lim)
-            results_dict[key] = Alive, Dead
-    return results_dict
-
 
 ###############################################################################
 ###############################################################################
@@ -302,17 +285,39 @@ results_dict = {}
 df = LoadSystems()
 Lx_arr = df['Lx']
 
+
+
+
+#Load all curves
+#Find corresponding pairs
+#Normalise
+#Calculate alive/dead time
+
+#An idea may be to simulate all the systems for 0 inclination and determine
+#their maximum values, Lx, and N_lim in advance as it would also save having to simulate
+#the 0 inclination systems more than once.
+
+#This would require simulating every systems for all dincls used 0 inclination.
+#Would take approximately 992 * 45 = 44640 simulations and they would not have to be repeated.
+
+
+
 for BH_NS in [0.9, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98 , 0.99]:
     for folder_number in range(500):
         working_dir = 'ulxlc_code_v0.1/curves/{}/{}'.format(BH_NS, folder_number)
-        df_dict = LoadCurves(working_dir)    #Load Curves from folder to dict
-        zero_inclinations = {k:v for (k,v) in df_dict.items() if '0.0' in k.split('-')[2]}
+        working_dir = 'curves0'
+        
+        #Load Curves from folder to dict
+        df_dict = LoadCurves(working_dir)
+        #Find all the curves with '0' as the final split
+        zero_inclinations = {k:v for (k,v) in df_dict.items() if 0 == float(k.split('-')[2])}
+        
         for key in tqdm(zero_inclinations):
             sim_num = int(key.split('-')[0])
             Lx = Lx_arr[sim_num]
             dincl = float(key.split('-')[1])
-            curves = {k: v for k, v in df_dict.items() if dincl == stripper(k)}
-            N_lim = Normalise(curves, Lx) #Find normalization limit
+            curve_pair = {k: v for k, v in df_dict.items() if dincl == float(k.split('-')[1])}
+            N_lim = Normalise(curve_pair, Lx) #Find normalization limit
             
             for key in curves:
                 Alive, Dead = AliveTime(df_dict, key, N_lim)
