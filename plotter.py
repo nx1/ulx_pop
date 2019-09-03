@@ -263,12 +263,12 @@ def ResultsDictToPandas(r_dict):
         incls.append(float(inclination))
         dincls_list.append(float(dincl))
         sim_num_list.append(int(sim_num))
-    df_a['sim_num'] = sim_num_list
+    df_a['system_num'] = sim_num_list
     df_a['inclination'] = incls
     df_a['dincl'] = dincls_list
 
     
-    df_a.columns = ['alive', 'dead', 'BH_NS', 'sim_num', 'inclination', 'dincl']
+    df_a.columns = ['alive', 'dead','MCMC_iter', 'BH_NS', 'sim_num', 'system_num', 'inclination', 'dincl']
     df_a['ratio'] = df_a['alive']/(df_a['dead']+df_a['alive'])
     return df_a
 
@@ -296,7 +296,7 @@ def calc_alive_dead_curve(key):
         Alive, Dead = 1, 0
     else:
         Alive, Dead = AliveTime(df_dict, key, N_lim)
-    return Alive, Dead
+    return Alive, Dead, MCMC_iteration, BH_NS, simulation_number
 ##############################################################################
 ##############################################################################
 #########################====MAIN CODE====####################################
@@ -342,8 +342,7 @@ for MCMC_iteration in pbar:
             results = p.map(calc_alive_dead_curve, df_dict.keys())
             p.close()
             
-            for key, res in zip(df_dict.keys(), results):
-                results_dict[key] = res
+            results_dict.update(dict(zip(df_dict.keys(), results)))
 
 df_a = ResultsDictToPandas(results_dict)
 df_a.to_csv('df_a_full.csv')
@@ -364,13 +363,77 @@ df_a.to_csv('df_a_full.csv')
 
 
 
+isbhlist = []
+
+for sys_num in tqdm(df_a['system_num']):
+    is_bh = is_bh_dict[sys_num]
+    isbhlist.append(isbhlist)
+
+
+    
+df_a['is_bh'] = isbhlist
+
+for BH_NS in tqdm(df_a['BH_NS'].unique()):
+    ns=1
+    bh=1
+    cut = df_a[df_a['BH_NS'] == BH_NS]
+    for sys_num in cut['system_num']:
+        # is_bh = df.iloc[sys_num]['is_bh']
+        is_bh = is_bh_dict[sys_num]
+        
+        if is_bh  == 0:
+            ns+=1
+        else:
+            bh+=1
+    print(sim_num, bh/ns, bh, ns)
+
+for BH_NS in df_a['BH_NS'].unique():
+    cut = df_a[df_a['BH_NS'] == BH_NS]
+    N = len(cut)
+    N_ON = len(cut[cut['ratio']==1])
+    N_OFF = len(cut[cut['ratio']==0])
+    N_TRANS = N - N_ON - N_OFF
+    print(round(BH_NS,2), N, N_ON/N, N_OFF/N, N_TRANS/N)
+
+
+
+for BH_NS in df_a['BH_NS'].unique():
+    n_on = []
+    n_off = []
+    n_trans = []
+    cut = df_a[df_a['BH_NS'] == BH_NS]
+    for dincl in np.sort(df_a['dincl'].unique()):
+        cut = df_a[df_a['dincl'] == dincl]
+        N = len(cut)
+        N_ON = len(cut[cut['ratio']==1])
+        N_OFF = len(cut[cut['ratio']==0])
+        N_TRANS = N - N_ON - N_OFF
+        
+        n_on.append(N_ON)
+        
+        n_off.append(N_OFF)
+        
+        n_trans.append(N_TRANS)
+        print(round(dincl,2), N, N_ON/N, N_OFF/N, N_TRANS/N)
+    plt.figure()
+    plt.title(BH_NS)
+    plt.plot(np.sort(df_a['dincl'].unique()), n_on, label='on')
+    plt.plot(np.sort(df_a['dincl'].unique()), n_off, label='off')
+    plt.plot(np.sort(df_a['dincl'].unique()), n_trans, label='trans')  
+    plt.legend()
+
+
+cut = df_a[df_a['MCMC_iter']==4]
+
+nonzero = cut[cut['ratio']!=0]
+nonzero = nonzero[nonzero['ratio']!=1]
 
 
 
 
-
-
-
+for mcmc_iter in range(3,100):
+    cut = df_a[df_a['MCMC_iter']==mcmc_iter]
+    
 
 
 
@@ -748,3 +811,16 @@ Things you can plot:
         beaming vs alive time
 
 '''
+
+def Plot():
+    import matplotlib
+    fontsize = 10
+    matplotlib.rcParams['mathtext.fontset'] = 'stix'
+    matplotlib.rcParams['font.family'] = 'STIXGeneral'
+    plt.figure(figsize=(5.5,1.7))
+    plt.xlabel('Time', fontsize=fontsize)
+    plt.ylabel('Flux', fontsize=fontsize)
+    plt.plot(curve['Time'], curve['Flux'], c='black', linewidth=1.0)
+    plt.savefig('lightcurve.eps', format='eps', bbox_inches = "tight")
+    
+    
