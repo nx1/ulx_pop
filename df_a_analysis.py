@@ -8,10 +8,10 @@ Created on Wed Aug 14 16:00:10 2019
 
 import pandas as pd
 import numpy as np
-import corner
 import matplotlib.pyplot as plt
 import time
-from tqdm import tqdm
+from multiprocessing import Pool
+
 
 def LoadSystemsDataframe():
     """
@@ -35,14 +35,15 @@ def FilterNSBH(df):
     return df_bh, df_ns
 
 
-def CreateBHNSdict(df_bh, df_ns):
+def CreateBHNSdict(df):
     """
     create dictionary with index keys corresponding to ns or bh
     """
     bh_ns_dict = {}
+    df_bh, df_ns = FilterNSBH(df)
     for i in df_bh.index:
         bh_ns_dict[i] = 1
-        
+
     for i in df_ns.index:
         bh_ns_dict[i] = 0
     return bh_ns_dict
@@ -66,7 +67,7 @@ def ChooseBHNS(BH_RATIO):
     r = np.random.random()
     ns = df_ns.index.values
     bh = df_bh.index.values
-    
+
     if r > BH_RATIO:
         choice = np.random.choice(ns)
     if r < BH_RATIO:
@@ -95,8 +96,7 @@ class System:
         """
         if self.params['theta_half_deg'] >= 45:
             return False
-        else:
-            return True
+        return True
         
     def GetSingleSimulation(self):
         """
@@ -118,160 +118,50 @@ class System:
         return self.df_a
 
 
-class Simulate:
-    def __init__(self):
-        self.N_alive = 0
-        self.N_dead = 0
-        self.N_transient = 0
-        self.df_a = pd.read_csv('df_a_full.csv')
-        
-    def Alive_Dead_Transient(self, BH_RATIO):
-        """
-        Simulate choosing N number of ULXs and calculating alive/dead analysis
-        returns the number of alive, transient and dead systems from the simulation.
-        """
-        N = 500 #Number of ULX Draws
-        chosen_systems = [System(ChooseBHNS(BH_RATIO)) for i in range(N)]
-        for system in chosen_systems:
-            if system.isBeamed():
-                result = system.GetSingleSimulation()
-                if np.sum(result['ratio']) == 0:
-                    self.N_dead += 1
-                elif np.sum(result['ratio']) == 45:
-                    self.N_alive += 1
-                else:
-                    self.N_transient += 1
-            else:
-                self.N_alive +=1
 
-
-
-def Simulate(BH_RATIO):
+    
+def Alive_Dead_Transient(BH_RATIO):
     """
     Simulate choosing N number of ULXs and calculating alive/dead analysis
     returns the number of alive, transient and dead systems from the simulation.
     """
-    NUMBER_OF_ULX_DRAWS = 500
-    chosen_systems = [System(ChooseBHNS(BH_RATIO)) for i in range(NUMBER_OF_ULX_DRAWS)]
-    
     N_alive = 0
     N_dead = 0
     N_transient = 0
-    transient_results = pd.DataFrame()
     
+    N = 500 #Number of ULX Draws
+    
+    chosen_systems = [System(ChooseBHNS(BH_RATIO)) for i in range(N)]
+    print('Simulating {} ULXs | BH_RATIO = {}'.format(N, BH_RATIO))
+    t0 = time.time()
     for system in chosen_systems:
         if system.isBeamed():
             result = system.GetSingleSimulation()
-            # result = result.sort_values(by=['dincl'])
-            # transient_results = pd.concat([transient_results, result])
             if np.sum(result['ratio']) == 0:
                 N_dead += 1
-            if np.sum(result['ratio']) == 45:
+            elif np.sum(result['ratio']) == 45:
                 N_alive += 1
+            else:
+                N_transient += 1
         else:
             N_alive +=1
-    N_transient = NUMBER_OF_ULX_DRAWS - N_alive - N_dead
-    return [BH_RATIO, N_alive, N_dead, N_transient]
-
-          
-def MCMC_BHNS_Number():
-    results = []
+    time_taken = round((time.time() - t0), 2)
+    results = {'BH_ratio':BH_RATIO,
+               'Alive':N_alive,
+               'Dead':N_dead,
+               'Trans':N_transient,
+               }
+    print('Done! Time Taken: {}'.format(time_taken))
+    return results
     
-    for i in tqdm(range(100)):
-        for BH_RATIO in np.arange(0,1.1,0.1):
-            result = Simulate(BH_RATIO)
-            results.append(result)
-
-    results_df = pd.DataFrame.from_records(results)
-    results_df.columns = ['BH_NS', 'N_alive', 'N_dead', 'N_trans']
-    return results_df
 
 
-def ProcessAndPlotResults(results):
-    n_alives = [] 
-    n_deads = []
-    n_trans = []
-    n_alives_std = [] 
-    n_dead_std = []
-    n_trans_std = []
-    
-    for BH_RATIO in np.arange(0,1.1,0.1):
-        r_df = results_df[results_df['BH_NS']==BH_RATIO]
-        
-        mean = r_df.mean()
-        std = r_df.std()
-        
-        n_alives.append(mean['N_alive'])
-        n_alives_std.append(std['N_alive'])
-        n_deads.append(mean['N_dead'])
-        n_dead_std.append(std['N_dead'])
-        n_trans.append(mean['N_trans'])
-        n_trans_std.append(std['N_trans'])
-    
-    import matplotlib
-    matplotlib.rcParams['mathtext.fontset'] = 'stix'
-    matplotlib.rcParams['font.family'] = 'STIXGeneral'    
-    plt.figure(figsize=(5,4)) 
-    plt.errorbar(np.arange(0,1.1,0.1), n_alives, yerr=n_alives_std, label='Alive')
-    plt.errorbar(np.arange(0,1.1,0.1), n_deads, yerr=n_dead_std, label='Dead')
-    plt.errorbar(np.arange(0,1.1,0.1), n_trans, yerr=n_trans_std, label='Transient')
-    plt.xlabel('BH/NS ratio')
-    plt.ylabel('Number')
-    plt.legend()
-    plt.savefig('bhns_number.eps', format='eps', bbox_inches = "tight")
-
-
-def plotdfHist(df, name):
-    import matplotlib
-    matplotlib.rcParams['mathtext.fontset'] = 'stix'
-    matplotlib.rcParams['font.family'] = 'STIXGeneral'
-    plt.figure(figsize=(5.5,5.5))
-    plt.title(name)
-    plt.xlabel('Precession angle $\Delta i$')
-    plt.ylabel('Alive / Dead Ratio')
-    x, y = df['dincl'].values, df['ratio'].values
-    color = df['is_bh'].values
-    # corner.hist2d(x, y, bins=20)
-    # plt.scatter(x,y,s=0.1,c=color)
-    plt.hist2d(x,y, bins=45, cmap='viridis')
-    plt.colorbar()
-    # plt.savefig('dincl_vs_ratio.eps', format='eps', bbox_inches = "tight")
-
-
-#GLOBAL VARIABLES
+# GLOBAL VARIABLES
 df_a = pd.read_csv('df_a_full.csv')
 df_systems = LoadSystemsDataframe()
-
-
 df_bh, df_ns = FilterNSBH(df_systems)
 
-bh_ns_dict = CreateBHNSdict(df_bh, df_ns)
-
-df_a = AppendIsBHtoDataFrame(df_a, bh_ns_dict)
-
-df_a_ns = df_a[df_a['is_bh'] == 0]
-df_a_bh = df_a[df_a['is_bh'] == 1]
-
-df_a_ns_nonzero = FilterNonzero(df_a_ns)
-df_a_bh_nonzero = FilterNonzero(df_a_bh)
-df_a_nonzero = FilterNonzero(df_a)
-
-
-results = []
-for BH_NS in np.arange(0.1, 1.0, 0.05):
-    results.append(Main(BH_NS))
-
-ProcessAndPlotResults(results)
-
-plotdfHist(df_results, 'results')
-
-
-
-
-
-
-plotdfHist(df_a_ns, 'ns')
-plotdfHist(df_a_bh, 'bh')
-
-plotdfHist(df_a_ns_nonzero, 'ns nonzero')
-plotdfHist(df_a_bh_nonzero, 'bh nonzero')
+if __name__ == '__main__':
+    p = Pool(8)
+    BH_RATIO = list(np.arange(0, 1.05, 0.05))*100
+    results = p.map(Alive_Dead_Transient, BH_RATIO)
