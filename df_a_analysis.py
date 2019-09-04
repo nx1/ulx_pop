@@ -116,7 +116,11 @@ class System:
             self.df_a = self.df_a[self.df_a['inclination'] == r_inclination]
         assert len(self.df_a) == 45
         return self.df_a
-
+    
+    def GetSingleRow(self):
+        self.df_a = df_a[df_a['system_num']==self.num]
+        row = self.df_a.sample(n=1)
+        return row
 
 
     
@@ -146,14 +150,52 @@ def Alive_Dead_Transient(BH_RATIO):
         else:
             N_alive +=1
     time_taken = round((time.time() - t0), 2)
+    
     results = {'BH_ratio':BH_RATIO,
                'Alive':N_alive,
                'Dead':N_dead,
-               'Trans':N_transient,
-               }
+               'Trans':N_transient}
+    
     print('Done! Time Taken: {}'.format(time_taken))
     return results
     
+
+def Alive_Dead_Transient2(BH_RATIO):
+    """
+    Simulate choosing N number of ULXs and calculating alive/dead analysis
+    returns the number of alive, transient and dead systems from the simulation.
+    """
+    N_alive = 0
+    N_dead = 0
+    N_transient = 0
+    
+    N = 500 #Number of ULX Draws
+    
+    chosen_systems = [System(ChooseBHNS(BH_RATIO)) for i in range(N)]
+    print('Simulating {} ULXs | BH_RATIO = {}'.format(N, BH_RATIO))
+    t0 = time.time()
+    for system in chosen_systems:
+        if system.isBeamed():
+            result = system.GetSingleRow()
+            if result['ratio'].values == 0:
+                N_dead += 1
+            elif result['ratio'].values == 1.0:
+                N_alive += 1
+            else:
+                N_transient += 1
+        else:
+            N_alive +=1
+    time_taken = round((time.time() - t0), 2)
+    
+    results = {'BH_ratio':BH_RATIO,
+               'Alive':N_alive,
+               'Dead':N_dead,
+               'Trans':N_transient}
+    
+    print('Done! Time Taken: {}'.format(time_taken))
+    return results
+
+
 
 
 # GLOBAL VARIABLES
@@ -162,6 +204,12 @@ df_systems = LoadSystemsDataframe()
 df_bh, df_ns = FilterNSBH(df_systems)
 
 if __name__ == '__main__':
-    p = Pool(8)
     BH_RATIO = list(np.arange(0, 1.05, 0.05))*100
-    results = p.map(Alive_Dead_Transient, BH_RATIO)
+    for bh in BH_RATIO:
+        results = Alive_Dead_Transient2(bh)
+        
+    results_df = pd.DataFrame.from_dict(results)
+    random_name = 'sim_'+str(np.round(np.random.random(),4))+'.csv'
+    results_df.to_csv('./sims/'+random_name)
+
+
