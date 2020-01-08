@@ -4,6 +4,13 @@
 Created on Wed Aug 14 16:00:10 2019
 
 @author: nk7g14
+
+This file is used to calculate the number of alive/dead transient ULXs for a
+given ratio of black holes to neutron stars.
+
+It does this by querying the simulation results obtained and saved in the large
+dataframe df_a_full.csv (432mb) which contains the simulation outputs from
+ulxlc.
 """
 
 import pandas as pd
@@ -17,8 +24,8 @@ def LoadSystemsDataframe():
     """
     Load all startrack simulation outputs.
     """
-    df_master = pd.read_csv('dataframe.csv') #36420 SYSTEMS
-    df = df_master[df_master['Lx'] > 1E39]  #Only ULX -     992 ULXs
+    df_master = pd.read_csv('../data/processed/all_systems_df.csv') #36420 SYSTEMS
+    df = df_master[df_master['Lx'] > 1E39]    #Only ULX -     992 ULXs
     # df = df[df['b'] < 1]                    #Only Beamed -  227 Beamed ULXs
     # df = df[df['theta_half_deg'] < 45]      #thetha < 45 -  151 Beamed ULXs with half opening angles < 45
     df = df.reset_index()
@@ -122,45 +129,7 @@ class System:
         row = self.df_a.sample(n=1)
         return row
 
-
-    
 def Alive_Dead_Transient(BH_RATIO):
-    """
-    Simulate choosing N number of ULXs and calculating alive/dead analysis
-    returns the number of alive, transient and dead systems from the simulation.
-    """
-    N_alive = 0
-    N_dead = 0
-    N_transient = 0
-    
-    N = 500 #Number of ULX Draws
-    
-    chosen_systems = [System(ChooseBHNS(BH_RATIO)) for i in range(N)]
-    print('Simulating {} ULXs | BH_RATIO = {}'.format(N, BH_RATIO))
-    t0 = time.time()
-    for system in chosen_systems:
-        if system.isBeamed():
-            result = system.GetSingleSimulation()
-            if np.sum(result['ratio']) == 0:
-                N_dead += 1
-            elif np.sum(result['ratio']) == 45:
-                N_alive += 1
-            else:
-                N_transient += 1
-        else:
-            N_alive +=1
-    time_taken = round((time.time() - t0), 2)
-    
-    results = {'BH_ratio':BH_RATIO,
-               'Alive':N_alive,
-               'Dead':N_dead,
-               'Trans':N_transient}
-    
-    print('Done! Time Taken: {}'.format(time_taken))
-    return results
-    
-
-def Alive_Dead_Transient2(BH_RATIO):
     """
     Simulate choosing N number of ULXs and calculating alive/dead analysis
     returns the number of alive, transient and dead systems from the simulation.
@@ -199,15 +168,15 @@ def Alive_Dead_Transient2(BH_RATIO):
 
 
 # GLOBAL VARIABLES
-df_a = pd.read_csv('df_a_full.csv')
+df_a = pd.read_csv('../data/processed/df_a_full.csv')
 df_systems = LoadSystemsDataframe()
 df_bh, df_ns = FilterNSBH(df_systems)
 
 if __name__ == '__main__':
     BH_RATIO = list(np.arange(0, 1.05, 0.05))*100
-    p = Pool(2)
-    results = p.map(Alive_Dead_Transient2, BH_RATIO)
-        
+    # p = Pool(2)
+    # results = p.map(Alive_Dead_Transient, BH_RATIO)
+    results = [Alive_Dead_Transient(bh) for bh in BH_RATIO]
     results_df = pd.DataFrame.from_dict(results)
     random_name = 'sim_'+str(np.round(np.random.random(),4))+'.csv'
     results_df.to_csv('./sims/'+random_name)
