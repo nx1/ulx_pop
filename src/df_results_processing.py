@@ -4,17 +4,20 @@
 Created on Wed Sep  4 13:19:18 2019
 
 @author: nk7g14
+
+This file is used to run through the simulation outputs obtained from
+df_a_analysis.py which are in the form of several csv files
+
+each one containing for a given ratio of Black holes to neutron stars
+the number of alive, dead and transient ULXs
 """
 
 import pandas as pd
 import glob
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.interpolate import spline
-import corner
 
-
-csv_files = glob.glob('./sims/*.csv')
+csv_files = glob.glob('../data/interim/sims/*.csv')
 
 results = pd.DataFrame()
 
@@ -25,9 +28,7 @@ for file in csv_files:
 results = results.drop('Unnamed: 0', axis=1)
 
 
-
-
-states = ['Alive', 'Dead', 'Trans'] 
+states = ['Alive', 'Dead', 'Trans']
 
 res=[]
 for bh in results['BH_ratio'].unique():
@@ -45,7 +46,6 @@ for bh in results['BH_ratio'].unique():
         
         # corner.corner(cut[state], quantiles=[0.159, 0.5, 0.841], bins=30, show_titles=True)
         # plt.title(round(bh,2))
-
 
 
 
@@ -88,5 +88,6 @@ plt.fill_between(df_res_trans['BH_ratio'],
    
 plt.legend(loc='right')
 plt.tight_layout()
-                 
-plt.savefig('ADT_BHNS.eps', format='eps')
+
+plt.savefig('../reports/figures/ADT_BHNS.png', format='png', dpi=1000)
+plt.savefig('../reports/figures/ADT_BHNS.eps', format='eps')
