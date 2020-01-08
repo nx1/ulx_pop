@@ -310,14 +310,17 @@ def Plot_Evolution(df_master):
     ax1.legend()
     ax2.legend()
     ax3.legend()
-    
-    
+
+def CountBHNS(df):
+    N = len(df)
+    N_bh = len(df[df['is_bh']==1])
+    N_ns = len(df[df['is_bh']==0])
+    return [N, N_bh, N_ns]
+
 if __name__ == '__main__':
-    df_master = df_master[df_master['Lx'] > 1E39]
-    # df_master = df_master[df_master['b'] < 1]
+    #total, bh, ns
+    # df_master = df_master[df_master['Lx'] > 1E39]
     # df_master.to_csv('../dataframe.csv')
-    
-    
     # Counting pivot tables
     pd.pivot_table(df_master, index = ['Z','tage'], aggfunc='count')
     pd.pivot_table(df_master, index = ['Z','tage'], aggfunc='count', columns='is_bh')
