@@ -26,15 +26,6 @@ import glob
 import pandas as pd
 import matplotlib.pyplot as plt
 
-def LoadSystems():
-    df_master = pd.read_csv('dataframe.csv')
-    df = df_master[df_master['Lx'] < 1E39]
-    df = df_master[df_master['b'] < 1]
-    df = df.reset_index()
-    df.columns
-    df = df.drop(columns=['index', 'Unnamed: 0'])
-    return df
-
 
 def LoadCurves():
     #Importing Files

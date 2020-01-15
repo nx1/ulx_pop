@@ -17,17 +17,7 @@ import numpy as np
 import time
 import uuid
 
-def LoadSystemsDataframe():
-    """
-    Load all startrack simulation outputs.
-    """
-    df_master = pd.read_csv('../data/processed/all_systems_df.csv') #36420 SYSTEMS
-    df = df_master[df_master['Lx'] > 1E39]    #Only ULX -     992 ULXs
-    # df = df[df['b'] < 1]                    #Only Beamed -  227 Beamed ULXs
-    # df = df[df['theta_half_deg'] < 45]      #thetha < 45 -  151 Beamed ULXs with half opening angles < 45
-    df = df.reset_index()
-    df = df.drop(columns=['index', 'Unnamed: 0'])
-    return df
+from auxil import load_systems_dataframe
 
 def ChooseBHNS(BH_RATIO, df_systems):
     """
@@ -55,7 +45,7 @@ def evaluate(ratio, results):
 
 #Import csv files
 df_a = pd.read_csv('../data/processed/df_a_full.csv')
-df_systems = LoadSystemsDataframe()
+df_systems = load_systems_dataframe(ulx_only=True, beamed=False, half_opening_l_45=False)
 
 
 #specify testing parameters
