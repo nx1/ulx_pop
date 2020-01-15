@@ -1,4 +1,4 @@
-,BH_ratio,Alive,Dead,Trans
+,bh_ratio,alive,dead,transient
 0,0.0,88,160,252
 1,0.05,110,148,242
 2,0.1,116,151,233
