@@ -6,9 +6,11 @@ Created on Wed Jan 15 10:57:04 2020
 @author: nk7g14
 """
 import pandas as pd
+from pathlib import Path
 
 def load_systems_dataframe(ulx_only=False, beamed=False, half_opening_l_45=False):
-    df = pd.read_csv('../data/processed/all_systems_df.csv')
+    systems_df_path = Path('../data/processed/all_systems_df.csv')
+    df = pd.read_csv(systems_df_path)
     if ulx_only:
         df = df[df['Lx'] > 1E39]
     if beamed:
@@ -18,3 +20,7 @@ def load_systems_dataframe(ulx_only=False, beamed=False, half_opening_l_45=False
     df = df.reset_index()
     df = df.drop(columns=['index', 'Unnamed: 0'])
     return df
+
+
+#df = load_systems_dataframe(True, True, True)
+#piv = pd.pivot_table(df, index = ['Z','tage'], aggfunc='count', columns='is_bh')

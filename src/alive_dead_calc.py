@@ -10,7 +10,6 @@ ulxlc and performs alive/dead time analysis for each of them.
 
 Lightcurves are stored in .txt files
 
-
 The filename format goes as:
     simulation_number - dincl - inclination.txt
 
@@ -29,89 +28,23 @@ N_lim = 1E39 / c                  #Limiting value
 """
 import pandas as pd
 import matplotlib.pyplot as plt
-import glob
 import numpy as np
 from multiprocessing import Pool
 from tqdm import tqdm
 import os
+from pathlib import Path
 import pickle
+
+from auxil import load_systems_dataframe
+from curvefunc import load_all_curves_from_path, find_curve_by_id_and_dincl, split_curve_filename
 
 # =============================================================================
 # Functions
 # =============================================================================
 
-def LoadSystems():
-    '''
-    Loads all systems from STARTRACK from csv files
-    '''
-    df_master = pd.read_csv('dataframe.csv') #36420 SYSTEMS
-    df = df_master[df_master['Lx'] > 1E39]  #Only ULX -     992 ULXs
-    # df = df[df['b'] < 1]                    #Only Beamed -  227 Beamed ULXs
-    # df = df[df['theta_half_deg'] < 45]      #thetha < 45 -  151 Beamed ULXs with half opening angles < 45
-    df = df.reset_index()
-    # df = df.drop(columns=['index', 'Unnamed: 0'])
-    return df
 
-def LoadCurve(filename):
-    curve = pd.read_csv(filename, delimiter=' ', header=None,
-                names=['Time', 'Time_Err', 'Flux'], skiprows=3)
-    return curve
-
-def LoadCurves(folder):
-    '''
-    Loads all simulation curves outputted from xspec model ulxlc
-    '''
-    #Importing Files
-    curve_files = glob.glob('./{}/*.txt'.format(folder))
-    filename = [i.split('/')[-1][:-4] for i in curve_files]
-    df_dict = {}      #Dictionary for storing dataframes for lightcurves
-    pbar = tqdm(curve_files)
-    for filename in pbar:
-        pbar.set_description('Loading curve: %s' % filename)
-        filename_split = filename.split('/')[-1][:-4]
-        df_dict[filename_split] = LoadCurve(filename)
-    return df_dict
-
-
-def FindCurves(df, num, dincl):
-    '''
-    Returns the lightcurves corresponding to a
-    given simulation number and dincl
-    '''
-    CurveDict = {}
-    for i in df.keys():
-        split_key = i.split('-')
-        sim_num = split_key[0]
-        sim_dincl = split_key[1]
-        #sim_inclination = split_key[2]
-#        print('key:', i)
-#        print('num: {} sim_num: {}'.format(num,sim_num))
-#        print('dincl {} sim_dincl {}'.format(dincl, sim_dincl))
-#        print('inclination', sim_inclination)
-        if str(num) == str(sim_num) and str(sim_dincl) == str(dincl):
-            #print('found')
-            CurveDict[i] = df[i]
-    return CurveDict
-
-
-def GetSimulationInfo(key):
-    '''
-    Returns the row of simulation info for a given simulation key
-    '''
-    split_key = key.split('-')
-
-    sim_number = int(split_key[0])
-    dincl = split_key[1]
-    inclination = split_key[2]
-
-    row = df.loc[sim_number]
-    row['dincl'] = dincl
-    row['inclination'] = inclination
-    return row
-
-
-def GetLx(num):
-    return df.loc[num]['Lx']
+def GetLx(systems_df, system_id):
+    return systems_df.loc[system_id]['Lx']
 
 
 def AliveTime(df_dict, key, limit):
@@ -119,7 +52,6 @@ def AliveTime(df_dict, key, limit):
     Calculates for a given curve the amount of time above and below a given
     limit
     '''
-
     if max(df_dict[key]['Flux']) < limit:
         Alive = 0
         Dead = df_dict[key]['Time'].iloc[-1]
@@ -148,21 +80,15 @@ def AliveTime(df_dict, key, limit):
         df_below = df2[df2['Above'] == -1]
         Dead = np.sum(df_above['time_diff'])
         Alive = np.sum(df_below['time_diff']) + df_below['Time'].iloc[0]
-
     return Alive, Dead
 
 
-def PlotCurve(key):
-    #Plots a specific curve based on key
-    splitkey = key.split('-')
-    sim_num = splitkey[0]
-    dincl = splitkey[1]
-    inclination = splitkey[2]
-
-    curves = FindCurves(df_dict, sim_num, dincl)
-
+def PlotCurve(filename):
+    #Plots a specific curve based on filename
+    system_id, dincl, inclination = split_curve_filename(filename)
+    curves = find_curve_by_id_and_dincl(df_dict, system_id, dincl)
     N_lim = Normalise(curves)
-
+    
     fig, ax = plt.subplots()
 
     for i in curves.keys():
@@ -179,25 +105,20 @@ def Normalise(curves, Lx):
         curves = dictionary of two curves
     Takes two curves and Normalises them based on inclination
     '''
-    assert len(curve_pair) == 2
     N_lim = None
     for key in curves:
-        splitkey = key.split('-')
-        sim_num = int(splitkey[0])
-        inclination = splitkey[-1]
+        system_id, dincl, inclination = split_curve_filename(key)
+        
         # print('-----------------')
         # print('Curve:', key)
         # print('Lx:', Lx)
         if inclination == '0.0':
-
             max_flux = max(curves[key]['Flux']) #Maximum Flux
             c = Lx / max_flux                   #Scaling factor
             N_lim = 1E39 / c                    #Limiting value
             # print('Curve Maximum:', max_flux)
             # print('Normalisation factor c:', c)
             # print('Resulting N_lim:', N_lim)
-        else:
-            pass
     return N_lim
 
 
@@ -219,11 +140,9 @@ def LookAtULX(df_dict, key):
     return for each system the number of times looked vs the number of times
     alive
     '''
-    split_key = key.split('-')
-    sim_num = split_key[0]
-    dincl = split_key[1]
+    system_id, dincl, inclination = split_curve_filename(key)
 
-    curves = FindCurves(df_dict, sim_num, dincl) #Two curves
+    curves = find_curve_by_id_and_dincl(df_dict, system_id, dincl) #Two curves
     N_lim = Normalise(curves) #Find normalization limit
     for k in curves:
         inclination = k.split('-')[-1]
@@ -256,10 +175,12 @@ def ResultsDictToPandas(r_dict):
     df_a = pd.DataFrame.from_dict(results_dict, orient='index')
 
     for key, row in tqdm(df_a.iterrows()):
+        
         split_key = key.split('-')
         sim_num = split_key[0]
         inclination = split_key[-1]
         dincl = split_key[1]
+        
         incls.append(float(inclination))
         dincls_list.append(float(dincl))
         sim_num_list.append(int(sim_num))
@@ -287,11 +208,9 @@ def CalculateNormalizationLimit(zero_inclination_curve, Lx):
     return N_lim
 
 def calc_alive_dead_curve(key):
-    system_number = key.split('-')[0]
-    dincl = key.split('-')[1]
-    inclination = key.split('-')[2]
+    system_id, dincl, inclination = split_curve_filename(key)
     
-    N_lim = norm_lookup[(system_number, dincl)]
+    N_lim = norm_lookup[(system_id, dincl)]
     if N_lim == None:
         Alive, Dead = 1, 0
     else:
@@ -310,15 +229,27 @@ def calc_alive_dead_curve(key):
 # Loading curves & Systems df
 # =============================================================================
 results_dict = {}
-df = LoadSystems()
-Lx_arr = df['Lx']
+systems_df = load_systems_dataframe(True, False, False)
+Lx_arr = systems_df['Lx']
 
-with open('norm_lookup.pickle', 'rb') as handle:
+#norm_lookup contains a lookup table containing N_lim where we have simulated
+#for each of the 991 ULXs 0 inclination curves over all precessional angles
+norm_lookup_path = Path('../data/interim/norm_lookup.pickle')
+with open(norm_lookup_path, 'rb') as handle:
     norm_lookup = pickle.load(handle)
+
 
 ulxlc_folder = 'ulxlc'
 
 pbar = tqdm(range(3, 100))
+
+"""
+MCMC_ITERATION
+    |____BH_NS_RATIO
+            |_________SIMULATION_NUMBER
+                        |________________CURVE_FILE.TXT
+"""
+
 
 #Loop over all MCMC iterations
 for MCMC_iteration in pbar:
@@ -336,7 +267,7 @@ for MCMC_iteration in pbar:
             
             curve_folder = '{}/{}/{}'.format(working_dir, BH_NS, simulation_number)
             #Load up all the curves in the folder
-            df_dict = LoadCurves(curve_folder)
+            df_dict = load_all_curves_from_path(curve_folder)
 
             pbar.set_description('%s %s %s' % (MCMC_iteration, BH_NS, simulation_number))
 
@@ -380,7 +311,7 @@ for BH_NS in tqdm(df_a['BH_NS'].unique()):
     bh=1
     cut = df_a[df_a['BH_NS'] == BH_NS]
     for sys_num in cut['system_num']:
-        # is_bh = df.iloc[sys_num]['is_bh']
+        # is_bh = systems_df.iloc[sys_num]['is_bh']
         is_bh = is_bh_dict[sys_num]
         
         if is_bh  == 0:
@@ -436,79 +367,6 @@ nonzero = nonzero[nonzero['ratio']!=1]
 for mcmc_iter in range(3,100):
     cut = df_a[df_a['MCMC_iter']==mcmc_iter]
     
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-'''
-for BH_NS in [0.9, 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98 , 0.99]:
-    for folder_number in range(500):
-        working_dir = 'ulxlc_code_v0.1/curves/{}/{}'.format(BH_NS, folder_number)
-        working_dir = 'curves0'
-        
-        #Load Curves from folder to dict
-        df_dict = LoadCurves(working_dir)
-        #Find all the curves with '0' as the final split
-        zero_inclinations = {k:v for (k,v) in df_dict.items() if 0 == float(k.split('-')[2])}
-        
-        for key in tqdm(zero_inclinations):
-            sim_num = int(key.split('-')[0])
-            Lx = Lx_arr[sim_num]
-            dincl = float(key.split('-')[1])
-            curve_pair = {k: v for k, v in df_dict.items() if dincl == float(k.split('-')[1])}
-            N_lim = Normalise(curve_pair, Lx) #Find normalization limit
-            
-            for key in curves:
-                Alive, Dead = AliveTime(df_dict, key, N_lim)
-                results_dict[key] = Alive, Dead, BH_NS
-'''
-
-'''
-ulxlc_folder = 'ulxlc_code_v0.1'
-zero_incl_folder = '0_incl_curves'
-
-path = ulxlc_folder + '/' + zero_incl_folder
-dincls = np.linspace(1.0, 45, 45)
-
-norm_lookup = {}
-for folder in tqdm(df.index):
-    folder_str = str(folder)
-    try:
-        os.listdir(path + '/' + folder_str)
-    except:
-        for key in zero_incl_dict.keys():
-            dincl = key.split('-')[1]
-            norm_lookup[(folder_str, dincl)] = None
-    else:
-        zero_incl_dict = LoadCurves(path + '/' + folder_str)
-        
-        for key in zero_incl_dict.keys():
-            dincl = key.split('-')[1]
-            zero_inclination_curve = zero_incl_dict[key]
-            Lx = Lx_arr[int(folder_str)]
-    
-            N_lim = CalculateNormalizationLimit(zero_inclination_curve, Lx)        
-    
-            norm_lookup[(folder_str, dincl)] = N_lim
-'''
-
 
 def PlotHistogramResults():
     plt.figure()
@@ -593,16 +451,16 @@ plt.plot(pivot2.index, pivot2['ratio', 'mean'], color='black', linewidth=5.0)
 # Calculate explicit alive/dead for each system
 # =============================================================================
 results_dict = {}
-for sim_num in range(len(df)):
+for sim_num in range(len(systems_df)):
     Lx = GetLx(sim_num) #Get Lx for system
     for dincl in dincl_list:    #Run through all precession angles
-        curves = FindCurves(df_dict, sim_num, dincl) #Two curves
+        curves = find_curve_by_id_and_dincl(df_dict, sim_num, dincl) #Two curves
         N_lim = Normalise(curves) #Find normalization limit
         for key in curves:
             Alive, Dead = AliveTime(df_dict, key, N_lim)
             results_dict[key] = Alive, Dead
             
-    print(sim_num, '/', len(df))
+    print(sim_num, '/', len(systems_df))
 
 
 
