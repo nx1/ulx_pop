@@ -53,8 +53,6 @@ metallicities = [0.02, 0.002, 0.0002]*10
 black_hole_ratios = list(np.arange(0, 1.05, 0.05))*100
 
 
-
-
 for Z in metallicities:
     all_results = []
     df_systems_subset = df_systems[df_systems['Z'] == Z]

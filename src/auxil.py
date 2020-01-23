@@ -20,7 +20,3 @@ def load_systems_dataframe(ulx_only=False, beamed=False, half_opening_l_45=False
     df = df.reset_index()
     df = df.drop(columns=['index', 'Unnamed: 0'])
     return df
-
-
-#df = load_systems_dataframe(True, True, True)
-#piv = pd.pivot_table(df, index = ['Z','tage'], aggfunc='count', columns='is_bh')

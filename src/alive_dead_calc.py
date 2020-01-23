@@ -47,7 +47,7 @@ def GetLx(systems_df, system_id):
     return systems_df.loc[system_id]['Lx']
 
 
-def AliveTime(df_dict, key, limit):
+def calc_alive_time(df_dict, key, limit):
     '''
     Calculates for a given curve the amount of time above and below a given
     limit
@@ -214,7 +214,7 @@ def calc_alive_dead_curve(key):
     if N_lim == None:
         Alive, Dead = 1, 0
     else:
-        Alive, Dead = AliveTime(df_dict, key, N_lim)
+        Alive, Dead = calc_alive_time(df_dict, key, N_lim)
     return Alive, Dead, MCMC_iteration, BH_NS, simulation_number
 
 
@@ -293,81 +293,6 @@ df_a.to_csv('df_a_full.csv')
 #Would take approximately 992 * 45 = 44640 simulations and they would not have to be repeated.
 
 
-
-
-
-isbhlist = []
-
-for sys_num in tqdm(df_a['system_num']):
-    is_bh = is_bh_dict[sys_num]
-    isbhlist.append(isbhlist)
-
-
-    
-df_a['is_bh'] = isbhlist
-
-for BH_NS in tqdm(df_a['BH_NS'].unique()):
-    ns=1
-    bh=1
-    cut = df_a[df_a['BH_NS'] == BH_NS]
-    for sys_num in cut['system_num']:
-        # is_bh = systems_df.iloc[sys_num]['is_bh']
-        is_bh = is_bh_dict[sys_num]
-        
-        if is_bh  == 0:
-            ns+=1
-        else:
-            bh+=1
-    print(sim_num, bh/ns, bh, ns)
-
-for BH_NS in df_a['BH_NS'].unique():
-    cut = df_a[df_a['BH_NS'] == BH_NS]
-    N = len(cut)
-    N_ON = len(cut[cut['ratio']==1])
-    N_OFF = len(cut[cut['ratio']==0])
-    N_TRANS = N - N_ON - N_OFF
-    print(round(BH_NS,2), N, N_ON/N, N_OFF/N, N_TRANS/N)
-
-
-
-for BH_NS in df_a['BH_NS'].unique():
-    n_on = []
-    n_off = []
-    n_trans = []
-    cut = df_a[df_a['BH_NS'] == BH_NS]
-    for dincl in np.sort(df_a['dincl'].unique()):
-        cut = df_a[df_a['dincl'] == dincl]
-        N = len(cut)
-        N_ON = len(cut[cut['ratio']==1])
-        N_OFF = len(cut[cut['ratio']==0])
-        N_TRANS = N - N_ON - N_OFF
-        
-        n_on.append(N_ON)
-        
-        n_off.append(N_OFF)
-        
-        n_trans.append(N_TRANS)
-        print(round(dincl,2), N, N_ON/N, N_OFF/N, N_TRANS/N)
-    plt.figure()
-    plt.title(BH_NS)
-    plt.plot(np.sort(df_a['dincl'].unique()), n_on, label='on')
-    plt.plot(np.sort(df_a['dincl'].unique()), n_off, label='off')
-    plt.plot(np.sort(df_a['dincl'].unique()), n_trans, label='trans')  
-    plt.legend()
-
-
-cut = df_a[df_a['MCMC_iter']==4]
-
-nonzero = cut[cut['ratio']!=0]
-nonzero = nonzero[nonzero['ratio']!=1]
-
-
-
-
-for mcmc_iter in range(3,100):
-    cut = df_a[df_a['MCMC_iter']==mcmc_iter]
-    
-
 def PlotHistogramResults():
     plt.figure()
     # plt.hist2d(df_a_nonzero['dincl'].values, df_a_nonzero['ratio'].values,bins=80)
@@ -376,76 +301,6 @@ def PlotHistogramResults():
     plt.ylabel('alive/dead ratio')
     plt.title('151 Beamed BH ULXs, 1000 iterations per ulx in the range 0 - 45 dincl')
     plt.colorbar()
-    
-    
-def filterdfabytype():
-    mask_ns = df_a_nonzero['sim_num'].isin(ns_df.index)
-    mask_bh = df_a_nonzero['sim_num'].isin(bh_df.index)
-    
-    ns_df_a_nonzero = df_a_nonzero[mask_ns]
-    bh_df_a_nonzero = df_a_nonzero[mask_bh]
-
-
-
-
- 
-
-
-
-
-
-'''
-df_a = pd.read_csv('df_a.csv')
-df_a.set_index('Unnamed: 0.1',inplace=True)
-
-
-plt.scatter(df_a_nonzero['dincl'], df_a_nonzero['ratio'], s=0.1, c=df_a['sim_num'])
-
-
-for BH_NS in [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09]:
-    plt.figure(figsize=(12,10))
-    df_cut = df_a[df_a['BH_NS']==BH_NS]
-    plt.scatter(np.log10(df_cut['dincl']), df_cut['ratio'], s=0.1, c=df_cut['sim_num'], cmap='inferno')
-    mean = np.mean(df_cut['dincl'])
-    plt.title(str(BH_NS) + 'mean:' + str(mean))
-    # plt.savefig(str(BH_NS)+'_all.png')
-
-
-'''
-
-
-'''
-df_a = ResultsDictToPandas(results_dict)
-df_a = df_a[df_a['inclination'] != 0]
-df_a_nonzero = df_a[df_a['alive'] != 0]
-df_a_nonzero = df_a_nonzero[df_a_nonzero['dead'] != 0]
-
-pivot = pd.pivot_table(df_a, index=['sim_num'],
-                       aggfunc=('count', 'mean', 'std'))
-
-for index, mean in zip(pivot.index, pivot[('ratio', 'mean')]):
-    plt.scatter(index, mean, label=index)
-
-plt.ylabel('alive/dead ratio')
-plt.xlabel('dincl mean')
-plt.legend()
-
-'''
-'''
-# =============================================================================
-# dincl vs ratio all for each simulation
-# =============================================================================
-plt.title('28 runs, 151 systems, ratio vs dincl')
-plt.xlabel('dincl')
-plt.ylabel('ratio')
-for i in range(28):
-    chunk = pivot[('ratio', 'mean')][i]
-    plt.plot(chunk, label=str(i))
-
-#dincl vs ratio for all simulations averaged
-pivot2 = pd.pivot_table(df_a_nonzero, index=['dincl'], aggfunc=('count', 'mean', 'std'))
-plt.plot(pivot2.index, pivot2['ratio', 'mean'], color='black', linewidth=5.0)
-
 
 # =============================================================================
 # Calculate explicit alive/dead for each system
@@ -457,13 +312,13 @@ for sim_num in range(len(systems_df)):
         curves = find_curve_by_id_and_dincl(df_dict, sim_num, dincl) #Two curves
         N_lim = Normalise(curves) #Find normalization limit
         for key in curves:
-            Alive, Dead = AliveTime(df_dict, key, N_lim)
+            Alive, Dead = calc_alive_time(df_dict, key, N_lim)
             results_dict[key] = Alive, Dead
             
     print(sim_num, '/', len(systems_df))
 
 
-
+'''
 # =============================================================================
 # Look at ULX method
 # =============================================================================
@@ -478,189 +333,10 @@ for key, i in zip(df_dict.keys(), range(len(df_dict))):
         alive = LookAtULX(df_dict, key)
         alive_sum += alive
     alive_dict_looking[key] = [alive_sum, observations, alive_sum/observations]
-
-# =============================================================================
-# MULTIPROCESSING
-# =============================================================================
-
-'''
-'''
-p = Pool(6)
-
-def multiprocess(key):
-    observations = 10
-    alive_list = [0]*observations
-    alive_sum = 0
-    for i in range(observations):
-        alive = LookAtULX(df_dict, key)
-        alive_sum += alive
-    return alive_sum
-
-
-for key in df_dict.keys():
-    print(key)
-    maped = p.map(multiprocess, key)
-    print('Alive_sum:', list(maped))
-'''
 '''
 
-#Splitting by dincl
-df_a_looking = pd.DataFrame.from_dict(alive_dict_looking, orient='index')
-df_a_looking.columns = ['alive', 'observed', 'ratio']
 
-incls = []
-dincls_list = []
-for i, row in df_a_looking.iterrows():
-    split_key = i.split('-')
-    inclination = split_key[-1]
-    dincl = split_key[1]
-    incls.append(float(inclination))
-    dincls_list.append(float(dincl))
-
-df_a_looking['inclination'] = incls
-df_a_looking['dincl'] = dincls_list
-
-df_a_looking = df_a_looking[df_a_looking['inclination'] != 0]
-df_a_looking = df_a_looking[df_a_looking['alive'] != 0]
-df_a_looking = df_a_looking[df_a_looking['alive'] != observations]
-
-
-pivot = pd.pivot_table(df_a_looking, index=['dincl'], aggfunc=('count', 'mean', 'std'))
-plt.scatter(pivot.index, pivot['ratio']['mean'])
-#Histogram of dincl
-dincl_plot = 15.0
-plt.hist(df_a_looking[df_a_looking['dincl'] == dincl_plot]['ratio'], label=dincl_plot)
-plt.legend()
-
-
-# =============================================================================
-# Dictionary to pandas and analysis
-# =============================================================================
-df_a = pd.DataFrame.from_dict(results_dict, orient='index')
-
-
-incls = []
-dincls_list = []
-for i, row in df_a.iterrows():
-    split_key = i.split('-')
-    inclination = split_key[-1]
-    dincl = split_key[1]
-    incls.append(float(inclination))
-    dincls_list.append(float(dincl))
-
-df_a['inclination'] = incls
-df_a['dincl'] = dincls_list
-
-df_a.columns = ['alive', 'dead', 'inclination', 'dincl']
-df_a['ratio'] = df_a['alive'] / (df_a['dead'] + df_a['alive'])
-df_a = df_a[df_a['inclination'] != 0]
-df_a_nonzero = df_a[df_a['alive'] != 0]
-df_a_nonzero = df_a_nonzero[df_a_nonzero['dead'] !=0 ]
-
-piv1 = pd.pivot_table(df_a, index=['dincl'], aggfunc=('count', 'mean', 'std'))
-piv2 = pd.pivot_table(df_a_nonzero, index=['dincl'], aggfunc=('count', 'mean', 'std'))
-
-plt.xlabel('dincl $ \Delta i $')
-plt.ylabel('Alive/Dead Ratio')
-plt.plot(piv1.index, piv1[('ratio', 'mean')], label='all i=0 sources')
-plt.plot(piv2.index, piv2[('ratio', 'mean')], label='all nonzero i=0 sources')
-plt.legend()
-
-# =============================================================================
-# ALL SYSTEMS HISTOGRAM
-# =============================================================================
-plt.title('Alive time distribution for {} sources'.format(len(df_a)))
-plt.hist(df_a['alive'], bins=30)
-plt.show()
-
-#plt.savefig('figures/alive_hist_all.eps', format='eps', dpi=1000)
-#plt.savefig('figures/alive_hist_all.png', format='png', dpi=1000)
-#
-# =============================================================================
-# ALL NONZERO SYSTEMS HISTOGRAM
-# =============================================================================
-plt.title('Alive time distribution for {} sources'.format(len(df_a_nonzero)))
-plt.hist(df_a_nonzero['alive'], bins=30)
-plt.show()
-
-#plt.savefig('figures/alive_hist_nonzero.eps', format='eps', dpi=1000)
-#plt.savefig('figures/alive_hist_nonzero.png', format='png', dpi=1000)
-
-# =============================================================================
-# ALL SYSTEMS ALIVE TIME VS DINCL (PRECESSION ANGLE)
-# =============================================================================
-plt.scatter(df_a['dincl'], df_a['alive'])
-#plt.savefig('figures/dincl_alive_all.eps', format='eps', dpi=1000)
-#plt.savefig('figures/dincl_alive_all.png', format='png', dpi=1000)
-# =============================================================================
-# ALL NON-ZERO SYSTEMS ALIVE TIME VS DINCL (PRECESSION ANGLE)
-# =============================================================================
-df_a_nonzero_5 = df_a_nonzero[df_a['dincl'] == 5]
-df_a_nonzero_10 = df_a_nonzero[df_a['dincl'] == 10]
-df_a_nonzero_15 = df_a_nonzero[df_a['dincl'] == 15]
-df_a_nonzero_20 = df_a_nonzero[df_a['dincl'] == 20]
-df_a_nonzero_25 = df_a_nonzero[df_a['dincl'] == 25]
-df_a_nonzero_30 = df_a_nonzero[df_a['dincl'] == 30]
-df_a_nonzero_35 = df_a_nonzero[df_a['dincl'] == 35]
-df_a_nonzero_40 = df_a_nonzero[df_a['dincl'] == 40]
-df_a_nonzero_45 = df_a_nonzero[df_a['dincl'] == 45]
-
-biglist = [df_a_nonzero_5,
-df_a_nonzero_10,
-df_a_nonzero_15,
-df_a_nonzero_20,
-df_a_nonzero_25,
-df_a_nonzero_30,
-df_a_nonzero_35,
-df_a_nonzero_40,
-df_a_nonzero_45]
-
-print('{} {} {} {}'.format('dincl', 'mean', 'std', '# systems'))
-for i in biglist:
-    print('{} {} {} {}'.format(
-            np.mean(i['dincl']),
-            round(np.mean(i['ratio']), 3),
-            round(np.std(i['ratio']), 3),
-            len(i['ratio']),
-            ))
-
-for i in dincl_list:
-    cut = df_a_nonzero[df_a['dincl'] == i]
-    plt.scatter(cut['dincl'], cut['alive'], label=i)
-
-plt.xlabel('dincl')
-plt.ylabel('alive/dead')
-#plt.savefig('figures/dincl_alive_nonzero.eps', format='eps', dpi=1000)
-#plt.savefig('figures/dincl_alive_nonzero.png', format='png', dpi=1000)
-
-# =============================================================================
-# ALL NON-ZERO SYSTEMS ALIVE TIME VS DINCL (PRECESSION ANGLE) MEANS
-# =============================================================================
-for i in dincl_list:
-    cut = df_a_nonzero[df_a['dincl'] == i]
-    plt.scatter(np.mean(cut['dincl']), np.mean(cut['ratio']), label=i)
-
-
-plt.xlabel('dincl')
-plt.ylabel('alive/dead')
-plt.legend()
-#plt.savefig('figures/dincl_alive_nonzero_mean.eps', format='eps', dpi=1000)
-#plt.savefig('figures/dincl_alive_nonzero_mean.png', format='png', dpi=1000)
-
-# =============================================================================
-# SPECIFIC LIGHTCURVES and LIMIT
-# =============================================================================
 PlotCurve('0-10.0-0')
-
-
-
-'''
-
-'''
-for i in np.arange(30,40):
-    print(str(i)+'-10.0-0')
-    PlotCurve(str(i)+'-10.0-0')
-'''
 
 '''
 Things you can plot:
@@ -669,10 +345,9 @@ Things you can plot:
         Dead Time vs dincl
         Ratio vs dincl
         beaming vs alive time
-
 '''
 
-def Plot():
+def plot_curve():
     import matplotlib
     fontsize = 10
     matplotlib.rcParams['mathtext.fontset'] = 'stix'
