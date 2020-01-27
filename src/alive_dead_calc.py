@@ -122,52 +122,6 @@ def Normalise(curves, Lx):
     return N_lim
 
 
-def LookAtULX(df_dict, key):
-    '''
-    This method will attempt to calculate the alive/dead probability
-    in a different manner.
-    Instead of the previous method of calculating the ratio of time
-    above and below the curve, this method will randomly select a time
-    on the time series to observe the curve.
-    We may either do this in an instantanous fashion or use a time interval
-    that could correspond to E-ROSITA exposure time. the issue with this, is
-    that the the time output from the system is in abitrary time units and so
-    constraints on the period of Lense-Thirring precession would be required in
-    order to normalise it.
-
-        Pick random value in time range
-    check to see if it's below or above N_lim
-    return for each system the number of times looked vs the number of times
-    alive
-    '''
-    system_id, dincl, inclination = split_curve_filename(key)
-
-    curves = find_curve_by_id_and_dincl(df_dict, system_id, dincl) #Two curves
-    N_lim = Normalise(curves) #Find normalization limit
-    for k in curves:
-        inclination = k.split('-')[-1]
-        if inclination == '0':
-            pass
-        else:
-#            print('Found system of inclination:', inclination)
-            time = curves[k]['Time']
-            flux = curves[k]['Flux']
-            rand = np.random.randint(low=0, high=len(time))
-#            print('selected random time bin:', rand)
-#            print('timebin corresponds to: t =', time[rand])
-#            print('Associated flux is: f = ', flux[rand])
-            if flux[rand] > N_lim:
-                
-#                print('Flux:', flux[rand], 'N_lim:', N_lim)
-#                print('Alive!')
-                alive = 1
-            else:
-#                print('Flux:', flux[rand], 'N_lim:', N_lim)
-#                print('Dead :(')
-                alive = 0
-    return alive
-
-
 def ResultsDictToPandas(r_dict):
     incls = []
     dincls_list = []
@@ -316,24 +270,6 @@ for sim_num in range(len(systems_df)):
             results_dict[key] = Alive, Dead
             
     print(sim_num, '/', len(systems_df))
-
-
-'''
-# =============================================================================
-# Look at ULX method
-# =============================================================================
-alive_dict_looking = {}
-observations = 1000 #Number of observations per system
-
-for key, i in zip(df_dict.keys(), range(len(df_dict))):
-    print(i, '/', len(df_dict))
-    #print(key)
-    alive_sum = 0
-    for i in range(observations):
-        alive = LookAtULX(df_dict, key)
-        alive_sum += alive
-    alive_dict_looking[key] = [alive_sum, observations, alive_sum/observations]
-'''
 
 
 PlotCurve('0-10.0-0')

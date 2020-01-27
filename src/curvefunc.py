@@ -25,15 +25,27 @@ def load_curve_file(path):
                         names=['Time', 'Time_Err', 'Flux'], skiprows=3)
     return curve
 
+def load_curve_file_skip_footer(path):
+    '''
+    path: pathlib Path
+    '''
+    curve = pd.read_csv(path, delimiter=' ', header=None,
+                        names=['Time', 'Time_Err', 'Flux'], skiprows=3,
+                        skipfooter=9)
+    return curve
 
-def load_all_curves_from_path(path):
+
+def load_all_curves_from_path(path, skip_footer=False):
     '''
     path: pathlib Path
     '''
     df_dict = {}
     for p in path.glob('*.txt'):
         filename = p.stem
-        df_dict[filename] = load_curve_file(p)
+        if skip_footer:
+            df_dict[filename] = load_curve_file_skip_footer(p)
+        else:
+            df_dict[filename] = load_curve_file(p)
     return df_dict
 
 
@@ -72,8 +84,8 @@ def get_simulation_info(systems_df, filename):
 # Datasets
 # =============================================================================
 
-def load_zero_inclination_curves():
-    curves_dir = "../data/interim/curves/227_systems_0_inclination_curves"
+def load_151_systems_zero_inclination_curves():
+    curves_dir = Path("../data/interim/curves/151_systems_0_inclination_curves")
     curves_path = Path(curves_dir)
-    df_dict = load_all_curves_from_path(curves_path)
+    df_dict = load_all_curves_from_path(curves_path, skip_footer=True)
     return df_dict
