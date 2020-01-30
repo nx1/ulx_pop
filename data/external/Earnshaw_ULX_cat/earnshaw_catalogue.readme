@@ -1,0 +1,19 @@
+Column descriptions for the catalogue of ultraluminous X-ray source candidates presented in Earnshaw+ (2018):
+
+
+Column		Unit		Description
+1-318		-		As in 3XMM-DR4 (Rosen+ 2015)
+319-384		-		As in RC3 (de Vaucouleurs+ 1991), with values from CNG (Karachentsev+ 2004) inserted into corresponding columns
+385-392 	- 		Galaxy properties from NED, including DISTANCE_NED calculated from the VELOCITY_NED using H0 = 75 km/s
+393-402		-		Galaxy properties from NBG (Tully & Fisher 1988)
+403		Mpc		The distance to the galaxy as an average of NED Distance Database (NED-D) entries using the best method (below)
+404		Mpc		The 1-sigma uncertainty on the NED-D distance
+405		- 		The method of distance estimation used to calculate the NED-D distance (first available of Cepheids, TRGB, SN1a and T-F)
+406		- 		The number of entries using the above method averaged to produce the NED-D distance
+407-408		Mpc		The best distance to the galaxy and its source (first available of NED-D, NBG, NED, RC3/CNG)
+409		mag		The absolute BT magnitude of the host galaxy, calculated from BT_MAG_CORR and DISTANCE_BEST
+410		arcsec		The angular separation between the detection position and the NED galaxy position
+411		arcsec		The minimum separation, defined as the angular separation minus three times the detection position uncertainty
+412-414		erg/s		The full-band (0.2-12.0 keV) luminosity, uncertainty and sum of the two, calculated from EP_8_FLUX(_ERR) and DISTANCE_BEST
+415-420		-		Flags indicating whether the source is present in six previous ULX catalogues
+421-423		-		Flags indicating whether the source is located in a galaxy complete to 10^38, 10^39 and 10^40 erg/s
