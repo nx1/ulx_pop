@@ -12,7 +12,7 @@ import numpy as np
 
 
 fig, ax = plt.subplots()
-ax.set_ylim(-1,25)
+ax.set_ylim(-1,50)
 
 curve_init = pd.read_csv('0.txt', delimiter=' ',
               header=None, names=['Time', 'Time_Err', 'Flux'], skiprows=3)
@@ -49,4 +49,4 @@ def animate(i):
     return line,  text
 
 
-ani = animation.FuncAnimation(fig, animate, init_func = init, interval = 500, blit=True, repeat=True, frames=45)
+ani = animation.FuncAnimation(fig, animate, init_func = init, interval = 50, blit=True, repeat=True, frames=45)

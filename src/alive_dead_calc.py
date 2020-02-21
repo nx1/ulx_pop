@@ -36,7 +36,7 @@ from pathlib import Path
 import pickle
 
 from auxil import load_systems_dataframe
-from curvefunc import load_all_curves_from_path, find_curve_by_id_and_dincl, split_curve_filename
+from curvefunc import load_all_curves_from_path, find_curve_by_id_and_dincl, split_curve_filename, calc_alive_time
 
 # =============================================================================
 # Functions
@@ -47,40 +47,7 @@ def GetLx(systems_df, system_id):
     return systems_df.loc[system_id]['Lx']
 
 
-def calc_alive_time(df_dict, key, limit):
-    '''
-    Calculates for a given curve the amount of time above and below a given
-    limit
-    '''
-    if max(df_dict[key]['Flux']) < limit:
-        Alive = 0
-        Dead = df_dict[key]['Time'].iloc[-1]
-        return Alive, Dead
-    if min(df_dict[key]['Flux']) > limit:
-        Alive = df_dict[key]['Time'].iloc[-1]
-        Dead = 0
-        return Alive, Dead
 
-    curve = df_dict[key]
-    curve['Above'] = curve['Flux'].map(lambda x: 1 if x >= limit else -1)
-
-    df2 = curve[curve['Above'].diff() != 0]
-    df2['time_diff'] = df2['Time'].diff()
-
-    if len(df2) == 1:   #If the Curve never goes above the limit
-        Alive = 0.0
-        Dead = curve['Time'].iloc[-1]
-    elif df2['Above'][0] == -1: #If the curve starts below the limit
-        df_above = df2[df2['Above'] == 1]
-        df_below = df2[df2['Above'] == -1]
-        Dead = np.sum(df_above['time_diff']) + df_above['Time'].iloc[0]
-        Alive = np.sum(df_below['time_diff'])
-    elif df2['Above'][0] == 1: #If the curve starts above the limit
-        df_above = df2[df2['Above'] == 1]
-        df_below = df2[df2['Above'] == -1]
-        Dead = np.sum(df_above['time_diff'])
-        Alive = np.sum(df_below['time_diff']) + df_below['Time'].iloc[0]
-    return Alive, Dead
 
 
 def PlotCurve(filename):
@@ -104,6 +71,7 @@ def Normalise(curves, Lx):
     inputs :
         curves = dictionary of two curves
     Takes two curves and Normalises them based on inclination
+    
     '''
     N_lim = None
     for key in curves:
@@ -168,7 +136,7 @@ def calc_alive_dead_curve(key):
     if N_lim == None:
         Alive, Dead = 1, 0
     else:
-        Alive, Dead = calc_alive_time(df_dict, key, N_lim)
+        Alive, Dead = calc_alive_time(df_dict[key], N_lim)
     return Alive, Dead, MCMC_iteration, BH_NS, simulation_number
 
 
@@ -266,7 +234,7 @@ for sim_num in range(len(systems_df)):
         curves = find_curve_by_id_and_dincl(df_dict, sim_num, dincl) #Two curves
         N_lim = Normalise(curves) #Find normalization limit
         for key in curves:
-            Alive, Dead = calc_alive_time(df_dict, key, N_lim)
+            Alive, Dead = calc_alive_time(df_dict[key], N_lim)
             results_dict[key] = Alive, Dead
             
     print(sim_num, '/', len(systems_df))

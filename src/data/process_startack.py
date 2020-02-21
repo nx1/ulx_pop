@@ -25,17 +25,18 @@ Msol = 1.989E33 #Mass of sun in g
 Myr = 31557600 * 1E6 #1 Myr in Seconds
 yr = 31557600 #1 yr in Seconds
 
-
-a_bh = 0.998 #Black hole max spin
-a_ns = 0.001 #NS average spin
-
 G_SI = 6.67408E-11 #N.(m^2)/(kg)^2 
 G = 6.674E-8 #(cm)^3 g^-1 s^-2
 pi = np.pi
 
+#GR constants
+epsilon_wind = 0.25 #Normally between 0.25 to 0.95 (check latex)
+beta = 1.4 #Velocity of the wind, distinct from the beta used in ulxlc
+
 
 '''
 FILE NAMES:
+===========
     eg: 'Z_0.002_tage_20.dat'
     'Z_0.002' = Metallicity = 0.002
     Metallicity range: 0.0002 - 0.02 
@@ -44,14 +45,26 @@ FILE NAMES:
 
 
 COLUMN NAMES:
+=============
+    ['mdot', 'm', 'Z', 'tage', 'is_bh', 'mdot_gs', 'LEdd', 'MEdd',
+       'mdot_ratio', 'XLsph', 'XLsph2', 'LXtot', 'b', 'Lx', 'ratio',
+       'ratio_beamed', 'theta', 'theta_deg', 'theta_half_deg', 'zeta',
+       'r_schw', 'r_isco_nospin', 'r_isco', 'r_sph', 'r_out', 'P_wind',
+       'f_wind'] 
 
+
+COLUMN DESCRIPTONS:
+===================
     mdot:
         mass transfer rate (in solar masses per Myr; to the disk, not to the accretor, 
         which is lower due to the mass loss in disk wind),
+        units: M_sol / Myr
     
     m:
         mass of a compact object (in solar masses; we assumed that these with a mass 
         lower than 2.5 Msun are NSs, whereas the heavier ones are BHs).
+        
+        units: M_sol
     
     idum, iidd:
         identificators of the system in the simulations. They have no physical meaning,
@@ -59,127 +72,182 @@ COLUMN NAMES:
     
     Z:
         Metallicity | range: 0.0002 - 0.02 
-    
+        units: Solar metallicity
+        
     tage:
-        Age of system (time since ZAMS in Myr). | range: 10 - 10000   
-    
+        Age of system time since Zero age main sequence (ZAMS)
+        units: Myr
+        
+        
     Mass Accretion rates:
+    =====================
         mdot_gs:
-            Mass Accretion rate in grams per second
+            see mdot
+            units: grams / second
+            
         mdot_ratio:
             Eddington Ratio
+            units: None (Eddington)
+            
         MEdd:
             Mass Accretion rate for eddington.
             defined by the equation LEdd / n c^2 where n = 1/12 for BH and 0.2 for NS
-            (See Grzegorz Wiktorowicz 2017 Appendix)      
+            (See Grzegorz Wiktorowicz 2017 Appendix)
+            units: None (Eddington)
+            
     
     Luminosities:
+    =============
         LEdd:
             Eddington Luminosity in erg/s from (1.2E38 * m)
+            units: erg / s
         XLsph:
             A.R King method with log contribution 
+            units: erg / s
         XLsph2:
             A.R King Method without log contribution
+            units: erg / s
         LXtot:
             Grzegorz Wiktorowicz Method
+            units: erg / s
         Lx:
             Beamed Luminosity from Lxtot/b
             In the 2018 paper by Greg they propose the following:
                 Lx = Ledd * (1 + ln(mdot))  for mdot > 1
                 Lx = Ledd * mdot            for mdot < 1
+            units: erg / s
         ratio:
             Ratio of LXtot/Ledd
+            units: None
         ratio_beamed:
             Ratio of Lx/Ledd
+            units: None
             
-    Beaming:
+            
+    Cone Geometry:
+    ==============
     b:
         Beaming parameter set by the following:
             b = 1 for m_dot < 8.5
             b = 73/mdot**2 >= 8.5
             b = 3.2E-3 for >150
-        
-        Examples of b to theta (Full opening angle):
-            b = 0.0032  | theta = 9.2 deg
-            b = 0.01    | theta = 16.8 deg
-            b = 0.022   | theta = 24 deg
-            b = 0.077   | theta = 45 deg
-            b = 0.1     | theta = 53 deg
-            b = 0.2     | theta = 73.9 deg
-            b = 0.3     | theta = 91 deg
-            b = 1.0     | theta = 180 deg (No beaming)
+        units: None
             
     theta:
-        cone opening angle in rad
-        Calculated from b = 1 - cos(theta/2)
+        cone opening angle:
+            b = 1 - cos(theta/2)
+        units: radians
+        
     theta_deg:
-        cone opening angle in rad
+        cone opening angle 
+        units: degrees
+        
     theta_half_deg:
-        cone half opening angle in rad
+        cone half opening angle
+        units: degrees
+        
 
 
-ULXLC:
-    norm - Normalisation
-    period - Period of the light curve
-    phase - Phase since the start of the lightcurve
-    theta - Half opening angle
-    incl - Inclination of system (90 is edge on)
-    dincl - Presccesion angle
-    beta - velocity of the outflow; given in units of the speed of light
-    dopulse - 0 or 1 for full lightcurve or 1 pulse
+For now we will use:
 
 
-PROCESS:
-    1) Create light curve for given system for variety of dincl
-        norm = 1 
-        period = 10
-        phase = 0
-        theta = from df
-        incl = random(0,90)
-        dincl = [0, 5 , 10, 30, 45]
-        beta = 0.5
-        dopulse = 0 
-       
-    2) Save light curve
-    3) Filename  = mdot,m,Z,tage,dincl
+    General Relativity:
+    ===================
+        zeta:
+            tan of the opening angle of the wind, floor set at zeta=2
+            zeta = tan[pi/2 - arccos(1 - 73 / mdot^2)]
+            units: None
+                
+        r_g:
+            Gravitational radius
+            G*m / c^2
+            units: cm
+        
+        a*:
+            System spin, currently black holes are set to maximum spin
+            while neutron stars are set to an average spin.
+                a_bh = 0.998
+                a_ns = 0.001
+            units: None
             
-    how to export the model from XSPEC:
-        after plotting the model
-        >ipl
-        >wdata [filename]
-        
-        
-    1) use python to run xspec script
-    2) once you get to PLT> bit use python to run the command wdata
-    3) use python to repeat this for different parameters
-    4) Once you have all files perform the analysis in python
+        r_schw:
+            Schwartzchild radius
+                2*G*m / c^2
+            units: R_g
+                
+        r_isco_nospin:
+            Innermost stable circular orbit for non spinning object (r_in)
+                6*G*m / c^2
+                3*r_schw
+            units: R_g
+                
+        r_isco:
+            Innermost stable circular orbit (r_in)
+                6 for a = 0.001 (NS) (low spin)
+                1.25 for a =  0.998 (BH) (maximally spinning)
+            units: R_g
+                
+        r_sph:
+            spherization radius
+                r_isco * mdot
+            
+            * alternatively from King 2009, we could use:
+                R_sph = 27 * mdot_ratio * r_schw / 4
+                
+            units: R_g
+                
+        r_out:
+            3 * epsilon_wind / (beta * zeta' * mdot_ratio^3/2 * r_isco
+            units: R_g (from r_isco)
+            where:
+                beta = 1.4 | wind velocity
+                units:(?)
+                
+                epsilon_wind = 0.25
+                given by L_wind / L_tot and is normally between 0.25 and 0.95
+                units: None
 
-
+        P_wind_at_rsph:
+            Precession period at r_sph
+            (G * m * pi) / (3 * c^3 * a) * r_out^3 * [ (1 - (r_in/r_out)^3) / ( ln( r_out / r_in ) )]
+            where all radii are expressed in units of r_g see Middleton 2017, 2019
+            units: seconds
+            
+        P_envelope:
+            precession period of the optically thick envolope
+            (G * m * pi) / (3 * c^3 * a) * r_sph^3 * [ (1 - (r_in/r_out)^3) / ( ln( r_out / r_in ) )] * (r_out/r_sph)
+            where all radii are expressed in units of r_g see Middleton 2017, 2019
+            units: seconds
 '''
 
-def ImportFiles():
-    files = glob.glob('../../data/external/data_mdot/*.dat')
+#def ImportFiles():
+#    files = glob.glob('../../data/external/data_mdot/*.dat')
+#
+#    for filename in files:
+#        # print(filename)
+#        df_dict[filename] = pd.read_csv(filename, delim_whitespace=True,
+#               header=None, names=['mdot', 'm', 'idum', 'iidd'])
+#        
+#        cut_string = filename.split('/')[-1].split(sep='_', maxsplit=4)
+#        df_dict[filename]['Z'] = float(cut_string[1])
+#        df_dict[filename]['tage'] = float(cut_string[3][:-4])
+#        
+#    
+#    # Concat all the datafames into one.
+#    df_master = pd.concat(df_dict, ignore_index=True)
+#    df_master = df_master.drop(['idum'], axis=1) #Drop useless columns
+#    df_master = df_master.drop(['iidd'], axis=1) #Drop useless columns
+#    
+#    return df_master
+#
+#
+#
+#df_master = ImportFiles()
 
-    for filename in files:
-        # print(filename)
-        df_dict[filename] = pd.read_csv(filename, delim_whitespace=True,
-               header=None, names=['mdot', 'm', 'idum', 'iidd'])
-        
-        cut_string = filename.split('/')[-1].split(sep='_', maxsplit=4)
-        df_dict[filename]['Z'] = float(cut_string[1])
-        df_dict[filename]['tage'] = float(cut_string[3][:-4])
-        
-    
-    # Concat all the datafames into one.
-    df_master = pd.concat(df_dict, ignore_index=True)
-    df_master = df_master.drop(['idum'], axis=1) #Drop useless columns
-    df_master = df_master.drop(['iidd'], axis=1) #Drop useless columns
-    df_master['is_bh'] = np.where(df_master['m'] < 2.5, 0 , 1) #Add type column
-    return df_master
-
-
-
-df_master = ImportFiles()
+df_master = pd.read_csv('../../data/processed/system_df_immutable/startrack_concat.csv')
+df_master.index = df_master['Unnamed: 0']
+df_master = df_master.drop(['Unnamed: 0'], axis=1)
+df_master['is_bh'] = np.where(df_master['m'] < 2.5, 0 , 1) #Add type column
 
 m = df_master['m']
 mdot = df_master['mdot']
@@ -235,95 +303,42 @@ df_master['theta_deg'] = df_master['theta'] * 180/np.pi #deg
 df_master['theta_half_deg'] = df_master['theta_deg'] / 2 #Half opening angle
 
 
-
-# Zeta is the opening angle of the wind
-# we will also set a floor of zeta = 2
 df_master['zeta'] = np.tan((pi/2) - np.arccos(1 - (73/(df_master['mdot_ratio']**2))))
 df_master['zeta'] = np.where(df_master['zeta'] <= 2, 2, df_master['zeta'])
 
 
-# Constants used for calculating r_out
-# epsilon_wind is given by L_wind / L_tot and is normally between 0.25 and 0.95
-epsilon_wind = 0.25 #Normally between 0.25 to 0.95 (check latex)
-beta = 1.4 #Velocity of the wind, distinct from the beta used in ulxlc
-
-'''
-For now we will use:
-    r_in = 6 for a = 0.001 (NS)
-    r_in = 1.25 for a =  0.998 (BH)
-'''
-
 # General Relativity stuff
-df_master['r_schw'] = 2 * G * m * Msol / c**2   #Schwarzschild radius (cm)
-df_master['r_isco_nospin'] = (6 * G * m * Msol) / c**2 #ISCO (nospin) (cm)
+df_master['R_g'] = (G * m*Msol) / c**2 #gravitational radii
+df_master['a*'] = np.where(m<2.5, 0.001, 0.998)
+
+df_master['r_schw'] = ((2 * G * m * Msol) / c**2) / df_master['R_g']
+df_master['r_isco_nospin'] = ((6 * G * m * Msol) / c**2) / df_master['R_g']
 df_master['r_isco'] = np.where(m < 2.5, 6, 1.25)    #Units of R_g (i think)
 df_master['r_sph'] = df_master['r_isco'] * df_master['mdot_ratio']
 df_master['r_out'] = 3 * epsilon_wind / (beta * df_master['zeta']) * df_master['mdot_ratio']**3/2 * df_master['r_isco']
-df_master['P_wind'] = np.where(m < 2.5,
-         G * m * Msol * pi / (3 * c**3 * a_ns) * df_master['r_out']**3 * ((1 - (df_master['r_isco']/df_master['r_out']))**3)/(np.log(df_master['r_out']/df_master['r_isco'])),
-         G * m * Msol * pi / (3 * c**3 * a_bh) * df_master['r_out']**3 * ((1 - (df_master['r_isco']/df_master['r_out']))**3)/(np.log(df_master['r_out']/df_master['r_isco'])))
-df_master['f_wind'] = 1 / df_master['P_wind']
-df_master = df_master.sort_values('Z')
-df_master = df_master.sort_values('tage')
-df_master = df_master.reset_index()
-df_master = df_master.drop('index', axis=1)
-df_master.to_csv('../../data/processed/dataframe.csv')
+
+df_master['P_inflow_at_rsph'] = (G * m * Msol * pi) / (3 * c**3 * df_master['a*']) * df_master['r_sph']**3 * ((1 - (df_master['r_isco']/df_master['r_sph']))**3)/(np.log(df_master['r_sph']/df_master['r_isco']))
+df_master['P_envelope'] = (G * m * Msol * pi) / (3 * c**3 * df_master['a*']) * df_master['r_sph']**3 * ((1 - (df_master['r_isco']/df_master['r_sph']))**3)/(np.log(df_master['r_sph']/df_master['r_isco'])) * (df_master['r_out']/df_master['r_sph'])**2
+df_master['P_wind'] = (G * m * Msol * pi) / (3 * c**3 * df_master['a*']) * df_master['r_out']**3 * ((1 - (df_master['r_isco']/df_master['r_out']))**3)/(np.log(df_master['r_out']/df_master['r_isco']))
+
+df_master['P_inflow_days'] = df_master['P_inflow_at_rsph'] / (24*60*60)
+df_master['P_envelope_days'] = df_master['P_envelope'] / (24*60*60)
+df_master['P_wind_days'] = df_master['P_wind'] / (24*60*60)
 
 
-# =============================================================================
-# Plotting Functions
-# =============================================================================
-def Plot_Mass_Lx(df):
-    """
-    Plots Mass vs Luminosity for all systems in a specified dataframe
-    splits into subplots according to Z and tage and colors them based on if
-    they are black holes or neutron stars.
-
-    Parameters
-    ----------
-    df : Pandas Dataframe
-        Pandas dataframe containing the simulation output
-    """
-    fig, axarr = plt.subplots(3, 10)
-    for i, tage in enumerate(df['tage'].unique()):
-        for j, Z in enumerate(df['Z'].unique()):
-            # print(i, j, Z, tage)
-            mask = (df['Z'] == Z) & (df['tage'] == tage)
-            
-            m = np.log10(df[mask]['m'])
-            Lx = np.log10(df[mask]['Lx'])
-            is_bh = df[mask]['is_bh']
-            axarr[j, i].scatter(m, Lx , s=1.0, c=is_bh, cmap='coolwarm')
-            axarr[0, i].set_title('t = %s' % tage)
-            axarr[j, 0].set_ylabel('Z = %s' % Z)
-
-def Plot_Evolution(df_master):
-    f, (ax1, ax2, ax3) = plt.subplots(3,1)
-    pivot = pd.pivot_table(df_master, index = ['Z','tage'], aggfunc='count', columns='is_bh')
-    pivot['LEdd'][0][:8].plot(ax=ax1, label='NS') # Z: 0.0002 | NS
-    pivot['LEdd'][0][8:15].plot(ax=ax2, label='NS') # Z: 0.002 | NS
-    pivot['LEdd'][0][15:].plot(ax=ax3, label='NS') # Z: 0.002 | NS
-    
-    pivot['LEdd'][0][:8].plot(ax=ax1, label='BH') # Z: 0.0002 | BH
-    pivot['LEdd'][0][8:15].plot(ax=ax2, label='BH') # Z: 0.002 | BH
-    pivot['LEdd'][0][15:].plot(ax=ax3, label='BH') # Z: 0.002 | BH
-   
-    ax1.legend()
-    ax2.legend()
-    ax3.legend()
-
-def CountBHNS(df):
-    N = len(df)
-    N_bh = len(df[df['is_bh']==1])
-    N_ns = len(df[df['is_bh']==0])
-    return [N, N_bh, N_ns]
 
 if __name__ == '__main__':
-    #total, bh, ns
-    # df_master = df_master[df_master['Lx'] > 1E39]
-    # df_master.to_csv('../dataframe.csv')
-    # Counting pivot tables
+#    df_master = df_master[df_master['Lx'] > 1E39]
+#    df_master = df_master[df_master['b'] < 1]
+    
+#    Counting pivot tables
     pd.pivot_table(df_master, index = ['Z','tage'], aggfunc='count')
     pd.pivot_table(df_master, index = ['Z','tage'], aggfunc='count', columns='is_bh')
-    Plot_Mass_Lx(df_master)
+    
+    
+    # =========================================================================
+    # UNCOMMENT THIS FOR CHANGES TO DATAFRAME
+    # =========================================================================
+    
+#    df_master.to_csv('../../data/processed/dataframe.csv')
     

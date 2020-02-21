@@ -12,11 +12,10 @@ import pandas as pd
 from io import StringIO
 import numpy as np
 from auxil import load_systems_dataframe, load_0_inclination_N_lim_dict
+import os
+from uuid import uuid4
+from tqdm import tqdm
 
-systems_df = load_systems_dataframe(True, True, True)
-Lx_series = systems_df['Lx']
-
-limit_dict = load_0_inclination_N_lim_dict()
 
 def Normalise(curve, Lx):
     '''
@@ -75,20 +74,45 @@ def calc_alive_time(curve, limit):
         Alive = np.sum(df_below['time_diff']) + df_below['Time'].iloc[0]
     return Alive, Dead
 
+def create_simulation_info_dict(simulation_info_list):
+    info = dict([tuple(simulation_info_list[i].split(':')) for i in range(len(simulation_info_list))])
+    return info
 
-
-#curve_files = glob.glob('./new_curves/*.txt')
-#for curve_file in curve_files:
+if __name__ == '__main__':
+    systems_df = load_systems_dataframe(True, True, True)
+    Lx_series = systems_df['Lx']
     
-
-with open('./new_curves/a7232574-74cb-4240-a5b1-2e0fbf5262ca.txt', 'r') as file:
-    data = file.read()
-    simulation_info = data.splitlines()[-9:]
-    system_id = int(simulation_info[0].split(':')[1])
+    limit_dict = load_0_inclination_N_lim_dict()
+    curve_files = glob.glob('./new_curves/*.txt')
+    done_files = list(pd.read_csv('done_files.csv')['file'])
     
-    curve = curvefunc.load_curve_file_skip_footer(StringIO(data))
-    Lx = Lx_series[882]
-    key = str(system_id) + '-' + str(dincl)
-    limit_dict[key]
-    alive, dead = calc_alive_time(curve, limit)
+    save_every = 50000
     
+    results_list = []
+    
+    for run_number, curve_file in tqdm(enumerate(files_to_do)):
+        
+        with open(curve_file, 'r') as file:
+            data = file.read()
+            simulation_info_list = data.splitlines()[-9:]
+            simulation_info = create_simulation_info_dict(simulation_info_list)
+            curve = curvefunc.load_curve_file_skip_footer(StringIO(data))
+        
+        Lx = Lx_series[882]
+        key = simulation_info['system_id'] + '-' + simulation_info['dincl'].strip()
+        limit = limit_dict[key]
+        alive, dead = calc_alive_time(curve, limit)
+        simulation_info['alive'] = alive
+        simulation_info['dead'] = dead
+        simulation_info['ratio'] = np.divide(alive,dead)
+        results_list.append(simulation_info)
+        if run_number%save_every == 0:
+            print('run_number:', run_number, 'saving...')
+            df_results = pd.DataFrame(results_list)
+            df_results.to_csv('new_curve_results/'+str(uuid4())+'.csv')
+            results_list = []
+        
+    
+    
+        
+        

@@ -57,8 +57,9 @@ def append_parameters_to_lightcurve_files(lightcurve_filename, system_id ,parame
         for k, v in parameters.items():
             myfile.write(f'{k}: {v}\n')
 
-def run_ulxlc(xcm_filename, parameters, system_id, lightcurve_filename):
+def run_ulxlc(xcm_filename, parameters, system_id, lightcurve_filename, append_to_file=False):
     make_xcm(xcm_filename, parameters, lightcurve_filename)
     run_xcm(xcm_filename)
-    append_parameters_to_lightcurve_files(lightcurve_filename, system_id ,parameters)
+    if append_to_file:
+        append_parameters_to_lightcurve_files(lightcurve_filename, system_id ,parameters)
     os.remove(xcm_filename)

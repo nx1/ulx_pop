@@ -47,4 +47,4 @@ def animate(i):
     
     return line,  text
 
-ani = animation.FuncAnimation(fig, animate, init_func = init, interval = 50, blit=True, repeat=True, frames=50)
+ani = animation.FuncAnimation(fig, animate, init_func = init, interval = 50, blit=True, repeat=True, frames=89)
