@@ -67,33 +67,20 @@ def sample_curve(curve, curve_period, N_lim, sampling_interval, number_of_repeat
     a random position somwhere in the first period.
     number_of_repeats: number of MC iterations
     """
-    time_arr = list(curve['Time'])
-    flux_arr = list(curve['Flux'])
+    time_arr = np.array(curve['Time'])
+    flux_arr = np.array(curve['Flux'])
     
-    sample_times = []
     truth = []
     for n in tqdm(range(number_of_repeats)):
-        start_time = np.random.uniform(0, curve_period)
-        sample_times.append([(start_time + i*sampling_interval) for i in range(0,9)])
-    
-    fluxes = [[flux_arr[time_arr.index(auxil.find_nearest(time_arr, t))] for t in eRASS] for eRASS in tqdm(sample_times)]
-    for n in tqdm(range(number_of_repeats)):
-        truth.append([f>N_lim for f in fluxes[n]])
+        start_time = np.random.uniform(0, 50)
+        sample_times = np.array([(start_time + i*30*6)%curve_period for i in range(0,9)])
+        sample_indexes = [np.argmin(np.abs(time_arr - t)) for t in sample_times]
         
-    return sample_times, fluxes, truth
-
-
-
-sample_times = []
-truth = []
-for n in tqdm(range(1000)):
-    start_time = np.random.uniform(0, 50)
-    sample_times.append([(start_time + i*6) for i in range(0,9)])
-
-
-
-
-
+        fluxes = flux_arr[sample_indexes]
+        
+        truth.append(list(np.where(fluxes > N_lim, True, False)))
+        
+    return truth
     
 def truth_table_processor(truth):
     """Runs through the 8*N is ulx truth table
@@ -139,15 +126,17 @@ def make_simulation_settings_file():
         f.write(f'SAMPLING_INTERVAL: {SAMPLING_INTERVAL} \n')
         
         f.write(f'Z: {Z}')
-        
+
 if __name__ == '__main__':
     SIMULATION_UUID = str(uuid4())
     MAXIMUM_P_WIND = 365 * 4
     ULXLC_PERIOD = 50 #Period to output lightcurves from ulxlc
     NUMBER_OF_SAMPLED_SYSTEMS = 500 #How many samples we wish to create
-    NUMBER_OF_SAMPLING_ITERATIONS = 100 #How many MC sampling iterations
+    NUMBER_OF_SAMPLING_ITERATIONS = 100000 #How many MC sampling iterations
     SAMPLING_INTERVAL = 30*6 #days
-    Z = 0.02 #Metallicity to test
+    Z = 0.0002 #Metallicity to test
+    
+    print(f'RUNNING SIMULATION: {SIMULATION_UUID}')
     
     SAVE_FOLDER = Path(f'../data/interim/eROSITA_sampling_results/{SIMULATION_UUID}')
 
@@ -160,7 +149,7 @@ if __name__ == '__main__':
     df_systems = df_systems[df_systems['Z'] == Z]
     
     #Only select rows with system ids correspondng to our subset
-#    df_a = auxil.load_df_a(transient_only=True)
+    df_a = auxil.load_df_a(transient_only=False)
     df_a = df_a[df_a['system_id'].isin(df_systems.index)]
     
     # Create dataframe of systems to test
@@ -185,15 +174,15 @@ if __name__ == '__main__':
         curve = curvefunc.scale_light_curve_period(curve, ULXLC_PERIOD, P_wind)  
         curve_0 = curvefunc.scale_light_curve_period(curve_0, ULXLC_PERIOD, P_wind)
         
-        curve = curvefunc.multiply_curve(curve, P_wind, 6*365)
+        # curve = curvefunc.multiply_curve(curve, P_wind, 6*365)
         
         N_lim = curvefunc.get_lightcurve_ULX_flux_limit(curve_0, Lx)
         
-        sample_times, fluxes, truth = sample_curve(curve,
-                                                   curve_period=P_wind,
-                                                   N_lim=N_lim,
-                                                   sampling_interval=SAMPLING_INTERVAL,
-                                                   number_of_repeats=NUMBER_OF_SAMPLING_ITERATIONS)    
+        truth = sample_curve(curve,curve_period=P_wind,
+                             N_lim=N_lim,
+                             sampling_interval=SAMPLING_INTERVAL,
+                             number_of_repeats=NUMBER_OF_SAMPLING_ITERATIONS)  
+        
         results = truth_table_processor(truth)
         df_results[index] = results
         

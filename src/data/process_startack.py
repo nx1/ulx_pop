@@ -328,7 +328,7 @@ df_master['P_wind_days'] = df_master['P_wind'] / (24*60*60)
 
 
 if __name__ == '__main__':
-#    df_master = df_master[df_master['Lx'] > 1E39]
+    df_master = df_master[df_master['Lx'] > 1E39]
 #    df_master = df_master[df_master['b'] < 1]
     
 #    Counting pivot tables

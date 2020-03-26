@@ -62,4 +62,7 @@ def run_ulxlc(xcm_filename, parameters, system_id, lightcurve_filename, append_t
     run_xcm(xcm_filename)
     if append_to_file:
         append_parameters_to_lightcurve_files(lightcurve_filename, system_id ,parameters)
-    os.remove(xcm_filename)
+    try:
+        os.remove(xcm_filename)
+    except:
+        print('xcm file not found')
