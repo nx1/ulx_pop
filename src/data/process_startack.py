@@ -32,7 +32,8 @@ pi = np.pi
 #GR constants
 epsilon_wind = 0.25 #Normally between 0.25 to 0.95 (check latex)
 beta = 1.4 #Velocity of the wind, distinct from the beta used in ulxlc
-
+NS_SPIN = 0.001
+BH_SPIN = 0.998
 
 '''
 FILE NAMES:
@@ -309,7 +310,7 @@ df_master['zeta'] = np.where(df_master['zeta'] <= 2, 2, df_master['zeta'])
 
 # General Relativity stuff
 df_master['R_g'] = (G * m*Msol) / c**2 #gravitational radii
-df_master['a*'] = np.where(m<2.5, 0.001, 0.998)
+df_master['a*'] = np.where(m<2.5, NS_SPIN, BH_SPIN)
 
 df_master['r_schw'] = ((2 * G * m * Msol) / c**2) / df_master['R_g']
 df_master['r_isco_nospin'] = ((6 * G * m * Msol) / c**2) / df_master['R_g']
@@ -341,4 +342,6 @@ if __name__ == '__main__':
     # =========================================================================
     
 #    df_master.to_csv('../../data/processed/dataframe.csv')
-    
+
+    df_master['P_wind_days']
+
