@@ -33,7 +33,7 @@ pi = np.pi
 epsilon_wind = 0.25 #Normally between 0.25 to 0.95 (check latex)
 beta = 1.4 #Velocity of the wind, distinct from the beta used in ulxlc
 NS_SPIN = 0.001
-BH_SPIN = 0.998
+BH_SPIN = 0.5
 
 '''
 FILE NAMES:
@@ -342,6 +342,3 @@ if __name__ == '__main__':
     # =========================================================================
     
 #    df_master.to_csv('../../data/processed/dataframe.csv')
-
-    df_master['P_wind_days']
-
