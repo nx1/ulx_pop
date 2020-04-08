@@ -33,7 +33,7 @@ pi = np.pi
 epsilon_wind = 0.25 #Normally between 0.25 to 0.95 (check latex)
 beta = 1.4 #Velocity of the wind, distinct from the beta used in ulxlc
 NS_SPIN = 0.001
-BH_SPIN = 0.5
+BH_SPIN = 0.998
 
 '''
 FILE NAMES:
@@ -184,8 +184,7 @@ For now we will use:
                 
         r_isco:
             Innermost stable circular orbit (r_in)
-                6 for a = 0.001 (NS) (low spin)
-                1.25 for a =  0.998 (BH) (maximally spinning)
+                Set to be 6 for both NS and BH (no spin)
             units: R_g
                 
         r_sph:
@@ -314,7 +313,8 @@ df_master['a*'] = np.where(m<2.5, NS_SPIN, BH_SPIN)
 
 df_master['r_schw'] = ((2 * G * m * Msol) / c**2) / df_master['R_g']
 df_master['r_isco_nospin'] = ((6 * G * m * Msol) / c**2) / df_master['R_g']
-df_master['r_isco'] = np.where(m < 2.5, 6, 1.25)    #Units of R_g (i think)
+df_master['r_isco'] = 6
+# df_master['r_isco'] = np.where(m < 2.5, 6, 1.25)  #We were previously using r_isco = 1.25 for BH and 6 for NS
 df_master['r_sph'] = df_master['r_isco'] * df_master['mdot_ratio']
 df_master['r_out'] = 3 * epsilon_wind / (beta * df_master['zeta']) * df_master['mdot_ratio']**3/2 * df_master['r_isco']
 
@@ -329,10 +329,10 @@ df_master['P_wind_days'] = df_master['P_wind'] / (24*60*60)
 
 
 if __name__ == '__main__':
-    df_master = df_master[df_master['Lx'] > 1E39]
-#    df_master = df_master[df_master['b'] < 1]
+    # df_master = df_master[df_master['Lx'] > 1E39]
+    # df_master = df_master[df_master['b'] < 1]
     
-#    Counting pivot tables
+    # Counting pivot tables
     pd.pivot_table(df_master, index = ['Z','tage'], aggfunc='count')
     pd.pivot_table(df_master, index = ['Z','tage'], aggfunc='count', columns='is_bh')
     
@@ -341,4 +341,4 @@ if __name__ == '__main__':
     # UNCOMMENT THIS FOR CHANGES TO DATAFRAME
     # =========================================================================
     
-#    df_master.to_csv('../../data/processed/dataframe.csv')
+    df_master.to_csv('../../data/processed/dataframe.csv')
