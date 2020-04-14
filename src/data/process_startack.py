@@ -264,8 +264,9 @@ LEdd = df_master['LEdd']
 
 # Eddington Mass, Obtained from the following prescription:
 # Ledd = eta * M_dot_Eddington * c^2
-# where eta = 0.2 for NS and 1/12 for bh
-df_master['MEdd'] = np.where(m <= 2.5, LEdd / (0.2 * c**2), LEdd / (1/12 * c**2))
+# where eta = 1/12 for bh and ns, since we are considering mass transfer to the disc and not the compact object
+# This is distinctly different to what was done by Wiktorowicz who used 1/12 for BH and 0.2 for NS.
+df_master['MEdd'] =LEdd / (1/12 * c**2))
 MEdd = df_master['MEdd']    
 
 
