@@ -11,13 +11,49 @@ XSPEC model ulxlc: http://www.sternwarte.uni-erlangen.de/~dauser/research/ulxlc/
 DATA FILES
 ==========
 There are several data files that are too large for github.
-
 data/interim/df_a.csv contains the MC simulation results from calculating alive/dead/transient systems from lightcurves.
 
- 
-ulxlc_code_v0.1/Batch.py
-========================
+
+PIPELINE
+========
+1. src/data/process_startrack.py
+Raw datafiles from STARTRACK located in /data/external/data_mdot are processed using src/data/process_startrack.py
+This file combines the raw data to create a dataframe with the required columns for further calculation and saved in
+/data/processed/all_systems_df.csv.
+
+2. src/ulxlc_runner.py
+will sample systems from a df_a.csv (selecting only the systems that are beamed ULXs with opening angles < 45)
+and run ulxlc to create a lightcurve with the system's specific parameters and the specified parameters for ULXLC.
+The lightcurves are saved with the pattern:
+
+simulation_number-dincl-inclination.txt 
+
+The optional argument can be provided to append the simulation information to the .txt file.
+
+3. src/alive_dead_calc.py
+Used to process the lightcurve files and classify the system as either alive/dead/transient.
+This may be done explicitly, (i.e. calculating the exact amount of time a curve is above or below 1e39 limit)
+or (TODO) in a 'quick' manner i.e does the lightcurve span over the 1e39 range and therefore is transient
+
+The results of this processed are saved in the file:
+/data/interim/df_a.csv
+
+4. src/df_a_analysis.py
+samples from df_a to calculate the effect of the BH_ratio on the alive/dead/transient population
+
+The results from these simulations are saved in:
+data/interim/sims_with_metallicity/{Z}/{results.csv}
+
+
+5. alive_dead_transient_plotter.py
+Is used to plot the results from step 4
+
+
+
+src/Batch.py
+============
 This script is used to automate running the ulxlc XSPEC model
-http://www.sternwarte.uni-erlangen.de/~dauser/research/ulxlc/
 and save the plotted lightcurves to text files.
+
+
 

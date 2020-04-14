@@ -6,11 +6,10 @@ Created on Wed Aug 14 16:00:10 2019
 
 This script is used to simulate sampling from a population of ULXs of a given
 black hole to neutron star ratio and evaluating the number of ULXs that are
-either always visible, sometimes visible or never visible.
+either always visible (alive), sometimes visible (transient) or never visible (dead).
 
 It does this by querying the simulation results obtained and saved in the large
-dataframe df_a_full.csv (432mb) which contains the simulation outputs from
-ulxlc.
+dataframe df_a.csv which contains the simulation outputs from ulxlc.
 """
 import pandas as pd
 import numpy as np

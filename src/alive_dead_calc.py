@@ -47,9 +47,6 @@ def GetLx(systems_df, system_id):
     return systems_df.loc[system_id]['Lx']
 
 
-
-
-
 def PlotCurve(filename):
     #Plots a specific curve based on filename
     system_id, dincl, inclination = split_curve_filename(filename)
