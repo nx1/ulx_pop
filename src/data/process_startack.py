@@ -92,7 +92,8 @@ COLUMN DESCRIPTONS:
             
         MEdd:
             Mass Accretion rate for eddington.
-            defined by the equation LEdd / n c^2 where n = 1/12 for BH and 0.2 for NS
+            defined by the equation LEdd / n c^2 where n = 1/12 for NS and BH
+            * Greg used 0.2 for NS
             (See Grzegorz Wiktorowicz 2017 Appendix)
             units: None (Eddington)
             
@@ -266,7 +267,7 @@ LEdd = df_master['LEdd']
 # Ledd = eta * M_dot_Eddington * c^2
 # where eta = 1/12 for bh and ns, since we are considering mass transfer to the disc and not the compact object
 # This is distinctly different to what was done by Wiktorowicz who used 1/12 for BH and 0.2 for NS.
-df_master['MEdd'] =LEdd / (1/12 * c**2))
+df_master['MEdd'] =LEdd / (1/12 * c**2)
 MEdd = df_master['MEdd']    
 
 
