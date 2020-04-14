@@ -8,31 +8,13 @@ on the observed population of ULXs (in prep).
 XSPEC model ulxlc: http://www.sternwarte.uni-erlangen.de/~dauser/research/ulxlc/
 
 
-STARTRACK FILES
-===============
-Raw data files from STRARTRACK are found in data/external/data_mdot
-File name guide:
-    eg: 'Z_0.002_tage_20.dat'
-    'Z_0.002' = Metallicity
-    'tage_20' = Age of system (time since ZAMS in Myr).
+DATA FILES
+==========
+There are several data files that are too large for github.
 
-COLUMN NAMES:
-mdot:
-    mass transfer rate (in solar masses per Myr; to the disk, not to the accretor, 
-    which is lower due to the mass loss in disk wind),
-m:
-    mass of a compact object (in solar masses; we assumed that these with a mass 
-    lower than 2.5 Msun are NSs, whereas the heavier ones are BHs).
-idum, iidd:
-    identificators of the system in the simulations. They have no physical meaning,
-    but will allow to find more info about some potentially odd, or interesting system.
-Z:
-    Metallicity | range: 0.0002 - 0.02 
-tage:
-    Age of system (time since ZAMS in Myr). | range: 10 - 10000
+data/interim/df_a.csv contains the MC simulation results from calculating alive/dead/transient systems from lightcurves.
 
-
-
+ 
 ulxlc_code_v0.1/Batch.py
 ========================
 This script is used to automate running the ulxlc XSPEC model
