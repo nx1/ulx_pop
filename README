@@ -46,14 +46,5 @@ data/interim/sims_with_metallicity/{Z}/{results.csv}
 
 
 5. alive_dead_transient_plotter.py
-Is used to plot the results from step 4
-
-
-
-src/Batch.py
-============
-This script is used to automate running the ulxlc XSPEC model
-and save the plotted lightcurves to text files.
-
-
-
+Is used to plot the results from step 4.
+ 
