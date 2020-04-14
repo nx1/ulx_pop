@@ -31,8 +31,7 @@ ulxlc_parameters = {'period': 10.0,
 
 
 
-while True:
-    
+while True: 
     sample = systems_df['theta_half_deg'].sample()
     selected_theta = sample.values[0]
     selected_id = sample.index[0]
@@ -42,6 +41,8 @@ while True:
         for d in dincls:
             ulxlc_parameters['dincl'] = d
 
-            xcm_n = str(uuid4())+'.xcm'
-            lc_n = 'new_curves/'+str(uuid4())+'.txt'
+            filename =  f'{selected_id}-{d}-{i}'
+            xcm_n = f'{filename}.xcm'
+            lc_n = f'{filename}.txt'
             batchfunc.run_ulxlc(xcm_n, ulxlc_parameters, selected_id, lc_n)
+
