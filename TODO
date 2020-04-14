@@ -1,5 +1,7 @@
 TODO
 ====
 [x] Recreate all systems dataframe with eta = 0.2
+[x] Install xspec
+[x] install ulxlc 
 [ ] Re-run NS systems lightcurves 
 

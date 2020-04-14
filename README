@@ -5,8 +5,16 @@ This repo contains auxilary files for the paper entitled The effect of Lense-Thi
 on the observed population of ULXs (in prep).
 
 
+ULXLC
+=====
 XSPEC model ulxlc: http://www.sternwarte.uni-erlangen.de/~dauser/research/ulxlc/
-
+How to install locally:
+    1. Extract to desired location
+    2. sudo apt install tcsh
+    3. ./compile_ulxlc.csh 
+    4. set LOCAL_MODEL_DIRECTORY in /home/.xspec/Xspec.init
+    5. add export ULXLC_TABLE_PATH=/home/x1/localmodels/ulxlc to .bashrc
+    
 
 DATA FILES
 ==========
