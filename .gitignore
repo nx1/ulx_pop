@@ -2,3 +2,5 @@ data/interim/curves/
 data/old/
 data/processed/df_a.csv
 data/interim/eROSITA_sampling_results/
+src/__pycache__/
+.spyproject/

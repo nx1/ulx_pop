@@ -221,31 +221,7 @@ For now we will use:
             units: seconds
 '''
 
-#def ImportFiles():
-#    files = glob.glob('../../data/external/data_mdot/*.dat')
-#
-#    for filename in files:
-#        # print(filename)
-#        df_dict[filename] = pd.read_csv(filename, delim_whitespace=True,
-#               header=None, names=['mdot', 'm', 'idum', 'iidd'])
-#        
-#        cut_string = filename.split('/')[-1].split(sep='_', maxsplit=4)
-#        df_dict[filename]['Z'] = float(cut_string[1])
-#        df_dict[filename]['tage'] = float(cut_string[3][:-4])
-#        
-#    
-#    # Concat all the datafames into one.
-#    df_master = pd.concat(df_dict, ignore_index=True)
-#    df_master = df_master.drop(['idum'], axis=1) #Drop useless columns
-#    df_master = df_master.drop(['iidd'], axis=1) #Drop useless columns
-#    
-#    return df_master
-#
-#
-#
-#df_master = ImportFiles()
-
-df_master = pd.read_csv('../../data/processed/system_df_immutable/startrack_concat.csv')
+df_master = pd.read_csv('../../data/processed/startrack_concat.csv')
 df_master.index = df_master['Unnamed: 0']
 df_master = df_master.drop(['Unnamed: 0'], axis=1)
 df_master['is_bh'] = np.where(df_master['m'] < 2.5, 0 , 1) #Add type column
@@ -343,4 +319,4 @@ if __name__ == '__main__':
     # UNCOMMENT THIS FOR CHANGES TO DATAFRAME
     # =========================================================================
     
-    df_master.to_csv('../../data/processed/dataframe.csv')
+    df_master.to_csv('../../data/processed/all_systems_df.csv')

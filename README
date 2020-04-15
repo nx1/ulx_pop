@@ -24,17 +24,23 @@ data/interim/df_a.csv contains the MC simulation results from calculating alive/
 
 PIPELINE
 ========
+0. startrack data
+Raw datafiles from STARTRACK located in /data/external/data_mdot
+The data from these files were combined into the file /data/processed/startrack_concat.csv
+From this point forward, the unique system_id of each system is specified by the index in startrack_concat.csv
+
 1. src/data/process_startrack.py
-Raw datafiles from STARTRACK located in /data/external/data_mdot are processed using src/data/process_startrack.py
-This file combines the raw data to create a dataframe with the required columns for further calculation and saved in
-/data/processed/all_systems_df.csv.
+Takes the data from /data/processed/startrack_concat.csv
+and calculates various other quantities which are saved in the file
+/data/processed/all_systems_df.csv
 
 2. src/ulxlc_runner.py
 will sample systems from a df_a.csv (selecting only the systems that are beamed ULXs with opening angles < 45)
 and run ulxlc to create a lightcurve with the system's specific parameters and the specified parameters for ULXLC.
 The lightcurves are saved with the pattern:
 
-simulation_number-dincl-inclination.txt 
+simulation_number-dincl-inclination.txt
+and all lightcurve files are saved in data/curves/
 
 The optional argument can be provided to append the simulation information to the .txt file.
 

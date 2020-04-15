@@ -3,5 +3,25 @@ TODO
 [x] Recreate all systems dataframe with eta = 0.2
 [x] Install xspec
 [x] install ulxlc 
-[ ] Re-run NS systems lightcurves 
+[-] Re-run MC lightcurves
+[ ] Process MC lightcurves
+[ ] Recalculate BH/NS ratio plots
+[ ] redo eRASS simulation with BH/NS ratio  
+
+NOTES
+=====
+Changing the accretion efficiency has actually resulted in my populations
+for ULX, beamed ULX etc Changing, therefore old ids are no longer valid and
+I have chosen to change them to the absolute ids assigned at the start if something
+like this were to happen again.
+
+
+1. The MC alive/dead/plot and simulations are only run on:
+    ULX systems \w \theta / 2 < 45.
+    I need to make this clearer in the paper.
+
+2. What percentage of the TOTAL ULX population is either Alive/Dead/Transient as a function of dincl?
+
+    141 are potentially alive/dead/transient for which we calculate MC distributions.
+    the remaining are always alive.
 

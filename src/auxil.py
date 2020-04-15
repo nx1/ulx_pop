@@ -16,7 +16,6 @@ def load_systems_dataframe(ulx_only=False, beamed=False, half_opening_l_45=False
     df = pd.read_csv(systems_df_path)
     if ulx_only:
         df = df[df['Lx'] > 1E39]
-        df = df.reset_index()
     if beamed:
         df = df[df['b'] < 1]
     if half_opening_l_45:

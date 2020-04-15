@@ -18,8 +18,14 @@ def make_xcm(xcm_filename, parameters, lightcurve_filename):
     '''
     Creates xcm script file for use in XSPEC.
     
-    xcm_filename: name of xcm file with extension
-    parameters: dictionary of model parameters
+    Parameters
+    ----------
+    xcm_filename : string
+        Name of xcm file
+    parameters : dictionary 
+        ULXLC parameters
+    lightcurve_filename : string
+        Name of output lightcurve filename
     '''
     F = open(xcm_filename, 'w')
 
@@ -46,23 +52,21 @@ exit'''
 
 def run_xcm(xcm_filename):
     '''
-    XCMfile: XCM file including extension
+    Run xcm file using XSPEC
+
+    Parameters
+    ----------
+    xcm_filename : string
     '''
-    devnull = open(os.devnull, 'w')
+    devnull = open(os.devnull, 'w') # Use Null device so no printing to the terminal occurs, siginificantly faster
     subprocess.call([f'xspec - {xcm_filename}'], shell=True, stdout=devnull)
 
-def append_parameters_to_lightcurve_files(lightcurve_filename, system_id ,parameters):
-    with open(lightcurve_filename, "a") as myfile:
-        myfile.write(f"system_id:{system_id}\n")
-        for k, v in parameters.items():
-            myfile.write(f'{k}: {v}\n')
 
-def run_ulxlc(xcm_filename, parameters, system_id, lightcurve_filename, append_to_file=False):
+def run_ulxlc(xcm_filename, parameters, lightcurve_filename):
     make_xcm(xcm_filename, parameters, lightcurve_filename)
     run_xcm(xcm_filename)
-    if append_to_file:
-        append_parameters_to_lightcurve_files(lightcurve_filename, system_id ,parameters)
     try:
         os.remove(xcm_filename)
     except:
         print('xcm file not found')
+
