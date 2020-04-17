@@ -20,7 +20,8 @@ DATA FILES
 ==========
 There are several data files that are too large for github.
 data/interim/df_a.csv contains the MC simulation results from calculating alive/dead/transient systems from lightcurves.
-
+data/curves/ contains the outputted lightcurves from ULXLC, these are around ~170kb each but end up adding upto a lot when
+you have around 500k of them.
 
 PIPELINE
 ========
@@ -39,18 +40,37 @@ will sample systems from a df_a.csv (selecting only the systems that are beamed 
 and run ulxlc to create a lightcurve with the system's specific parameters and the specified parameters for ULXLC.
 The lightcurves are saved with the pattern:
 
-simulation_number-dincl-inclination.txt
+theta-dincl-inclination.txt
+
+Where theta and dincl are the half opening angles and the precessional angles.
+
 and all lightcurve files are saved in data/curves/
 
-The optional argument can be provided to append the simulation information to the .txt file.
+For our simulations, the following fixed parameters were used:
+period  = 10.0
+phase   = 0.0
+beta    = 0.2
+norm    = 1.0
+dopulse = 0.0
 
-3. src/alive_dead_calc.py
+3. src/create_normalisation_lookup.py
+Run through 0 inclination lightcurves and calculate normalisation ULX
+limits at 1E39 ergs equivilent, store the output in a .pkl file for further use.
+
+The pickle file can be found in /data/interim/N_lim_dict.pickle
+
+final dict is in the form:
+N_lim_dict = {dincl-inclination: N_lim}
+
+
+3. src/curve_processor.py
 Used to process the lightcurve files and classify the system as either alive/dead/transient.
-This may be done explicitly, (i.e. calculating the exact amount of time a curve is above or below 1e39 limit)
-or (TODO) in a 'quick' manner i.e does the lightcurve span over the 1e39 range and therefore is transient
+Does this in a 'quick' manner i.e does the lightcurve span over the 1e39 range and therefore is transient.
 
 The results of this processed are saved in the file:
-/data/interim/df_a.csv
+/data/interim/curve_classications.csv
+
+
 
 4. src/df_a_analysis.py
 samples from df_a to calculate the effect of the BH_ratio on the alive/dead/transient population

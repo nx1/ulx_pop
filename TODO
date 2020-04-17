@@ -3,9 +3,11 @@ TODO
 [x] Recreate all systems dataframe with eta = 0.2
 [x] Install xspec
 [x] install ulxlc 
-[-] Re-run MC lightcurves
+[x] Re-run MC lightcurves
+[x] Create N_lim dict for 0 inclination curves
+[ ] Write fast lighturve processor
 [ ] Process MC lightcurves
-[ ] Recalculate BH/NS ratio plots
+[ ] Recalculate BH/NS ratio plots (change Z order)
 [ ] redo eRASS simulation with BH/NS ratio  
 
 NOTES
@@ -14,6 +16,27 @@ Changing the accretion efficiency has actually resulted in my populations
 for ULX, beamed ULX etc Changing, therefore old ids are no longer valid and
 I have chosen to change them to the absolute ids assigned at the start if something
 like this were to happen again.
+
+I have also thought that the previous quantity that we were calculation
+known as 'ratio', i.e. The measure of how transient a paticular system is
+actually not paticularly of use.
+    1. Previously calculating this value basically showed that the distribution of transient systems
+    just seemed to be 'guassian' on ratio=0.5, i.e the majority of transient systems were on 50% of the time.
+    So far the quantity is useful for creating a pretty plot showing the effect of dincl on the transient population
+    however the same effect is much better illustrated by showing the relative number of alive/dead/transient systems
+    against dincl.
+
+What i want to save from the lightcurves?
+1. classification | alive/dead/transient
+2. Simulation information
+    The changing quantities for ULXLC are:
+        theta - dincl - inclination
+
+Since a lot of the curves will likely have the same theta, (maximally beamed saturation)
+I can probably avoid a lot of repeated calculations for these systems.
+
+
+
 
 
 1. The MC alive/dead/plot and simulations are only run on:
