@@ -37,51 +37,6 @@ def load_curve_file_skip_footer(path):
     return curve
 
 
-def load_all_curves_from_path(path, skip_footer=False):
-    '''
-    path: pathlib Path
-    '''
-    df_dict = {}
-    for p in path.glob('*.txt'):
-        filename = p.stem
-        if skip_footer:
-            df_dict[filename] = load_curve_file_skip_footer(p)
-        else:
-            df_dict[filename] = load_curve_file(p)
-    return df_dict
-
-
-def split_curve_filename(filename):
-    """splits a string of form system_id-dincl-inclination"""
-    system_id = filename.split('-')[0]
-    dincl = filename.split('-')[1]
-    inclination = filename.split('-')[2]
-    return system_id, dincl, inclination
-
-
-def find_curve_by_id_and_dincl(df_dict, system_id, dincl):
-    '''
-    Returns the lightcurves corresponding to a
-    given simulation number and dincl
-    '''
-    CurveDict = {}
-    for i in df_dict.keys():
-        curve_system_id, curve_dincl, inclination = split_curve_filename(i)
-        if str(curve_system_id) == str(system_id) and str(curve_dincl) == str(dincl):
-            CurveDict[i] = df_dict[i]
-    return CurveDict
-
-
-def get_simulation_info(systems_df, filename):
-    '''
-    Returns the row of simulation info for a given simulation key
-    '''
-    system_id, dincl, inclination = split_curve_filename(filename)
-    row = systems_df.loc[system_id]
-    row['dincl'] = dincl
-    row['inclination'] = inclination
-    return row
-
 
 def calc_alive_time(curve, limit):
     '''
@@ -146,25 +101,13 @@ def scale_light_curve_period(curve, original_period, new_period):
     return curve
 
 
-
 def get_lightcurve_ULX_flux_limit(curve_0, Lx):
     '''
     obtain ULX normalisation limit for two curves.
     curve_0: curve at 0 inclination
     Lx: maximum value of 0 inclination curve.
     '''
-    N_lim = None
     zero_incl_max_flux = max(curve_0['Flux'])
     c = Lx / zero_incl_max_flux     #Curve Normalisation constant
     N_lim = 1E39 / c
     return N_lim
-
-# =============================================================================
-# Datasets
-# =============================================================================
-
-def load_151_systems_zero_inclination_curves():
-    curves_dir = Path("../data/interim/curves/151_systems_0_inclination_curves")
-    curves_path = Path(curves_dir)
-    df_dict = load_all_curves_from_path(curves_path, skip_footer=True)
-    return df_dict
