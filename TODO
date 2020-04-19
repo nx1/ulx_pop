@@ -48,3 +48,33 @@ I can probably avoid a lot of repeated calculations for these systems.
     141 are potentially alive/dead/transient for which we calculate MC distributions.
     the remaining are always alive.
 
+
+================
+
+# Alive/Dead/Transient Classification
+There are 123 ULX systems with beaming < 1 and opening angles less than 45
+
+of these 123 systems, there are only 87 unique different opening angles.
+
+We only need to simulate curves for unique dincl, theta, and inclination
+
+There are 87 * 46 = 4002 0 Inclination curves corresponding to a unique opening angle and precessional angle
+
+while there are 87 * 46 * 90 = 380,180 curves corresponding to arbirary inclination
+
+In total there are thus 380,180 + 4002 = 87*46*91 = 384,182 different curves.
+
+We wish to calculate for every SYSTEM what it's alive/dead/transient classification looks like
+
+thus we will have 123*46*91 = 514,878 unique results (4,186 per system)
+
+For a given system we would like:
+
+    minimal:
+    parent_system_id, Lx, lc_min, lc_max, N_lim, theta, dincl, inclination, classification
+
+
+1. get min and max of curve
+2. Calculate the ULX limiting level for a specific system_id + theta + dincl combination
+3. 
+

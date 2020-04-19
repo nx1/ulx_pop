@@ -35,6 +35,7 @@ Takes the data from /data/processed/startrack_concat.csv
 and calculates various other quantities which are saved in the file
 /data/processed/all_systems_df.csv
 
+
 2. src/ulxlc_runner.py
 will sample systems from a df_a.csv (selecting only the systems that are beamed ULXs with opening angles < 45)
 and run ulxlc to create a lightcurve with the system's specific parameters and the specified parameters for ULXLC.
@@ -53,23 +54,23 @@ beta    = 0.2
 norm    = 1.0
 dopulse = 0.0
 
+
 3. src/create_normalisation_lookup.py
 Run through 0 inclination lightcurves and calculate normalisation ULX
 limits at 1E39 ergs equivilent, store the output in a .pkl file for further use.
 
-The pickle file can be found in /data/interim/N_lim_dict.pickle
+The pickle file can be found in /data/processed/N_lim_dict.pickle
 
 final dict is in the form:
-N_lim_dict = {dincl-inclination: N_lim}
+N_lim_dict = {system_id-dincl-inclination : N_lim}
 
 
-3. src/curve_processor.py
+3. src/curve_classifier.py
 Used to process the lightcurve files and classify the system as either alive/dead/transient.
 Does this in a 'quick' manner i.e does the lightcurve span over the 1e39 range and therefore is transient.
 
 The results of this processed are saved in the file:
-/data/interim/curve_classications.csv
-
+/data/processed/curve_classications.csv
 
 
 4. src/df_a_analysis.py
