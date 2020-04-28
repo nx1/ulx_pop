@@ -74,7 +74,29 @@ The results of this processed are saved in the file:
 
 
 4. src/df_a_analysis.py
-samples from df_a to calculate the effect of the BH_ratio on the alive/dead/transient population
+4. src/bh_vs_classification.py
+
+simulates the effect of sampling systems from the FULL ulx population
+in a specified BH ratio and the the number of alive/dead transient systems
+
+
+1. sample a N ULXs in a specified bh ratio.
+2. Is it visible
+seperate by metallicity and tage.
+
+
+Could we calculate for each system, a probably distribution for
+its curve classification?
+
+yes, by sampling from them we are essentially doing that.
+
+
+
+
+
+samples from curve_classifcations to calculate the effect of the
+BH_ratio on the alive/dead/transient population
+
 
 The results from these simulations are saved in:
 data/interim/sims_with_metallicity/{Z}/{results.csv}

@@ -5,10 +5,13 @@ TODO
 [x] install ulxlc 
 [x] Re-run MC lightcurves
 [x] Create N_lim dict for 0 inclination curves
-[ ] Write fast lighturve processor
-[ ] Process MC lightcurves
-[ ] Recalculate BH/NS ratio plots (change Z order)
+[x] Write fast lighturve processor
+[x] Process MC lightcurves
+[x] Recalculate BH/NS ratio plots (change Z order)
+[x] Change x-label on BH/NS to actual percentages 
 [ ] redo eRASS simulation with BH/NS ratio  
+[ ] Change r_isco = r_in = 1.25 for BHs
+[ ] Think about eRASS simulations
 
 NOTES
 =====
@@ -77,4 +80,65 @@ For a given system we would like:
 1. get min and max of curve
 2. Calculate the ULX limiting level for a specific system_id + theta + dincl combination
 3. 
+
+
+Matt Emails 24-25/04/2019
+-------------------------
+1. I'm confused - did you not change r_in in the precession equation for spin??
+I'm still using r_in = r_isco = 6 R_g for both NS & BHs
+
+I was previously using r_in = 1.25 for NS. Did you want me to use something else?
+
+
+
+2. In addition to the previous email, I'm not clear on how you're extracting the underlying population BH% from eRASS -
+I get the sense you're working out how many BHs vs NSs are in the *transient* population rather than the underlying population (i.e. by improving the constraints in Fig 4)
+- is that right?
+
+So from the lightcurves we created, I'm sampling from all the curves that were classified as transient (circled in red) with the additional cut of considering systems with P_wind < 4 years.
+with the additional cut of P_wind, the number of unique lightcurves drops from 238956 to 110457 (123 Parent ULXs to 54).
+
+I'm then sampling from the 110457 lightcurves with a specified %_BH and for each lightcurve, I obtain the probability at each eRASS cycle through sampling the curve 10,000 times.
+
+
+
+3. Last email from me tonight. If I'm correct, the LT period formula only comes into play with eRASS correct?
+If so then we can claim our results preceding that are essentially independent of the mechanism driving it.
+This isn't the case for eRASS which as I mentioned in my previous emails we need to look at.
+
+Correct, the spin, radii calculations and LT formulas are only used for the eRASS estimate.
+
+
+
+4. It occurs to me that the biggest question-mark is the effect of delta (i).
+We don't have any priors for this so we should investigate the effect (and how robust our inferences are) by limiting it to smaller values, e.g. SS433's delta i is 20 degs.
+
+I also had the same thought, we could potentially do each step of the analysis while also considering precessional ranges eg 0 - 10, 0 - 20 etc...
+
+
+
+5. I had some time last night to think about how to make the eRASS section more constraining and I think we can do the following.
+
+The *number* of transients (not proportion of a population but the actual number) will depend on the total population (hidden as well as visible) and proportion of NS/BH in the parent (Figure 4),
+and the delta(i) of the precession.
+
+You can picture this by having the number of transients detected (cumulative or otherwise) plotted versus time (or eRASS cycles).
+If the proportion of NSs in the parent is large then there will be a large number of transients so the final value on the y axis will be large.
+Conversely if the proportion is small then the final value on the y axis will be small.
+Then the different delta(i) just tells you how quickly (the rate of change of transient detection) this peak value is reached.
+If correct, then eRASS could in principle indicate both by reproducing observational equivalents.
+
+
+are you saying we could look at the relative change in the population number of transients or transient+alive or transient+alive+dead after each cycle and actually compare that to
+what we find?
+
+
+
+Matt Meeting 27/04/2020
+
+Change r_isco=r_in=1.25 for BHs
+
+Try earlier plots for dincl < 20 deg
+
+Bimodal flux distribution could can be achieved using ULXLC ==  maybe not propeller?
 
