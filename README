@@ -104,4 +104,221 @@ data/interim/sims_with_metallicity/{Z}/{results.csv}
 
 5. alive_dead_transient_plotter.py
 Is used to plot the results from step 4.
- 
+
+ULX System
+-----------
+- Z (Metallicity)
+- tage (Age)
+- mass
+- mdot
+- is_bh
+- L_Edd     (Eddington Luminosity)
+- eta       (Accretion Efficiency)
+- mdot_Edd  (mdot in Eddington units)
+- mdot
+- Lx_iso
+- b
+- Lx
+- theta_half_deg (opening angle, theta/2)
+- inclination
+- dincl
+- zeta      (cotangent of the wind opening angle)
+- spin
+- R_g
+- r_schw
+- r_isco
+- r_in
+- r_sph
+- r_out
+- P_inflow_at_r_sph
+- P_envolope
+- P_wind
+- P_Free_precession
+
+Population
+----------
+- size
+- N_bh
+- N_ns
+- bh_percent
+- ns_percent
+- Z
+- tage
+
+Curve (LightCurve)
+------------------
+- path
+- filename
+
+- period
+- phase
+- theta
+- inclination
+- dincl
+- beta
+- dopulse
+- norm
+
+
+
+
+eRASS
+
+prob_eRASS 1 - 8 : 0.00 - 1.00
+
+Sample N systems from whole ULX population.
+What percentage of the whole population will be observed after N cycles?
+
+System 1:
+    N_samples = 10 000
+    sample 1:      Flux         Above?      Transient?
+        - Cycle 1: 1E40         True        False           
+        - Cycle 2: 2.5E39       True        False
+        - Cycle 3: 1E38         False       True
+    sample 2:   
+        - Cycle 1: 1E38         False       False
+        - Cycle 2: 2E38         False       False
+        - Cycle 3: 1.5E38       False       False
+    Sample 3:
+        - Cycle 1: 2E39         True        False
+        - Cycle 2: 3E39         True        False
+        - cYCLE 3: 4E39         True        False
+
+
+f(above):
+    above       = [1,1,1,1,1,1,1,1]
+    transient   = [0,0,0,0,0,0,0,0]
+
+    above       = [0,0,0,0,0,0,0,0]
+    transient   = [0,0,0,0,0,0,0,0]
+
+    above       = [0,0,0,1,0,1,0,1]
+    transient   = [0,0,0,1,1,1,1,1]
+
+    above       = [1,1,1,0,0,0,0,0]
+    transient   = [0,0,0,1,1,1,1,1]
+
+
+f(above):
+    transient = [0] * 7
+    last = above[0]
+
+    for i in above[1:]:
+        if last != current:
+            transient[i:] = 1
+            break
+
+    return transient
+
+
+samples = [[0,0,0,0,0,0,0]
+           [0,0,0,0,0,1,1]
+           [0,0,1,1,1,1,1]
+           ...
+           [0,0,0,1,1,1,1]]
+
+probability = N_transient / N (mean)
+
+
+Curve_classifications
+id   curve_id    system_id        Classification    P
+0    284         937              Alive             [0] * 7
+1    238         102              Transient         []
+3    519         857              Dead              [0] * 7
+
+
+
+Possible things we could investigate:
+
+Curve_id --> 
+    - period
+    - phase
+    - theta
+    - inclination
+    - dincl
+    - beta
+    - dopulse
+    - norm
+
+system_id:
+    - Z (Metallicity)
+    - tage (Age)
+    - mass
+    - mdot
+    - is_bh
+    - Lx
+    - theta_half_deg (opening angle, theta/2)
+    - inclination
+    - dincl
+    - spin
+    - P_wind
+    - P_Free_precession
+
+
+
+Pick N samples from whole ULX population:
+
+N           = 500
+N_alive     = 30
+N_Dead      = 70
+N_transient = N - N_alive - N_dead - N_transient
+
+%_alive     = N_alive / N
+%_dead      = N_dead / N
+%_transient = N_transient / N
+
+
+
+Transient systems:
+sys1: P = [0, 0.35, 0.38, 0.56, 0.88, 1.00]
+sys2: P = [0, 0.63, 0.72, 0.98, 1.00, 1.00]
+...
+sys:  P = [                               ]
+
+mean  P = [0, 0.73, 0.92, 1.00, 2.00, 1.00]
+std   P = 
+
+
+After which cycle was the system observed as transient?
+system 1
+    - Run 1:    6th
+    - Run 2:    5th
+    - Run 3:    5th
+    Average = 6+5+5 / 3 = 5.333     []
+    
+
+Impose cuts for precession angles:
+    0 - 10
+    0 - 20
+    0 - 30
+    0 - 40
+
+Count the total unique systems in each cut
+
+
+==============
+Things we can measure with eRASS:
+    - cycle number
+    
+    - number of total ulxs
+    - number of new ulxs
+    - number of alive ulxs
+    - number of transient ulx
+
+- Impose constraints 0 - 10 dincl.
+Draw 500 ULXs
+    For each ulx
+        - Find all sub-systems (dincl + i combinations)
+        - number_of_sub_systems (46*91)   = 4186
+        - number_of_alive_sub_systems     = 1000    (constant over all erass cycles)
+        - number_of_dead_sub_systems      = 1000    (constant over all erass cycles)
+        - number_of_transient_sub_systems = 2186
+
+        - For the transient sub systems:
+            get their erass transient probabilities
+                P1 = [0, 0.25, 0.5, 0.75, 0.8, 0.9, 0.98, 1.00]
+                P2 = [0, 0.35, 0.6, 0.65, 0.7, 0.9, 0.94, 0.998]
+                ..etc
+
+            calculate the number of transients for each eRASS cycle
+                - sum all the probabilites

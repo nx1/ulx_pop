@@ -9,12 +9,106 @@ TODO
 [x] Process MC lightcurves
 [x] Recalculate BH/NS ratio plots (change Z order)
 [x] Change x-label on BH/NS to actual percentages 
-[ ] redo eRASS simulation with BH/NS ratio  
-[ ] Change r_isco = r_in = 1.25 for BHs
-[ ] Think about eRASS simulations
+[x] Check the transient classification to explain weird things like the 0.8 thing.
+[x] eRASS simulation with BH/NS ratio
+[x] eRASS simulation with dincl cut
+[x] Change ULXLC output to linear spacing
+[x] Change r_isco = r_in = 1.25 for BHs
+[x] Re-do eRASS deterministically
+[x] Omit free body precession
+[x] Message Greg wrt getting orbital period for our sample
+[x] re-derive the form for zeta
+[x] Change lightcurve dincl and i plots to percent
+[x] Combine lightcurve and dincl plot into 1 figure.
+
+[ ] Calculate precessional period from Phil Charles relation
+[ ] Put precessional period into eRASS sims
+[ ] Use Phil Charles relation for a second form of precession comparison
+[ ] Obtain figures for the orbital period from Universe @ Home https://universeathome.pl/universe/bhdb.php
+[ ] Check lower limit of zeta = 2
+
+[ ] Show the luminosity distributions before precession / after precession etc.
+[ ] Let Matt know about the low luminosity distribution of the tail to see if it is dominated by black holes
+    - See Latex notes wiktorowicz 2017
+
+
+
 
 NOTES
 =====
+
+
+eRASS simulation
+----------------
+    [x] 1.  Take total population of 955 ULXs, mix of BHs/NSs
+    [x] 2.  create fake parent population of 500 ULXs of given BH/NS ratio
+  **[ ] 3.  For each system, determine weather it is persisent_alive, persisient_dead or transient.
+    [ ] 4.  Check curve_classifications
+
+
+            - If the system was not sampled, then P_wind > 4 years and the system is treated as persistent
+                - retrieve the probability of the source being alive on the first eRASS observation via
+                  sampling the first cycle of its lightcurve              
+                - We will for now make the assumption that this probability is 0.5 for these systems.
+                  (50/50 alive or dead)
+
+
+            - If the system sampled does have eRASS transient probabilities, retrieve them
+              and determine which cycle the source was observed as transient in.
+
+            - Also determine the probability of alive on first cycle. For now we will use 0.5
+              This will tell us if the source was classified as alive or dead up until the eRASS
+              cycle it was determined to be transient in.
+
+    [ ] 5.  Gives us alive vs transient (as function of total population demographic)
+    [ ] 6.  Repeat for new realisations up to ~1000
+    [ ] 7.  Repeat for dinc cut
+    [ ] 8.  Repeat 1-7 for new BH/NS ratio
+
+
+
+*Omitting Free-body precession:
+	[ ] Find formula for the free-free body precession
+	[ ] compare if it is lense-thirring or free-free
+    - https://arxiv.org/pdf/1307.6026.pdf
+    - Also look at papers for Herr - X1
+    - Consider using Phil Charles model for an extra form of comparison.
+
+
+**old chain:
+P(ulx_realisation_being_transient vs erass cycle) ended up being miscalculated (error in sampling code)
+            - We have P(alive), P(dead) and P(transient) for all ULX systems
+                - Those with P(alive) = 1.0 are unbeamed (theta/2 > 1) ULX systems.
+                - probability of transient systems  (theta/2 < 45 )may be obtained by:
+                  Number of realisations in each classification / Total number of realisations. (subject to dincl cut)
+
+            - We can either use these probability values or simply draw a realisation
+              which would recreate the same probabilities.
+ 
+
+
+How to store a database in code?
+--------------------------------
+tables.py
+tables.curve_classifications()
+lookup.N_lim_dict()
+
+
+
+
+erass sim output:
+-----------------
+eRASS cycle         = [1  ,   2,   3,   4, ...,   8]
+alive_persistent    = [100, 100, 100, 100, ..., ...] = 100
+dead_persistent     = [50 , 50 , 50 , 50 , ..., ...] = 50
+
+number_of_alive     = [300, 275, ]
+number_of_transient = [0  , 150, ]			<-- not used
+number_of_dead      = [100, 75 , 75, 75, 75]            <-- not used
+
+include the additional ones that are unbeamed and therefore always alive.
+
+
 Changing the accretion efficiency has actually resulted in my populations
 for ULX, beamed ULX etc Changing, therefore old ids are no longer valid and
 I have chosen to change them to the absolute ids assigned at the start if something
@@ -37,9 +131,6 @@ What i want to save from the lightcurves?
 
 Since a lot of the curves will likely have the same theta, (maximally beamed saturation)
 I can probably avoid a lot of repeated calculations for these systems.
-
-
-
 
 
 1. The MC alive/dead/plot and simulations are only run on:
@@ -84,9 +175,8 @@ For a given system we would like:
 
 Matt Emails 24-25/04/2019
 -------------------------
-1. I'm confused - did you not change r_in in the precession equation for spin??
+1. I'm confused - did you not change r_in in the precession equation for spin?
 I'm still using r_in = r_isco = 6 R_g for both NS & BHs
-
 I was previously using r_in = 1.25 for NS. Did you want me to use something else?
 
 
@@ -135,10 +225,249 @@ what we find?
 
 
 Matt Meeting 27/04/2020
-
 Change r_isco=r_in=1.25 for BHs
-
 Try earlier plots for dincl < 20 deg
-
 Bimodal flux distribution could can be achieved using ULXLC ==  maybe not propeller?
+
+
+29/04/2020
+----------
+
+Went on a bit of a mad one and decided to completely revamp the code.
+
+Instead of storing all the systems in one big pandas dataframe, we now have a new data structure called a System.
+
+This data structure represents one ulx to come out of Greg's startrack simulation.
+
+Many Systems compose a Population, the new datastructure that has replaced the large dataframe that was previously in use.
+It is still possible to export any system to a dataframe using a function, this ensures that old notebooks and exploratory analysis can still take place, however it is definitely
+more robust.
+
+
+One system may have many curves, corresponding to paticular realisations of the system in question, eg for a given dincl and inclination.
+
+We need a way to connect curves and systems.
+
+System.get_curves()
+Curve.parent_system
+
+Something that has plagued this entire process throughout everything is that I do not have a way of keeping track of the curves in a good way.
+
+I have previously been using naming conventions on the curves in order to try and keep track of things.
+But this has not been consistent
+
+I was previously using something like
+id-angle-dincl
+then I changed it to
+angle-dincl-i
+
+Whatever I chose to do it needs to be consistent and fixed, let's say in future I wanted to change beta or something
+now all my old curves have the old beta and the new ones have the new beta and I have no way of keeping track which ones are which.
+
+Each curve has far to many varibles to be stored in a filename therefore I think going back to the old way of having a uuid for each curve
+with a lookup table may prove to actually be the most robust thing, however It needs to be implemented properly or it's gonna be a messs.
+
+
+ulxlc_grid = 
+
+
+
+30/04/2020
+----------
+Less transient systems in total.
+Less transients across all %bh and more alive.
+This brings up the %bh estimate.
+
+Vasiloplolis paper on freee body precession.
+
+
+15/05/2020
+----------
+Been picking away at this eRASS simulation for a few weeks, I'm getting a little frustrated that things have been so slow.
+However there has been some measureable progress I think.
+
+I've written an eRASS routine that does the following.
+
+1. Draw 500 ULXs from the parent population
+2. Specify a paticular realisation for each ULX. (dincl + inclination)
+3. Runs through each of the 500 systems and classifies them as:
+    - Persistently alive
+    - Persistently dead
+    - Transient
+4. If they are transient, we fetch the erass simulation and for each system we check how
+the observations of the source change over each erass cycle.
+That is to say, was it originally observed as a ulx or not, and in which cycle (if any) did it
+cross the 1e39 threshold and thus become a transient system.
+
+We repeat this process for 100x for different draws of 500 ULXs.
+and we changed the bh_percentage of the parent population, as well as the
+precessional angle cuts (dincl) to see how things varied.
+
+The code is ugly and could probably do with being rewritten but hey that's life. :^)
+
+
+
+
+==============================
+Matt Meeting 26/5/20
+--------------------
+1. Attend Belloni meeting
+2. Matt moved some stuff about in the paper.
+3. Make sure you can rederive things eg eq (6) (Zeta)
+4. Make sure you're confident on the things you're writing are correct
+
+5. The lower limit we put of Zeta = 2 may need some looking at
+it's a bit position of the outer photospheric readius.
+
+B = 10^13 is a magnetar.
+
+6. If we put in the free-free precession, we don't have any a-priori knowledge of the field strength or spin period.
+We don't understand how the field strength and how it evolves, as a consequence of supernovae fallback, or consequence of accretion rate
+or even as a consequence of the time it takes for the orbit to shrink where it can begin accreting. The field strength tells you about the spin period.
+
+If it's an age thing, the lower the magnetic field the older the system, so it will spin down. The torque depends on the radius, which depends on the field strength
+which depends on the radius.
+
+7. We take out Free-Free precession, and instead use the empirical precession by Townsend and Charles.
+
+Taking that we still need to caveat it in the discussion
+8. It's still unclear what the origin of precession is:
+    If it's lense thirring then blah
+    If it's this other thing that scales slightly differently, then we have some lose empircal constraints
+    BUT there are probably several mechanisms operating which may make things slightly tougher
+    We will explore this in future.
+
+9. Matt was looking at something called Ohmic diffusion which tells us how the field decays for NS.
+The results are cyclical outbursts from NS.
+
+Do LT - Do Empircal thing --> Bung it to co-authors.
+
+10. Drop Thomas an email, and ask if he can send me the periods or binary seperations so i can put in the period.
+
+11. If we can exlude parameter space for dincl/bh erass then that's good.
+
+12. Our results should relate back to the plot I made with Hannah catalgue limits on it.
+
+13. In Greg's 2017 Paper he mentions creating 10^7 binary systems then scaling them to the MWEG.
+I've dug up an old email and this is what he says:
+
+=================================================================
+On Fri, 26 Jul 2019 at 22:06, Khan N. <nk7g14@soton.ac.uk> wrote:
+Dear Greg,
+Hope things are going well.
+I was writing just to ask for some clarification on a particular point in your 2017 paper: The Origin of the Ultraluminous X-ray Sources.
+When you say that you simulated the evolution of 2×107 binary systems for every model and scaled the results to the Milky-Way equivalent galaxy, what exactly does this scaling involve? I attempted to look (Lic-quia & Newman 2015) and wasn't able to find anything specific.
+Kind regards,
+Norman
+
+
+Dear Norman,
+
+The thing is quite simple, although I agree that it is not well explained in the paper.
+
+First of all, the Licquia & Newman 2015 reference is just to the MW mass. The scaling is strictly technical thing. We simulate N binaries from a limited initial parameter space. Then we calculate the total simulated stellar mass (M_sim) of all stellar systems (sinble and binaries) from the entire initial parameter space, which include these N binaries. The scaling factor to the MW galaxy is then simply SF=M_MW/M_sim.
+
+I hope it is clear. If not, please let me know.
+
+Cheers,
+Greg
+==================================================================
+
+
+
+================
+29/05/2020
+
+Emailed Greg, he tells me:
+
+ 
+Q. Is the combination of the two identifiers completely unique for a binary system?
+
+A. Yes, for any model idum+iidd identify exactly one binary.
+Please note that  idum+iidd (binary) in one model is in general different to
+the same idum+iidd values in other models.
+ 
+ 
+Q. Would I be able to run through all the *_binary.dat.tbz files to obtain the semi-major axis (a) for each system?
+
+A. In general yes, but choose only models which interest you (probably std, lowZ and midZ). Then you can pick interesting systems (ULXs?) and keep only them on your disk.
+ 
+
+
+=======================
+01/06/2020 June life
+
+
+- Belloni Lecture | Part - 2
+---------------------------------
+
+Flux is subject to poisson noise.
+
+If you expect \lambda counts then:
+
+    P(k) = \frac{\lambda}^{k}}{k!} e^{-\lambda}
+
+
+
+- This is the same as saying that photon's arrival time is independent.
+- Exponential waiting time between photons
+
+Uncorrelated noise - White noise - Flat spectrum
+    With this noise --> Chi^2 with two DoF
+
+    P = \frac{2} {N_{phot}} |a|^{2}     (Leahy Normalisation)
+    P_{total} = P_{signal} + P_{noise}
+    Noise and signal independent (in practice this is not true)
+
+    Logarithmic binning of power spectrum
+
+    \Delta \nu = \Delta \nu_{j-1} * (1+f)
+
+==================================
+2/6/2020
+
+Meeting with Matt,
+
+So we're trying to get out the orbital periods for our sample.
+
+We don't want to re-run literally everything from scratch, and so Matt suggested the following idea:
+
+maybe we could use the new catalogue to find out the distribution of orbital periods as a function of m, Z, mdot etc and simply draw from that.
+
+We're going to talk about the AGN paper on thursday too, 
+
+We need to build a posterior probability distributioni
+
+
+maybe a corrlation between m/mdot -James
+
+
+==============
+3/6/20
+
+I've made an attempt to try and estimate the orbital period from the known startrack database.
+
+Kepler's third law states that the orbital period T of two point masses
+orbiting each other in a circular or elliptical orbit is given by:
+    
+    T = 2 \pi \sqrt{\frac{a^3}{GM} }
+    
+    Where M is the mass of the more massive body
+
+What I have:
+	Z
+	tage
+	Ma	(mass of CO)
+	mdot
+
+What is in the databse:
+	Ma
+	Mb
+
+
+Alive_persistent + Alive + Transient / Total = number of observable ulxs
+Alive+ transient - dead  + max inclination min inclination ---> uniform inclaintions may hide upto 20% of ulx from view
+
+How does max(Lx) vary with dincl and inclination (probably in dauser already)
+
 

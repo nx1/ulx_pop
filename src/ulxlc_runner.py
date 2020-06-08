@@ -17,28 +17,6 @@ import os
 import batchfunc
 from auxil import load_systems_dataframe
 
-
-systems_df = load_systems_dataframe(True, True, True)
-# save_directory = Path('/mnt/d/curves/gridsearch')
-save_directory = Path('../data/interim/curves/MC_curves_eta_0.08_ns/gridsearch')
-
-os.chdir(save_directory)
-
-ulxlc_parameters = {'period': 10.0,
-                'phase': 0.0,
-                'theta': None,
-                'inclination': None,
-                'dincl': None,
-                'beta': 0.2,
-                'dopulse': 0,
-                'norm': 1.0}
-
-
-
-thetas = systems_df['theta_half_deg'].unique()
-inclinations = np.arange(1,91)
-dincls = np.arange(0,46)
-
 def wrapper(id_dincl_tuple):
     theta, dincl, i = id_dincl_tuple
     theta = round(theta, 2)
@@ -51,6 +29,30 @@ def wrapper(id_dincl_tuple):
     lc_n = f'{filename}.txt'
     batchfunc.run_ulxlc(xcm_n, ulxlc_parameters, lc_n)
 
-with Pool(5) as p:
-        p.map(wrapper, itertools.product(thetas, dincls, inclinations))
-
+def main():
+    systems_df = load_systems_dataframe(True, True, True)
+    # save_directory = Path('/mnt/d/curves/gridsearch')
+    save_directory = Path('../data/interim/curves/MC_curves_eta_0.08_ns/gridsearch')
+    
+    os.chdir(save_directory)
+    
+    ulxlc_parameters = {'period': 10.0,
+                    'phase': 0.0,
+                    'theta': None,
+                    'inclination': None,
+                    'dincl': None,
+                    'beta': 0.2,
+                    'dopulse': 0,
+                    'norm': 1.0}
+    
+    
+    
+    thetas = systems_df['theta_half_deg'].unique()
+    inclinations = np.arange(0,91)
+    dincls = np.arange(0,46)
+    
+    with Pool(5) as p:
+            p.map(wrapper, itertools.product(thetas, dincls, inclinations))
+            
+if __name__ == "__main":
+    main()

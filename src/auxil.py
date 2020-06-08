@@ -11,19 +11,6 @@ import math
 from pathlib import Path
 import ast
 
-def load_systems_dataframe(ulx_only=False, beamed=False, half_opening_l_45=False):
-    systems_df_path = Path('../data/processed/all_systems_df.csv')
-    df = pd.read_csv(systems_df_path)
-    if ulx_only:
-        df = df[df['Lx'] > 1E39]
-    if beamed:
-        df = df[df['b'] < 1]
-    if half_opening_l_45:
-        df = df[df['theta_half_deg'] < 45]
-        
-    df = df.drop(['Unnamed: 0'], axis=1)
-    return df
-
 def find_nearest(array,value):
     idx = np.searchsorted(array, value, side="left")
     if idx > 0 and (idx == len(array) or math.fabs(value - array[idx-1]) < math.fabs(value - array[idx])):
@@ -44,3 +31,18 @@ def load_df_a(transient_only=False):
         df = df[(df['ratio'] < 1) & (df['ratio'] != 0)]
     df = df.drop(['Unnamed: 0'], axis=1)
     return df
+
+def load_curve_classifications():
+    curve_classifications = pd.read_csv('../data/processed/curve_classifications.csv')
+    return curve_classifications
+
+def sample_by_bh_ratio(systems_df, bh_ratio, n):
+    ns_ratio = 1 - bh_ratio
+    
+    ns_systems = systems_df[systems_df['is_bh']==0].index
+    bh_systems = systems_df[systems_df['is_bh']==1].index
+    
+    bh_weights = [bh_ratio/len(bh_systems)]*len(bh_systems)
+    ns_weights = [ns_ratio/len(ns_systems)]*len(ns_systems)
+    selected_systems = np.random.choice([*bh_systems, *ns_systems], size=n, p=[*bh_weights, *ns_weights])
+    return selected_systems

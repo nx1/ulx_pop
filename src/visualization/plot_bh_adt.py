@@ -274,9 +274,9 @@ def plot_all_ADT():
     plot_ADT(df_adt_Z_0002, '0.002', axarr, 1, 0)
     plot_ADT(df_adt_Z_00002, '0.0002', axarr, 1, 1)
     plt.tight_layout()
-    plt.savefig('../reports/figures/ADT_BHNS_array.png', format='png', dpi=1000)
-    plt.savefig('../reports/figures/ADT_BHNS_array.eps', format='eps')
-    plt.savefig('../reports/figures/ADT_BHNS_array.pdf', format='pdf')
+    # plt.savefig('../reports/figures/ADT_BHNS_array.png', format='png', dpi=1000)
+    # plt.savefig('../reports/figures/ADT_BHNS_array.eps', format='eps')
+    # plt.savefig('../reports/figures/ADT_BHNS_array.pdf', format='pdf')
     
 def plot_all_AT():
     import matplotlib
@@ -289,15 +289,15 @@ def plot_all_AT():
     plot_AT(df_at_Z_002, '0.02', axarr, 0, 1)
     plot_AT(df_at_Z_0002, '0.002', axarr, 1, 0)
     plot_AT(df_at_Z_00002, '0.0002', axarr, 1, 1)
-    plt.savefig('../reports/figures/AT_BHNS_array.png', format='png', dpi=1000)
-    plt.savefig('../reports/figures/AT_BHNS_array.eps', format='eps')
-    plt.savefig('../reports/figures/AT_BHNS_array.pdf', format='pdf')
+    # plt.savefig('../reports/figures/AT_BHNS_array.png', format='png', dpi=1000)
+    # plt.savefig('../reports/figures/AT_BHNS_array.eps', format='eps')
+    # plt.savefig('../reports/figures/AT_BHNS_array.pdf', format='pdf')
     
 
-results_Z_all = read_csvs('../data/interim/sims/')
-results_Z_002 = read_csvs('../data/interim/sims_with_metallicity/0.02/')
-results_Z_0002 = read_csvs('../data/interim/sims_with_metallicity/0.002/')
-results_Z_00002 = read_csvs('../data/interim/sims_with_metallicity/0.0002/')
+results_Z_all = read_csvs('../../data/interim/eta_0.08_ns_sims/sims/')
+results_Z_002 = read_csvs('../../data/interim/eta_0.08_ns_sims/sims_with_metallicity/0.02/')
+results_Z_0002 = read_csvs('../../data/interim/eta_0.08_ns_sims/sims_with_metallicity/0.002/')
+results_Z_00002 = read_csvs('../../data/interim/eta_0.08_ns_sims/sims_with_metallicity/0.0002/')
 
 df_adt_Z_all = process_ADT_results(results_Z_all)
 df_adt_Z_002 = process_ADT_results(results_Z_002)
@@ -309,39 +309,11 @@ df_at_Z_002 = process_AT_results(results_Z_002)
 df_at_Z_0002 = process_AT_results(results_Z_0002)
 df_at_Z_00002 = process_AT_results(results_Z_00002)
 
-#plot_all_ADT()
-plot_all_AT()
+plot_all_ADT()
+# plot_all_AT()
 
 
-
-
-
-"""
-plot_ADT_stackplot(df_adt_Z_all, 'all')
-plot_ADT_stackplot(df_adt_Z_002, '0.02')
-plot_ADT_stackplot(df_adt_Z_0002, '0.002')
-plot_ADT_stackplot(df_adt_Z_00002, '0.0002')
-
-plot_AT_stackplot(df_at_Z_all, 'all')
-plot_AT_stackplot(df_at_Z_002, '0.02')
-plot_AT_stackplot(df_at_Z_0002, '0.002')
-plot_AT_stackplot(df_at_Z_00002, '0.0002')
-
-"""
 print('Number of runs for Z=All : {}'.format(len(results_Z_all)/len(results_Z_all['BH_ratio'].unique())))
 print('Number of runs for Z=All : {}'.format(len(results_Z_002)/len(results_Z_002['BH_ratio'].unique())))
 print('Number of runs for Z=All : {}'.format(len(results_Z_0002)/len(results_Z_0002['BH_ratio'].unique())))
 print('Number of runs for Z=All : {}'.format(len(results_Z_00002)/len(results_Z_00002['BH_ratio'].unique())))
-
-
-
-
-
-
-df_res_alive = df_at_Z_all[df_at_Z_all['state'] == 'Alive']
-
-
-
-
-
-plt.plot()

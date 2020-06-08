@@ -26,6 +26,7 @@ value, N_lim.
 c = Lx / max(curves[key]['Flux']) #Scaling factor
 N_lim = 1E39 / c                  #Limiting value
 """
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
@@ -36,7 +37,7 @@ from pathlib import Path
 import pickle
 
 from auxil import load_systems_dataframe
-from curvefunc import load_all_curves_from_path, find_curve_by_id_and_dincl, split_curve_filename, calc_alive_time
+from curvefunc import calc_alive_time
 
 # =============================================================================
 # Functions
@@ -137,126 +138,128 @@ def calc_alive_dead_curve(key):
     return Alive, Dead, MCMC_iteration, BH_NS, simulation_number
 
 
-##############################################################################
-##############################################################################
-#########################====MAIN CODE====####################################
-##############################################################################
-##############################################################################
 
 
-# =============================================================================
-# Loading curves & Systems df
-# =============================================================================
-results_dict = {}
-systems_df = load_systems_dataframe(True, False, False)
-Lx_arr = systems_df['Lx']
 
-#norm_lookup contains a lookup table containing N_lim where we have simulated
-#for each of the 991 ULXs 0 inclination curves over all precessional angles
-norm_lookup_path = Path('../data/interim/norm_lookup.pickle')
-with open(norm_lookup_path, 'rb') as handle:
-    norm_lookup = pickle.load(handle)
-
-
-ulxlc_folder = 'ulxlc'
-
-pbar = tqdm(range(3, 100))
-
-"""
-MCMC_ITERATION
-    |____BH_NS_RATIO
-            |_________SIMULATION_NUMBER
-                        |________________CURVE_FILE.TXT
-"""
-
-
-#Loop over all MCMC iterations
-for MCMC_iteration in pbar:
-    #Set working directory to the MCMC Folder
-    working_dir = '{}/curves/{}'.format(ulxlc_folder, MCMC_iteration)
+def main():
+    # =============================================================================
+    # Loading curves & Systems df
+    # =============================================================================
+    results_dict = {}
+    systems_df = load_systems_dataframe(True, False, False)
+    Lx_arr = systems_df['Lx']
     
-    #Find all the subfolders within the MCMC folder corresponding to BHNS ratios
-    BH_NS_folders = os.listdir(working_dir)
-    #Loop over all BHNS folders
-    for BH_NS in BH_NS_folders:
-        #Loop over all 500 folders in each BH_NS folder
-        for simulation_number in range(500):
-            #for each folder we need to load all the curves and perform
-            # alive/dead time analysis on them all
-            
-            curve_folder = '{}/{}/{}'.format(working_dir, BH_NS, simulation_number)
-            #Load up all the curves in the folder
-            df_dict = load_all_curves_from_path(curve_folder)
-
-            pbar.set_description('%s %s %s' % (MCMC_iteration, BH_NS, simulation_number))
-
-            p = Pool()
-            results = p.map(calc_alive_dead_curve, df_dict.keys())
-            p.close()
-            
-            results_dict.update(dict(zip(df_dict.keys(), results)))
-
-df_a = ResultsDictToPandas(results_dict)
-df_a.to_csv('df_a_full.csv')
-
-#Load all curves
-#Find corresponding pairs
-#Normalise
-#Calculate alive/dead time
-
-#An idea may be to simulate all the systems for 0 inclination and determine
-#their maximum values, Lx, and N_lim in advance as it would also save having to simulate
-#the 0 inclination systems more than once.
-
-#This would require simulating every systems for all dincls used 0 inclination.
-#Would take approximately 992 * 45 = 44640 simulations and they would not have to be repeated.
-
-
-def PlotHistogramResults():
-    plt.figure()
-    # plt.hist2d(df_a_nonzero['dincl'].values, df_a_nonzero['ratio'].values,bins=80)
-    corner.hist2d(df_a_nonzero['dincl'].values, df_a_nonzero['ratio'].values,bins=20)
-    plt.xlabel('Precession angle')
-    plt.ylabel('alive/dead ratio')
-    plt.title('151 Beamed BH ULXs, 1000 iterations per ulx in the range 0 - 45 dincl')
-    plt.colorbar()
-
-# =============================================================================
-# Calculate explicit alive/dead for each system
-# =============================================================================
-results_dict = {}
-for sim_num in range(len(systems_df)):
-    Lx = GetLx(sim_num) #Get Lx for system
-    for dincl in dincl_list:    #Run through all precession angles
-        curves = find_curve_by_id_and_dincl(df_dict, sim_num, dincl) #Two curves
-        N_lim = Normalise(curves) #Find normalization limit
-        for key in curves:
-            Alive, Dead = calc_alive_time(df_dict[key], N_lim)
-            results_dict[key] = Alive, Dead
-            
-    print(sim_num, '/', len(systems_df))
-
-
-PlotCurve('0-10.0-0')
-
-'''
-Things you can plot:
-    FOR DIFFERENT Z AND TAGE:
-        Alive Time vs dincl
-        Dead Time vs dincl
-        Ratio vs dincl
-        beaming vs alive time
-'''
-
-def plot_curve():
-    import matplotlib
-    fontsize = 10
-    matplotlib.rcParams['mathtext.fontset'] = 'stix'
-    matplotlib.rcParams['font.family'] = 'STIXGeneral'
-    plt.figure(figsize=(5.5,1.7))
-    plt.xlabel('Time', fontsize=fontsize)
-    plt.ylabel('Flux', fontsize=fontsize)
-    plt.plot(curve['Time'], curve['Flux'], c='black', linewidth=1.0)
-    plt.savefig('lightcurve.eps', format='eps', bbox_inches = "tight")
+    #norm_lookup contains a lookup table containing N_lim where we have simulated
+    #for each of the 991 ULXs 0 inclination curves over all precessional angles
+    norm_lookup_path = Path('../data/interim/norm_lookup.pickle')
+    with open(norm_lookup_path, 'rb') as handle:
+        norm_lookup = pickle.load(handle)
     
     
+    ulxlc_folder = 'ulxlc'
+    
+    pbar = tqdm(range(3, 100))
+    
+    """
+    MCMC_ITERATION
+        |____BH_NS_RATIO
+                |_________SIMULATION_NUMBER
+                            |________________CURVE_FILE.TXT
+    """
+    
+    
+    #Loop over all MCMC iterations
+    for MCMC_iteration in pbar:
+        #Set working directory to the MCMC Folder
+        working_dir = '{}/curves/{}'.format(ulxlc_folder, MCMC_iteration)
+        
+        #Find all the subfolders within the MCMC folder corresponding to BHNS ratios
+        BH_NS_folders = os.listdir(working_dir)
+        #Loop over all BHNS folders
+        for BH_NS in BH_NS_folders:
+            #Loop over all 500 folders in each BH_NS folder
+            for simulation_number in range(500):
+                #for each folder we need to load all the curves and perform
+                # alive/dead time analysis on them all
+                
+                curve_folder = '{}/{}/{}'.format(working_dir, BH_NS, simulation_number)
+                #Load up all the curves in the folder
+                df_dict = load_all_curves_from_path(curve_folder)
+    
+                pbar.set_description('%s %s %s' % (MCMC_iteration, BH_NS, simulation_number))
+    
+                p = Pool()
+                results = p.map(calc_alive_dead_curve, df_dict.keys())
+                p.close()
+                
+                results_dict.update(dict(zip(df_dict.keys(), results)))
+    
+    df_a = ResultsDictToPandas(results_dict)
+    df_a.to_csv('df_a_full.csv')
+    
+    #Load all curves
+    #Find corresponding pairs
+    #Normalise
+    #Calculate alive/dead time
+    
+    #An idea may be to simulate all the systems for 0 inclination and determine
+    #their maximum values, Lx, and N_lim in advance as it would also save having to simulate
+    #the 0 inclination systems more than once.
+    
+    #This would require simulating every systems for all dincls used 0 inclination.
+    #Would take approximately 992 * 45 = 44640 simulations and they would not have to be repeated.
+    
+    
+    def PlotHistogramResults():
+        plt.figure()
+        # plt.hist2d(df_a_nonzero['dincl'].values, df_a_nonzero['ratio'].values,bins=80)
+        corner.hist2d(df_a_nonzero['dincl'].values, df_a_nonzero['ratio'].values,bins=20)
+        plt.xlabel('Precession angle')
+        plt.ylabel('alive/dead ratio')
+        plt.title('151 Beamed BH ULXs, 1000 iterations per ulx in the range 0 - 45 dincl')
+        plt.colorbar()
+    
+    # =============================================================================
+    # Calculate explicit alive/dead for each system
+    # =============================================================================
+    results_dict = {}
+    for sim_num in range(len(systems_df)):
+        Lx = GetLx(sim_num) #Get Lx for system
+        for dincl in dincl_list:    #Run through all precession angles
+            curves = find_curve_by_id_and_dincl(df_dict, sim_num, dincl) #Two curves
+            N_lim = Normalise(curves) #Find normalization limit
+            for key in curves:
+                Alive, Dead = calc_alive_time(df_dict[key], N_lim)
+                results_dict[key] = Alive, Dead
+                
+        print(sim_num, '/', len(systems_df))
+    
+    
+    PlotCurve('0-10.0-0')
+    
+    '''
+    Things you can plot:
+        FOR DIFFERENT Z AND TAGE:
+            Alive Time vs dincl
+            Dead Time vs dincl
+            Ratio vs dincl
+            beaming vs alive time
+    '''
+    
+    def plot_curve():
+        import matplotlib
+        fontsize = 10
+        matplotlib.rcParams['mathtext.fontset'] = 'stix'
+        matplotlib.rcParams['font.family'] = 'STIXGeneral'
+        plt.figure(figsize=(5.5,1.7))
+        plt.xlabel('Time', fontsize=fontsize)
+        plt.ylabel('Flux', fontsize=fontsize)
+        plt.plot(curve['Time'], curve['Flux'], c='black', linewidth=1.0)
+        plt.savefig('lightcurve.eps', format='eps', bbox_inches = "tight")
+        
+        
+
+
+
+if __name__ == "__main__":
+    main()

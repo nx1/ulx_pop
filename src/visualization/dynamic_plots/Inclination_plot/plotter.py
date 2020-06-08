@@ -29,6 +29,11 @@ def init():
     '''
     line.set_ydata([np.nan]*len(time))
     text.set_text('')
+    plt.axhline(y=15, c='purple', linewidth=0.5, linestyle='--')
+    
+    for x in range(5):
+        plt.axvline(x=10*x+5, c='r', linewidth=0.5)
+    
     return line, 
 
 def animate(i):
@@ -47,4 +52,5 @@ def animate(i):
     
     return line,  text
 
-ani = animation.FuncAnimation(fig, animate, init_func = init, interval = 50, blit=True, repeat=True, frames=89)
+
+anim = animation.FuncAnimation(fig, animate, init_func = init, interval = 500, blit=True, repeat=True, frames=89)

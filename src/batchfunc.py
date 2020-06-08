@@ -40,6 +40,7 @@ newpar 5  {parameters['dincl']}
 newpar 6  {parameters['beta']}
 newpar 7  {parameters['dopulse']}
 newpar 8  {parameters['norm']}
+dummy 0 50 5000 lin
 cpd /null
 plot model
 setplot command wdata {lightcurve_filename}
@@ -65,6 +66,7 @@ def run_xcm(xcm_filename):
 def run_ulxlc(xcm_filename, parameters, lightcurve_filename):
     make_xcm(xcm_filename, parameters, lightcurve_filename)
     run_xcm(xcm_filename)
+    #assert os.path.isfile(lightcurve_filename)
     try:
         os.remove(xcm_filename)
     except:

@@ -7,6 +7,19 @@ Created on Mon Feb 17 13:25:55 2020
 
 This file is used to simulate sampling ulx lightcurves obtained via ULXLC
 as would be done by eRASS in intervals of six months
+
+parameters:
+Z
+bh ratio
+
+
+observables
+X | erass cycle #
+Y | probability of observation
+
+
+
+
 """
 import numpy as np
 import pandas as pd
@@ -141,9 +154,8 @@ if __name__ == '__main__':
     SAVE_FOLDER = Path(f'../data/interim/eROSITA_sampling_results/{SIMULATION_UUID}')
 
 
-    df_systems = auxil.load_systems_dataframe(ulx_only=True,
-                                          beamed=True, 
-                                          half_opening_l_45=True)
+    df_systems = auxil.load_systems_dataframe(ulx_only=True, beamed=True, half_opening_l_45=True)
+    
     df_systems = df_systems.drop(['index'], axis=1)
     df_systems = df_systems[df_systems['P_wind_days'] < MAXIMUM_P_WIND] 
     df_systems = df_systems[df_systems['Z'] == Z]
