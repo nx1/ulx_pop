@@ -39,6 +39,12 @@ def ulx_beamed_l_45_P_wind_l_4_years():
     df = df[df['P_wind_days'] < 4*365]
     return df
 
+def all():
+    populations = {'startrack' :                        startrack(),
+                   'ulx' :                              ulx(),
+                   'ulx_beamed_l_45' :                  ulx_beamed_l_45(),
+                   'ulx_beamed_l_45_P_wind_l_4_years' : ulx_beamed_l_45_P_wind_l_4_years()}
+    return populations
 
 if __name__ == "__main__":
     df_full = startrack()
@@ -46,3 +52,4 @@ if __name__ == "__main__":
     df_ulx_beamed = ulx_beamed()
     df_beamed_l_45 = ulx_beamed_l_45()
     df_beamed_l_45_P_wind_l_4_years = ulx_beamed_l_45_P_wind_l_4_years()
+    dict_all = all()

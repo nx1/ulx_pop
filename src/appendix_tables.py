@@ -8,14 +8,16 @@ Created on Wed Apr 15 09:27:43 2020
 import pandas as pd
 import numpy as np
 
-from auxil import load_systems_dataframe
-
+import populations
 
 def table(df_systems):
     piv1 = pd.pivot_table(df_systems, columns=['is_bh'], index=['Z', 'tage'], aggfunc='count')
     piv1 = piv1[piv1.columns[0:2]]
     piv1 = piv1.fillna(0)
-    
+
+    for Z in piv1.index.unique(level=0):
+        Z_total = piv1.loc[Z].sum()
+
     n_ns = piv1[piv1.columns[0]]
     n_bh = piv1[piv1.columns[1]]
     
@@ -39,22 +41,10 @@ def table(df_systems):
     piv1[piv1.columns[4]] = piv1[piv1.columns[4]].astype('int32')
     return piv1
 
-if __name__ == "__main":
-    df_systems_all = load_systems_dataframe(ulx_only=False, beamed=False, half_opening_l_45=False)
-    df_systems_ulx = load_systems_dataframe(ulx_only=True, beamed=False, half_opening_l_45=False)
-    df_systems_beamed = load_systems_dataframe(ulx_only=True, beamed=True, half_opening_l_45=False)
-    df_systems_beamed_l_45 = load_systems_dataframe(ulx_only=True, beamed=True, half_opening_l_45=True)
-    
-    piv1 = table(df_systems_all)
-    
-    print('\n ALL systems')
-    print(table(df_systems_all).to_latex())
-          
-    print('\n ULX systems')
-    print(table(df_systems_ulx).to_latex())
-    
-    print('\n BEAMED ULX systems')
-    print(table(df_systems_beamed).to_latex())
-    
-    print('\n BEAMED ULX < 45 systems')
-    print(table(df_systems_beamed_l_45).to_latex())
+
+if __name__ == "__main__":
+    import pdb; pdb.set_trace()
+    all_populations = populations.all()    
+    for name, df in all_populations.items():
+        print(name)
+        print(table(df).to_latex())

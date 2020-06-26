@@ -20,11 +20,11 @@ TODO
 [x] re-derive the form for zeta
 [x] Change lightcurve dincl and i plots to percent
 [x] Combine lightcurve and dincl plot into 1 figure.
+[x] Obtain figures for the orbital period from Universe @ Home https://universeathome.pl/universe/bhdb.php
 
 [ ] Calculate precessional period from Phil Charles relation
 [ ] Put precessional period into eRASS sims
 [ ] Use Phil Charles relation for a second form of precession comparison
-[ ] Obtain figures for the orbital period from Universe @ Home https://universeathome.pl/universe/bhdb.php
 [ ] Check lower limit of zeta = 2
 
 [ ] Show the luminosity distributions before precession / after precession etc.
@@ -470,4 +470,42 @@ Alive+ transient - dead  + max inclination min inclination ---> uniform inclaint
 
 How does max(Lx) vary with dincl and inclination (probably in dauser already)
 
+10/6/2020
+---------
+Paper review:
+What is on tap? The role of spin in compact objects and relativistic jets.
+- Ashley L. King
 
+Abstract:
+Looked at a bunch of sources,
+modelled with Guassian line features
+Modeled others with Relativistic blurred disk reflection model that measure spin
+====================
+12/6/20
+
+
+Our paper is trying to answer:
+
+What is the effect of precession on the observed population of ULXs?
+
+The larger the precessional angle, the greater number of transient ULX are observed
+Likewise an increase in the relative number of neutron stars also increases the number of transient systems observed.
+
+Discussion:
+
+Our question for this paper was to answer the question of what is the effect of precession in its various forms
+on the observed population of ULXs. The conical emmission geometry created through means of supercritical accretion
+if subject to precession may affect the observational demographic of the ULX population. 
+
+
+At low metallicities Z=0.0002 (1\% Z_{\sol}) our sample of ULXs is predominantly dominated by BH,
+at mid metallicities Z=0.002  (10\% Z_{\sol} our sample of ULXs is also predominantly dominated by BH,
+at std metallicities Z=0.02   ($Z_{\sol}$ we find few ULXs
+
+For  our ULX samplew was composed of 
+
+If our ULX sample is representative we find that approximately \sim 13 \% of ULXs display beaming while the remaining 73\% are always visible
+
+Approximately (\sim 13 \%) of our population displayed beaming for which we assumed that precession was present.
+
+By performing simulations on the 123 (12\%) of our ULXs that displayed strong levels of beaming 

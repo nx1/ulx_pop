@@ -63,12 +63,18 @@ def run_xcm(xcm_filename):
     subprocess.call([f'xspec - {xcm_filename}'], shell=True, stdout=devnull)
 
 
-def run_ulxlc(xcm_filename, parameters, lightcurve_filename):
-    make_xcm(xcm_filename, parameters, lightcurve_filename)
-    run_xcm(xcm_filename)
-    #assert os.path.isfile(lightcurve_filename)
+def remove_xcm(xcm_filename):
     try:
         os.remove(xcm_filename)
     except:
         print('xcm file not found')
+        
+    
+
+def run_ulxlc(xcm_filename, parameters, lightcurve_filename):
+    if not os.path.isfile(lightcurve_filename):
+        make_xcm(xcm_filename, parameters, lightcurve_filename)
+        run_xcm(xcm_filename)
+        remove_xcm(xcm_filename)
+
 

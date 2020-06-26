@@ -7,7 +7,11 @@ Created on Fri May 29 10:27:46 2020
 
 https://universeathome.pl/universe/bhdb.php
 
-Process large .dat files from startrack database
+Process.dat files from startrack database
+The files are very large and so diskspace may be an issue
+0.02   ~20gb
+0.002  ~40gb 
+0.0002 ~40gb
 
 The script currently runs through the standard model
 Z = 0.02, 0.002, and 0.0002 files, there is a slight malformatting issue
@@ -35,7 +39,6 @@ t dt Ma Mb Ka Kb a e Ra Rb La Lb aspina aspinb mt mttype Lxmt Lx Vsmx Vsmy Vsmz 
     e0 is the eccentricity on ZAMS
     idum, iidd - identifiers of a system (i.e. all lines with identical idum and iidd refer to the same binary)
     evroute is a symbolical description of binary evolution (see below)
-
 """
 import tarfile
 import glob
@@ -57,9 +60,6 @@ def fix_csv(infile, outfile):
         for line in fin:
             fout.write(line.replace(' ', ',', 27))
             
-
-
-
 
 def my_filter(df):    
     ns_a = df['Ka'] == 13 # ns
@@ -144,14 +144,14 @@ def get_dataframe(tbz_file, dat_file, csv_file):
             else:
                 df = read_dat(dat_file)
             df.to_csv(csv_file)
-            os.remove(dat_file)
+            # os.remove(dat_file)
             return df
         
         else:
             extract_tar(tbz_file, dat_file)
             df = read_dat(dat_file)
             df.to_csv(csv_file)
-            os.remove(dat_file)
+            # os.remove(dat_file)
             return df
         
         
@@ -191,7 +191,7 @@ if __name__ == "__main__":
         
     dat_files = [extract_dir+'bhdb180327_ZZ_0.02_Sal_-2.3_SS_1_BHSPIN_1_kick_6_data1.dat',
                 extract_dir+'fix_bhdb180327_ZZ_0.002_Sal_-2.3_SS_1_BHSPIN_1_kick_6_data1.dat',
-                extract_dir+'bhdb180327_ZZ_0.0002_Sal_-2.3_SS_1_BHSPIN_1_kick_6_data1.dat']
+                extract_dir+'fix_bhdb180327_ZZ_0.0002_Sal_-2.3_SS_1_BHSPIN_1_kick_6_data1.dat']
     
     csv_files = ['../data/processed/startrackdb/bhdb180327_ZZ_0.02_Sal_-2.3_SS_1_BHSPIN_1_kick_6_data1_mt_1.csv',
                   '../data/processed/startrackdb/bhdb180327_ZZ_0.002_Sal_-2.3_SS_1_BHSPIN_1_kick_6_data1_mt_1.csv',

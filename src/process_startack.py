@@ -257,7 +257,7 @@ def main():
     df_master['XLsph'] = abs(2.2E39 * (m/10) * (mdot_ratio/10)**2 * (1 + np.log(mdot_ratio)))
     df_master['XLsph2'] = 2.2E39 * (m/10) * (mdot_ratio/10)**2
     df_master['LXtot'] = np.where(mdot_ratio > 1, LEdd * (1 + np.log(mdot_ratio)), LEdd * mdot_ratio)
-    #df_master['LXtot'] = LEdd * (1 + np.log(mdot_ratio))
+    df_master['LXtot'] = LEdd * (1 + np.log(mdot_ratio))
     
     
     # Beaming factor
@@ -308,7 +308,7 @@ def main():
     # UNCOMMENT THIS FOR CHANGES TO DATAFRAME
     # =========================================================================
     
-    df_master.to_csv('../data/processed/all_systems_df.csv')
+    #df_master.to_csv('../data/processed/all_systems_df.csv')
     return df_master
     
 
