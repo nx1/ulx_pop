@@ -14,7 +14,7 @@ import itertools
 from multiprocessing import Pool
 import os
 
-import batchfunc
+import ulxlc
 from auxil import load_systems_dataframe
 
 def wrapper(id_dincl_tuple):
@@ -27,7 +27,7 @@ def wrapper(id_dincl_tuple):
     filename =  f'{theta}-{dincl}-{i}'
     xcm_n = f'{filename}.xcm'
     lc_n = f'{filename}.txt'
-    batchfunc.run_ulxlc(xcm_n, ulxlc_parameters, lc_n)
+    ulxlc.run_ulxlc(xcm_n, ulxlc_parameters, lc_n)
 
 def main():
     systems_df = load_systems_dataframe(True, True, True)

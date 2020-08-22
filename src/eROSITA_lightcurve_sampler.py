@@ -31,7 +31,7 @@ from tqdm import tqdm
 from uuid import uuid4
 import auxil
 import curvefunc
-import batchfunc
+import ulxlc
 
 import matplotlib.pyplot as plt
 
@@ -57,9 +57,9 @@ def get_lightcurves(row):
     
     parameters = get_parameters(row)
     
-    batchfunc.run_ulxlc(xcm_filename, parameters, row['system_id'], lc_filename, append_to_file=False)
+    ulxlc.run_ulxlc(xcm_filename, parameters, row['system_id'], lc_filename, append_to_file=False)
     parameters['inclination'] = 0
-    batchfunc.run_ulxlc(xcm_filename, parameters, row['system_id'], zero_incl_lc_filename, append_to_file=False)
+    ulxlc.run_ulxlc(xcm_filename, parameters, row['system_id'], zero_incl_lc_filename, append_to_file=False)
     
     curve = curvefunc.load_curve_file(lc_filename)
     curve_0 = curvefunc.load_curve_file(zero_incl_lc_filename)

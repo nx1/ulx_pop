@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 
 import populations
-from batchfunc import run_ulxlc
+from ulxlc import run_ulxlc
 from curvefunc import load_curve_file, scale_light_curve_period
 
 

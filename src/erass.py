@@ -15,7 +15,7 @@ import sqlite3
 import populations
 import auxil
 import curvefunc
-import batchfunc
+import ulxlc
 
 def create_classification_dict():
     # Classication dict
@@ -70,7 +70,7 @@ def get_erass_curve(theta, inclination, dincl):
                       'beta': 0.2,
                       'dopulse': 1,
                       'norm': 1}
-        batchfunc.run_ulxlc(xcm_path, parameters, lc_path)
+        ulxlc.run_ulxlc(xcm_path, parameters, lc_path)
         curve = curvefunc.load_curve_file(lc_path)
         return curve
 

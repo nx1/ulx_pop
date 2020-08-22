@@ -286,12 +286,12 @@ def main():
     
     
     # General Relativity stuff
-    df_master['R_g'] = (G * m*M_sol) / c**2 # Gravitational radii
-    df_master['a*'] = np.where(m<2.5, NS_SPIN, BH_SPIN)
+    df_master['R_g']           = (G * m*M_sol) / c**2 # Gravitational radii
+    df_master['a*']            = np.where(m<2.5, NS_SPIN, BH_SPIN)
     
-    df_master['r_schw'] = ((2 * G * m * M_sol) / c**2) / df_master['R_g']
+    df_master['r_schw']        = ((2 * G * m * M_sol) / c**2) / df_master['R_g']
     df_master['r_isco_nospin'] = ((6 * G * m * M_sol) / c**2) / df_master['R_g']
-    df_master['r_isco'] = np.where(m < 2.5, NS_ISCO, BH_ISCO)
+    df_master['r_isco']        = np.where(m < 2.5, NS_ISCO, BH_ISCO)
     
     df_master['r_sph'] = df_master['r_isco'] * df_master['mdot_ratio']
     df_master['r_out'] = 3 * epsilon / (beta * df_master['zeta']) * df_master['mdot_ratio']**3/2 * df_master['r_isco']

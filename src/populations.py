@@ -176,14 +176,13 @@ class Population:
         self.df_ulx = self.df_ulx[self.df_ulx['mttype'] != 5]
         self.df_ulx_bh = self.df_ulx[self.df_ulx['is_bh'] == 1]
         self.df_ulx_ns = self.df_ulx[self.df_ulx['is_bh'] == 0]
-        self.df_ulx_opening_angle_le_45 = self.df_ulx[self.df_ulx['theta_half_deg'] <= 45]
-        self.df_ulx_P_wind_l_4_years = self.df_ulx_opening_angle_le_45[self.df_ulx_opening_angle_le_45['P_wind_days'] < 365*4]
-        self.df_ulx_P_sup_l_4_years = self.df_ulx_opening_angle_le_45[self.df_ulx_opening_angle_le_45['P_sup_days'] < 365*4]
+        #self.df_ulx_opening_angle_le_45 = self.df_ulx[self.df_ulx['theta_half_deg'] <= 45]
+        #self.df_ulx_P_wind_l_4_years = self.df_ulx_opening_angle_le_45[self.df_ulx_opening_angle_le_45['P_wind_days'] < 365*4]
+        #self.df_ulx_P_sup_l_4_years = self.df_ulx_opening_angle_le_45[self.df_ulx_opening_angle_le_45['P_sup_days'] < 365*4]
         
     
-    def get_system(self, df, idum_run, iidd_old):
-        df_system = df.copy()
-        df_system = df[df['idum_run']==idum_run]
+    def get_system(self, idum_run, iidd_old):
+        df_system = self.df[self.df['idum_run']==idum_run]
         df_system = df_system[df_system['iidd_old']==iidd_old]
         return df_system
     
@@ -200,15 +199,21 @@ class Population:
         samp_weights = gb['P_samp']
         return samp_weights
     
-    def calc_ulx_sampling_weights(self):                
+    def calc_ulx_sampling_weights(self):
         self.ulx_bh_samp_weights = self.calc_sampling_weights(self.df_ulx_bh)
         self.ulx_ns_samp_weights = self.calc_sampling_weights(self.df_ulx_ns)
+    
+    
+    def calc_ulx_binary_dict(self):
+        self.binary_dict = self.df_ulx.groupby(['idum_run', 'iidd_old']).groups
     
     def sample_ulxs(self, bh_ratio, size=500):
         try:
             self.ulx_bh_samp_weights
+            self.binary_dict
         except:
             self.calc_ulx_sampling_weights()
+            self.calc_ulx_binary_dict()
             
         N_bh = int(size*bh_ratio)
         N_ns = size-N_bh
@@ -217,9 +222,10 @@ class Population:
         sampled_bh = np.random.choice(self.ulx_bh_samp_weights.index, size=N_bh , p=self.ulx_bh_samp_weights.values)
         sampled_ns = np.random.choice(self.ulx_ns_samp_weights.index, size=N_ns , p=self.ulx_ns_samp_weights.values)
         
-        sampled_ulxs = np.concatenate((sampled_bh, sampled_ns))
-        return sampled_ulxs
+        sampled_ulxs_idum_iidd_pairs = np.concatenate((sampled_bh, sampled_ns))
         
+        sampled_indexs = np.array([np.random.choice(self.binary_dict[sampled_ulxs_idum_iidd_pairs[i]]) for i in range(size)])
+        return sampled_indexs
         
     
     def plot_XLF_by_NSBH(self, df):
@@ -247,6 +253,7 @@ class Population:
         ax[1].legend()
         # plt.savefig('../reports/figures/luminosity_distributions_by_type.png', dpi=500)
         # plt.savefig('../reports/figures/luminosity_distributions_by_type.eps')
+        
         
     def plot_XLF_by_mttype(self, df):
         df_nuc = df[df['mttype'] == 1]
@@ -278,6 +285,7 @@ class Population:
         ax[1].legend()
         #plt.savefig('../reports/figures/luminosity_distributions_by_MT.png', dpi=500)
         #plt.savefig('../reports/figures/luminosity_distributions_by_MT.eps')
+    
     
     def plot_XLF_by_mttype_and_bh(self, df):
         df_ns = df[df['K_a'] == 13]
@@ -315,15 +323,15 @@ class Population:
         #plt.savefig('../reports/figures/luminosity_distributions.png', dpi=500)
         #plt.savefig('../reports/figures/luminosity_distributions.eps')
         
-    def plot_system_luminosity_evolution(self, df, idum_run, iidd_old):
-        df_system = self.get_system(df, idum_run, iidd_old)
+        
+    def plot_system_luminosity_evolution(self, idum_run, iidd_old):
+        df_system = self.get_system(idum_run, iidd_old)
         plt.figure()
         plt.scatter(df_system['t'], np.log10(df_system['Lx1']))
         plt.xlabel('Time')
         plt.ylabel('log (Lx)')
         plt.show()
     
-
     
     def export_to_binary_data(self, df):
         """
@@ -403,20 +411,19 @@ class Population:
         self.N_rows_bh = len(df[df['K_a'] == 14])
         self.N_rows_ns = len(df[df['K_a'] == 13])
         
-        self.N_binaries = len(self.df.groupby(['idum_run', 'iidd_old']).size().reset_index().rename(columns={0:'count'}))
-        self.N_beamed_ulx_binaries = len(self.df_ulx.groupby(['idum_run', 'iidd_old']).size().reset_index().rename(columns={0:'count'}))
-        self.N_opening_angle_l_45_binaries = len(self.df_ulx_opening_angle_le_45.groupby(['idum_run', 'iidd_old']).size().reset_index().rename(columns={0:'count'}))
-        self.N_P_wind_l_4_years_binaries = len(self.df_ulx_P_wind_l_4_years.groupby(['idum_run', 'iidd_old']).size().reset_index().rename(columns={0:'count'}))
-        self.N_P_sup_l_4_years_binaries = len(self.df_ulx_P_sup_l_4_years.groupby(['idum_run', 'iidd_old']).size().reset_index().rename(columns={0:'count'}))
-        
-                
-        self.unique_Z =self. df['Z'].unique()
+        self.N_binaries = len(self.df.groupby(['idum_run', 'iidd_old']))
+        self.N_beamed_ulx_binaries = len(self.df_ulx.groupby(['idum_run', 'iidd_old']))
+        self.N_opening_angle_l_45_binaries = len(self.df_ulx_opening_angle_le_45.groupby(['idum_run', 'iidd_old']))
+        self.N_P_wind_l_4_years_binaries = len(self.df_ulx_P_wind_l_4_years.groupby(['idum_run', 'iidd_old']))
+        self.N_P_sup_l_4_years_binaries = len(self.df_ulx_P_sup_l_4_years.groupby(['idum_run', 'iidd_old']))
+  
+        self.unique_Z = self. df['Z'].unique()
 
     
 if __name__ == "__main__":
-    df = startrack_v2_mt_1_all(10000)
+    df = startrack_v2_mt_1_all(nrows=10000) #nrows=100000
     
     pop = Population(df, 'startrack_mt_1')
-    
+
     #pop.describe()
     #pop.calc_ulx_sampling_weights()

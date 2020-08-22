@@ -11,7 +11,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from auxil import load_systems_dataframe
-from batchfunc import run_ulxlc
+from ulxlc import run_ulxlc
 from curvefunc import load_curve_file, scale_light_curve_period
 
 

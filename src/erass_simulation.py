@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from batchfunc import run_ulxlc
+from ulxlc import run_ulxlc
 from curvefunc import load_curve_file, scale_light_curve_period
 import create_erass_parent_population
 

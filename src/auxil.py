@@ -5,10 +5,14 @@ Created on Wed Jan 15 10:57:04 2020
 
 @author: nk7g14
 """
+import os
+from pathlib import Path
+from urllib.request import urlopen
+from shutil import copyfileobj
+
 import pandas as pd
 import numpy as np
 import math
-from pathlib import Path
 import ast
 
 def find_nearest(array,value):
@@ -46,3 +50,23 @@ def sample_by_bh_ratio(systems_df, bh_ratio, n):
     ns_weights = [ns_ratio/len(ns_systems)]*len(ns_systems)
     selected_systems = np.random.choice([*bh_systems, *ns_systems], size=n, p=[*bh_weights, *ns_weights])
     return selected_systems
+
+
+def download_file(url, path):
+    """
+    Download file from a url
+
+    Parameters
+    ----------
+    url : string
+        url of item to download
+    path : TYPE
+        path to download file to
+
+    """
+    if os.path.isfile(path):
+        print(f'{path} already exists, not downloading.')
+    else:
+        print(f'downloading {path}')
+        with urlopen(url) as in_stream, open(path, 'wb') as out_file:
+            copyfileobj(in_stream, out_file)

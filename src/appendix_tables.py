@@ -43,7 +43,6 @@ def table(df_systems):
 
 
 if __name__ == "__main__":
-    import pdb; pdb.set_trace()
     all_populations = populations.all()    
     for name, df in all_populations.items():
         print(name)

@@ -44,13 +44,13 @@ def calc_alive_time(curve, limit):
     limit
     '''
     if max(curve['Flux']) < limit:
-        Alive = 0
-        Dead = curve['Time'].iloc[-1]
-        return Alive, Dead
+        alive = 0
+        dead = curve['Time'].iloc[-1]
+        return alive, dead
     if min(curve['Flux']) > limit:
-        Alive = curve['Time'].iloc[-1]
-        Dead = 0
-        return Alive, Dead
+        alive = curve['Time'].iloc[-1]
+        dead = 0
+        return alive, dead
 
     
     curve['Above'] = curve['Flux'].map(lambda x: 1 if x >= limit else -1)
@@ -59,19 +59,19 @@ def calc_alive_time(curve, limit):
     df2['time_diff'] = df2['Time'].diff()
 
     if len(df2) == 1:   #If the Curve never goes above the limit
-        Alive = 0.0
-        Dead = curve['Time'].iloc[-1]
+        alive = 0.0
+        dead = curve['Time'].iloc[-1]
     elif df2['Above'][0] == -1: #If the curve starts below the limit
         df_above = df2[df2['Above'] == 1]
         df_below = df2[df2['Above'] == -1]
-        Dead = np.sum(df_above['time_diff']) + df_above['Time'].iloc[0]
-        Alive = np.sum(df_below['time_diff'])
+        dead = np.sum(df_above['time_diff']) + df_above['Time'].iloc[0]
+        alive = np.sum(df_below['time_diff'])
     elif df2['Above'][0] == 1: #If the curve starts above the limit
         df_above = df2[df2['Above'] == 1]
         df_below = df2[df2['Above'] == -1]
-        Dead = np.sum(df_above['time_diff'])
-        Alive = np.sum(df_below['time_diff']) + df_below['Time'].iloc[0]
-    return Alive, Dead
+        dead = np.sum(df_above['time_diff'])
+        alive = np.sum(df_below['time_diff']) + df_below['Time'].iloc[0]
+    return alive, dead
 
 
 def multiply_curve(curve, period, time_range):
@@ -97,8 +97,9 @@ def multiply_curve(curve, period, time_range):
     
 def scale_light_curve_period(curve, original_period, new_period):
     """Scale a lightcurve to a new period."""
-    curve['Time'] = (curve['Time'] / original_period) * new_period
-    return curve
+    working = curve.copy()
+    working['Time'] = (working['Time'] / original_period) * new_period
+    return working
 
 
 def get_lightcurve_ULX_flux_limit(curve_0, Lx):
