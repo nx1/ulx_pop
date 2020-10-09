@@ -1,8 +1,7 @@
 ULX Population Study
 ====================
-
-This repo contains auxilary files for the paper entitled The effect of Lense-Thirring
-on the observed population of ULXs (in prep).
+This repo contains source code used for the paper entitled 
+The effect of Lense-Thirring on the observed population of ULXs (in prep).
 
 
 ULXLC
@@ -321,4 +320,4 @@ Draw 500 ULXs
                 ..etc
 
             calculate the number of transients for each eRASS cycle
-                - sum all the probabilites
+                 sum all the probabilites

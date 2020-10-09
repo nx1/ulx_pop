@@ -21,16 +21,58 @@ TODO
 [x] Change lightcurve dincl and i plots to percent
 [x] Combine lightcurve and dincl plot into 1 figure.
 [x] Obtain figures for the orbital period from Universe @ Home https://universeathome.pl/universe/bhdb.php
-
-[ ] Calculate precessional period from Phil Charles relation
-[ ] Put precessional period into eRASS sims
-[ ] Use Phil Charles relation for a second form of precession comparison
-[ ] Check lower limit of zeta = 2
-
-[ ] Show the luminosity distributions before precession / after precession etc.
-[ ] Let Matt know about the low luminosity distribution of the tail to see if it is dominated by black holes
+[x] Download the new greg data
+[x] add additional columns to new data 
+[x] Run new data through lightcurve classifier
+[x] Calculate precessional period from Phil Charles relation
+[x] Put precessional period into eRASS sims
+[x] Use Phil Charles relation for a second form of precession comparison
+[x] Check lower limit of zeta = 2
     - See Latex notes wiktorowicz 2017
+[x] Get ULXLC working outside of XSPEC
+[x] Add analysis directly in C for speed
+[x] Mention what we do with the ISCO
+[ ] The low luminosity ULXs dominate the entire population \citep{Earnshaw_ULX_cat} and these are thought to be dominated by black hole systems. - is this now true?}
+    -No not really.
+[x] Why 12 years cut for prcession period?
+    get rid of precessional angle cut
+[ ] Show the luminosity distributions before precession / after precession etc.
+[ ] is the tail of the XLF dominated by black holes?
+[x] Check to see if our XLF matches greg's one
+    - Greg did not show a XLF however the most highly beamed sources at 10^41 are BH which is the same as greg.
+[x] Ask Matt about LMXRB classification
+    1.5 fine
+    use nuclear timescale values
+[x] Is this half angle or full angle?
+    it possesses a double-sided radio jet precessing on
+    a period of 162.5 days and tracing out a cone of polar angle 2019
+    around a precession axis of position angle PA  98.
+    -Find a paper from the 1970s to reference this
 
+[ ] What do we do about the DIM systems?
+    
+[ ] Expand what you mean about combination (of metallicities)
+    - I will not use the 'All' metallicities anymore.
+
+[ ] We should show the luminosity distributions as a function of erass cycle above.
+
+[ ] Is the underlying population still 500?
+    -Yes
+[ ] How many persistent sources in there?
+show persistent ones too    
+
+
+[x] Seperate out NS and BH in MC in XLF
+[ ] Include duty cycle in XLF
+
+[ ] What properties did the sample have (for table)
+
+[ ] Define what you mean by sub-sample
+
+[ ] Mention eRASS sensitivity in the paper
+[ ] For what BH ratio and size of underlying population?
+
+[ ] Send report to Ian and Francesco
 
 
 
@@ -508,4 +550,24 @@ If our ULX sample is representative we find that approximately \sim 13 \% of ULX
 
 Approximately (\sim 13 \%) of our population displayed beaming for which we assumed that precession was present.
 
-By performing simulations on the 123 (12\%) of our ULXs that displayed strong levels of beaming 
+By performing simulations on the 123 (12\%) of our ULXs that displayed strong levels of beaming
+
+
+===========
+23/07/2020
+----------
+Matt has been away for this week living it up in some fancy house in Essex.
+
+I've been left to my own devices to attempt to use Greg's new data to reproduce the results.
+
+I have spent the last two days bungling through the ULXLC code and have managed to figure out how to create lightcurves in C naitvely. (Thanks to David Williamson)
+
+The next step is to reproduce the results using this new dataset.
+
+timing: ulxlc_model()
+
+iterations:     Time Taken:
+100             0.04 sec
+1000            0.4  sec
+10000           4.1  sec
+100000          41   sec

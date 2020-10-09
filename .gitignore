@@ -5,3 +5,4 @@ data/interim/eROSITA_sampling_results/
 src/__pycache__/
 src/visualization/dynamic_plots/ffmpeg-20200623-ce297b4-win64-static/
 .spyproject/
+*.db
