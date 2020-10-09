@@ -16,6 +16,7 @@ Myr  = yr * 1E6     # 1 Myr in Seconds
 G_SI = 6.67408E-11  # N.(m^2)/(kg)^2 
 G    = 6.674E-8     # (cm)^3 g^-1 s^-2
 
+eta = 1/12 # Accretion efficiency
 
 #GR constants
 epsilon = 0.25 # Normally between 0.25 to 0.95 (check latex)
@@ -24,3 +25,5 @@ BH_ISCO = 1.25
 BH_SPIN = 0.998
 NS_ISCO = 6
 NS_SPIN = 0.01
+
+LMXRB_MASS = 1.5
