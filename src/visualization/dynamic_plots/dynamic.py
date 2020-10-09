@@ -136,9 +136,9 @@ i_text = i_ax.text(0, 35, '', fontsize=15)
 
 ani = animation.FuncAnimation(fig, animate, init_func = init, interval = 1000/animation_fps, blit=True, repeat=True, frames=45)
 # Set up formatting for the movie files
-# plt.rcParams['animation.ffmpeg_path'] = 'ffmpeg-20200623-ce297b4-win64-static/ffmpeg-20200623-ce297b4-win64-static/bin/ffmpeg.exe'
-# FFwriter = animation.FFMpegWriter(fps=30)
-# ani.save('basic_animation.mp4', writer=FFwriter)
+plt.rcParams['animation.ffmpeg_path'] = 'ffmpeg-20200623-ce297b4-win64-static/ffmpeg-20200623-ce297b4-win64-static/bin/ffmpeg.exe'
+FFwriter = animation.FFMpegWriter(fps=30)
+ani.save('basic_animation.mp4', writer=FFwriter)
 
 
 
