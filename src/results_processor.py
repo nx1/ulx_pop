@@ -910,7 +910,6 @@ class ResultsProcessor:
 
 
 
-
 if __name__ == "__main__":
     # Load population
     df = populations.startrack_v2_mt_1_all()
@@ -920,7 +919,7 @@ if __name__ == "__main__":
     rp = ResultsProcessor()
     
     # Set Database
-    db_path = 'ulxlc2.db'
+    db_path = 'ulxlc.db'
     rp.set_active_db(db_path)
     
     # Insert population
