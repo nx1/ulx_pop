@@ -111,7 +111,7 @@ class Population:
         
         self.df_ulx_Z_subset = None
         
-    def calc_columns(self):   
+    def calc_columns(self):
         self.df['is_bh'] = np.where(self.df['K_a'] == 14, 1, 0)
         
         # Make mass accretion rates positive
@@ -181,19 +181,24 @@ class Population:
         
     def calc_sub_populations(self):
         self.df_ulx = self.df[self.df['Lx1'] > 1e39]
-        self.df_ulx = self.df_ulx[self.df_ulx['mttype'] != 5]
+        self.df_ulx = self.df_ulx[self.df_ulx['mttype'] != 5]   # Exclude WD mass transfer systems
         #self.df_ulx_opening_angle_le_45 = self.df_ulx[self.df_ulx['theta_half_deg'] <= 45]
         #self.df_ulx_P_wind_l_4_years = self.df_ulx_opening_angle_le_45[self.df_ulx_opening_angle_le_45['P_wind_days'] < 365*4]
         #self.df_ulx_P_sup_l_4_years = self.df_ulx_opening_angle_le_45[self.df_ulx_opening_angle_le_45['P_sup_days'] < 365*4]
-    
+        
     def filter_df_ulx_by_Z(self, Z):
         self.df_ulx = self.df_ulx[self.df_ulx['Z'] == float(Z)]
         self.df_ulx_Z_subset = float(Z)
-    
+        
     def calc_bh_ns_ulx_sub_populations(self):
         self.df_ulx_bh = self.df_ulx[self.df_ulx['is_bh'] == 1]
         self.df_ulx_ns = self.df_ulx[self.df_ulx['is_bh'] == 0]
-       
+          
+    def get_system_ids(self, df):
+        """Get all unique idum_run, iidd_old pairs in a given df.
+        returns a list of tuples."""
+        ids = list(pop.df.groupby(['idum_run', 'iidd_old']).groups)
+        return ids
     
     def get_system(self, idum_run, iidd_old):
         df_system = self.df[self.df['idum_run']==idum_run]
@@ -207,11 +212,9 @@ class Population:
 
 
     def calc_sampling_weights(self, df):
-        gb = df.groupby(['idum_run', 'iidd_old'])[['t']].agg(['min', 'max']) # Get min and max t for each system
-        gb[('t', 'range')] = gb[('t', 'max')] - gb[('t', 'min')] #Calculate t_range (i.e system alive time)
-        t_tot = gb[('t', 'range')].sum() #Calculate total time alive for all systems
-        gb['P_samp'] = gb[('t', 'range')] / t_tot
-        samp_weights = gb['P_samp']
+        sys_time = df.groupby(['idum_run', 'iidd_old'])[['dt']].sum() # system_on_time
+        sys_time['P_samp'] = sys_time['dt'] / sys_time['dt'].sum()
+        samp_weights = sys_time['P_samp']
         return samp_weights
     
     def calc_ulx_sampling_weights(self):
@@ -450,9 +453,11 @@ class Population:
     def plot_system_luminosity_evolution(self, idum_run, iidd_old):
         df_system = self.get_system(idum_run, iidd_old)
         plt.figure()
+        plt.title(f'System: {idum_run} {iidd_old}')
         plt.scatter(df_system['t'], np.log10(df_system['Lx1']))
-        plt.xlabel('Time')
-        plt.ylabel('log (Lx)')
+        plt.axhline(39, c='r') 
+        plt.xlabel('Time (Myr)')
+        plt.ylabel('log10 (Lx)')
         plt.show()
     
     
@@ -460,7 +465,7 @@ class Population:
         """
         Create binary datafiles used for importing into C code.
         """
-        N = len(df)        
+        N = len(df)
         system_id = array('i', df.index)
         system_theta = array('d', df.theta_half_deg)
         system_Lx = array('d', df.Lx1 / 1e39)    # In units of x10^39 erg/s
@@ -555,57 +560,77 @@ class Population:
   
     
 if __name__ == "__main__":
-    df = startrack_v2_mt_1_all() #nrows=100000
+    df = startrack_v2_mt_1_all(nrows=100000) #
     pop = Population(df)
     df_sys = pop.df.groupby(['idum_run', 'iidd_old']).mean().reset_index()
+    
+    
+    # Population Statistics
     # pop.describe(pop.df, 'df')
-    # pop.describe(pop.df_ulx, 'df_ulx') 
+    # pop.describe(pop.df_ulx, 'df_ulx')
+    
+    # Plotting
     pop.set_latex_font()
     # pop.XLF_plot(df_sys, include_beamed=True, include_duty_cycle=True, save=True)
-    
-    lmxrb = pop.df[pop.df['lmxrb'] == 1]
-    # lmxrb = lmxrb.groupby(['idum_run', 'iidd_old']).mean().reset_index()
 
-    plt.yscale('log')
-    
-    plt.hist(np.log10(lmxrb['Lx1']), bins=pop.bins, histtype='step', label='lmxrb')
-    
-    df_ns = lmxrb[lmxrb['K_a'] == 13]
-    df_bh = lmxrb[lmxrb['K_a'] == 14]
+    # =============================================================================
+    # LMXRB XLF NEEDS REDOING
+    # =============================================================================
+        
 
-    df_ns_sys = df_ns.groupby(['idum_run', 'iidd_old']).mean().reset_index()
-    df_bh_sys = df_bh.groupby(['idum_run', 'iidd_old']).mean().reset_index()
+    # lmxrb = pop.df[pop.df['lmxrb'] == 1]
+    # lmxrb_ns = lmxrb[lmxrb['K_a'] == 13]
+    # lmxrb_bh = lmxrb[lmxrb['K_a'] == 14]
     
-    for dc in [0.1, 0.2, 0.3, 1.0]:
-        
-        vis = pop.sample_visible(lmxrb, include_duty_cycle=True, lmxrb_duty_cycle=dc)
-        
-        ns_hist_results = pop.XLF_mc_histogram(df_ns_sys, True, lmxrb_duty_cycle=dc)
-        bh_hist_results = pop.XLF_mc_histogram(df_bh_sys, True, lmxrb_duty_cycle=dc)
+    # # lmxrb = lmxrb.groupby(['idum_run', 'iidd_old']).mean().reset_index()
+
+    # plt.yscale('log')
+    # plt.hist(np.log10(pop.df['Lx1']), bins=pop.bins, histtype='step', label='full')
     
-        df_vis_ns = pop.sample_visible(df_ns_sys)
-        df_vis_bh = pop.sample_visible(df_bh_sys)
+    # # plt.hist(np.log10(lmxrb['Lx1']), bins=pop.bins, histtype='step', label='lmxrb')
+    # plt.hist(np.log10(lmxrb_ns['Lx1']), bins=pop.bins, histtype='step', label='lmxrb_NS')
+    # plt.hist(np.log10(lmxrb_bh['Lx1']), bins=pop.bins, histtype='step', label='lmxrb_BH')
+    # # plt.text(x=38,y=100,s='LMXRBs')
+    # plt.legend()
+    
+    
+    
+    # df_ns = lmxrb[lmxrb['K_a'] == 13]
+    # df_bh = lmxrb[lmxrb['K_a'] == 14]
+
+    # df_ns_sys = df_ns.groupby(['idum_run', 'iidd_old']).mean().reset_index()
+    # df_bh_sys = df_bh.groupby(['idum_run', 'iidd_old']).mean().reset_index()
+    
+    # for dc in [0.1, 0.2, 0.3, 1.0]:
         
-        mean_ns = np.mean(ns_hist_results, axis=0)
-        std_ns  = np.std(ns_hist_results, axis=0)
+    #     vis = pop.sample_visible(lmxrb, include_duty_cycle=True, lmxrb_duty_cycle=dc)
         
-        mean_bh = np.mean(bh_hist_results, axis=0)
-        std_bh  = np.std(bh_hist_results, axis=0)
+    #     ns_hist_results = pop.XLF_mc_histogram(df_ns_sys, True, lmxrb_duty_cycle=dc)
+    #     bh_hist_results = pop.XLF_mc_histogram(df_bh_sys, True, lmxrb_duty_cycle=dc)
+    
+    #     df_vis_ns = pop.sample_visible(df_ns_sys)
+    #     df_vis_bh = pop.sample_visible(df_bh_sys)
         
-        np.log10(df_vis_ns['Lx1']).hist(bins=pop.bins, label=f'NS | With Beaming | Visible only | d={dc}', histtype='step', alpha=1.0, grid=False)
-        np.log10(df_vis_bh['Lx1']).hist(bins=pop.bins, label=f'BH | With Beaming | Visible only | d={dc}',histtype='step', alpha=1.0, grid=False, linestyle='--')
+    #     mean_ns = np.mean(ns_hist_results, axis=0)
+    #     std_ns  = np.std(ns_hist_results, axis=0)
         
-        plt.errorbar(pop.bin_centers, mean_ns, yerr=std_ns, linestyle='', capsize=1.0, label=f'NS | With Beaming | Visible only | d={dc}')
-        plt.errorbar(pop.bin_centers, mean_bh, yerr=std_bh, linestyle='', capsize=1.0, label=f'BH | With Beaming | Visible only | d={dc}')
+    #     mean_bh = np.mean(bh_hist_results, axis=0)
+    #     std_bh  = np.std(bh_hist_results, axis=0)
+        
+    #     np.log10(df_vis_ns['Lx1']).hist(bins=pop.bins, label=f'NS | With Beaming | Visible only | d={dc}', histtype='step', alpha=1.0, grid=False)
+    #     np.log10(df_vis_bh['Lx1']).hist(bins=pop.bins, label=f'BH | With Beaming | Visible only | d={dc}',histtype='step', alpha=1.0, grid=False, linestyle='--')
+        
+    #     plt.errorbar(pop.bin_centers, mean_ns, yerr=std_ns, linestyle='', capsize=1.0, label=f'NS | With Beaming | Visible only | d={dc}')
+    #     plt.errorbar(pop.bin_centers, mean_bh, yerr=std_bh, linestyle='', capsize=1.0, label=f'BH | With Beaming | Visible only | d={dc}')
         
                 
-        # plt.hist(np.log10(vis['Lx1']), bins=pop.bins, histtype='step', label=f'd = {dc}')
-        plt.legend()
+    #     # plt.hist(np.log10(vis['Lx1']), bins=pop.bins, histtype='step', label=f'd = {dc}')
+    #     plt.legend()
         
         
-    plt.xlabel(r'log $L_{x}$ $(\mathrm{erg \ s^{-1}})$')
-    plt.legend()
-    plt.savefig('../reports/figures/XLF_lmxrb_sys_inc_dc.png', dpi=500)
-    plt.savefig('../reports/figures/XLF_lmxrb_sys_inc_dc.eps')
-    plt.savefig('../reports/figures/XLF_lmxrb_sys_inc_dc.pdf')
+    # plt.xlabel(r'log $L_{x}$ $(\mathrm{erg \ s^{-1}})$')
+    # plt.legend()
+    # plt.savefig('../reports/figures/XLF_lmxrb_sys_inc_dc.png', dpi=500)
+    # plt.savefig('../reports/figures/XLF_lmxrb_sys_inc_dc.eps')
+    # plt.savefig('../reports/figures/XLF_lmxrb_sys_inc_dc.pdf')
     
