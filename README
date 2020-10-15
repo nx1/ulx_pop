@@ -1,6 +1,113 @@
 ULX Population Study
 ====================
-This repo contains source code used for the paper entitled
 
-The effect of Lense-Thirring on the observed population of ULXs.
+What is this?
+-------------
+Ultraluminous X-ray sources (ULXs) are a subset of X-ray binaries
+lightcurves often display long term modulations on the order
+of months.
+
+One explaination for these modulations is that they are caused by
+some form of precession of the accretion flow near the compact object.
+
+One model created to describe these modulations is ULXLC:
+http://www.sternwarte.uni-erlangen.de/~dauser/research/ulxlc/
+and allows the creation of lightcurves for a variety of system parameters.
+
+This code uses a modifed version of ULXLC coupled with an
+artifically created population of binary systems in order
+to try and answer the question of how does precession affect
+the observed population of ULXs.
+
+
+
+
+
+
+
+
+
+Input Data
+----------
+The code makes uses of the output from the population synthesis code
+STARTRACK (https://ui.adsabs.harvard.edu/abs/2008ApJS..174..223B)
+
+The input files may be found at:
+Z=0.02   | https://universeathome.pl/universe/pub/z02_data1.dat
+Z=0.002  | https://universeathome.pl/universe/pub/z002_data1.dat
+Z=0.0002 | https://universeathome.pl/universe/pub/z0002_data1.dat
+
+With columns corresponding to the following:
+s.t, s.dt, s.A.M, s.B.M, s.A.K, s.B.K, s.a, s.e,
+s.A.R, s.B.R, s.A.L, s.B.L, s.A.aspin, s.B.aspin,
+s.mt, s.mttype, s.Lxmt, s.Lx, 
+s.A.dMmt,s.A.dMwind,s.B.dMmt,s.B.dMwind,
+s.Vsm[0], s.Vsm[1], s.Vsm[2],
+s.A.Mzams, s.B.Mzams, s.a0, s.e0,
+idum_run, iidd_old, s.evroute
+
+
+These files are ~30gb each and for our analysis we have extracted the systems
+with active mass transfer (mt=1)
+
+The result is a ~9.3m rows of data that is not provided in this repo.
+
+These files may be processed using src/
+----------
+
+Code
+----
+The code is currently split betwen three main areas:
+1.  src/populations.py
+2.  src/results_processor.py
+3.  src/ulxlc/
+
+populations.py
+--------------
+This file contains code for reading in the input data from STARTRACK,
+calculating seconary quantities, and various functions for calculating
+sampling weights and sub-populations.
+
+Currently all the code is pretty much held in one class called 'Population'
+This is pretty stupid as the class does not actually correspond to a single
+population as you would expect it to but instead also contains all possible
+sub-populations within it as various Pandas dataframes, this is highly confusing
+and likely not a good idea.
+
+results_processor.py
+--------------------
+One would assume that this file contains code for processing results, however
+it also for some reason contains literally all the other simulation code too.
+
+the main class 'ResultsProcessor' includes functions for:
+    - Creating, reading and writing several SQLite tables
+    - Performing maps, joins and other various transformations
+      of these tables outside of SQLite using Pandas
+    - Running the Monte-Carlo routine via subprocess.run() calls to
+      the modified ULXLC written in C.
+    - all the plotting code.
+
+The other two classes 'Ulx' and 'ErassTransientSampler'
+
+
+General Thoughts About the state of the code
+--------------------------------------------
+
+results_processor.py
+--------------------
+1.  Too Many similar functions i.e: "table_" functions make things way too convoluted and repetitive.
+    - Refactoring of this 
+
+2. Literally 0 unit tests.
+3. Some things are just plain awful, like 
+
+
+
+
+
+
+
+
+
+
 

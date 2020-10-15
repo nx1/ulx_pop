@@ -1,5 +1,5 @@
 DONE
-====
+ ====
 [x] Recreate all systems dataframe with eta = 0.2
 [x] Install xspec
 [x] install ulxlc 
@@ -41,6 +41,7 @@ DONE
 [x] Seperate out NS and BH in MC in XLF
 [x] Mention eRASS sensitivity and how it is a flux limited survey
 [x] Check ULX system weighting
+[x] somewhere we need to note that we assume only the beamed emission is detected not the emission from the spherisaton radius or photosphere
 
 ====
 TODO
@@ -48,6 +49,64 @@ TODO
 
 Code
 ----
+[ ] Ensure duty cycle is doing the right thing.
+[ ] Remove the mass from lmxrb classification
+
+Refactoring
+-----------
+
+Now
+---
+Population
+    -XLF
+
+ResultsProcessor
+    -db + SQL
+    -MC simulation
+    -MC results processing
+    -MC results plotting
+
+Sim_eRASS
+ulx
+
+
+New
+---
+SQLite db
+---------
+Tables:
+    -Full mt=1 population
+    -mc_info
+    -mc_sampled_systems
+    -classifications
+    -mc_results
+    -transient
+
+Population
+
+Simulation
+    - Input parameters
+        - size
+        - dincl_cutoff
+        - Z
+        - bh ratio
+        - period_cutoff (obselete)
+        - lmxrb_duty_cycle
+
+    - Input population
+    - 
+
+
+Plotter
+    Plot_XLF
+    Plot_ADT
+    Plot_eRASS_transients
+    Plot_
+    
+
+
+
+
 
 Plots
 -----
@@ -61,7 +120,6 @@ Plots
 
 Paper
 -----
-[ ] somewhere we need to note that we assume only the beamed emission is detected not the emission from the spherisaton radius or photosphere
 [ ] What do we do about the DIM systems?
 [ ] Expand what you mean about combination (of metallicities)
 [ ] Is the underlying population still 500?

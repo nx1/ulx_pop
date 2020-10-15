@@ -464,72 +464,7 @@ int main(int argc, char *argv[]){
 	int rc;
 	const char* data = "Callback function called";
 	sqlite3_stmt *res;
-	
-	rc = sqlite3_open(filename_database, &db);
-    
-	if(rc) {
-		fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
-		return(0);
-	} else {
-		fprintf(stderr, "Opened database successfully\n");
-	}
-	
-	// Create CLASSIFICATIONS SQL table
-	sql = "CREATE TABLE IF NOT EXISTS CLASSIFICATIONS(" \
-		  "system_row_id INT," \
-		  "system_theta REAL," \
-		  "system_dincl INT," \
-		  "system_inclination INT," \
-		  "lc_min_flux REAL," \
-		  "lc_max_flux REAL," \
-		  "lc_ulx_lim REAL," \
-		  "lc_classification INT," \
-		  "run_id CHAR);";
-	
-	rc = sqlite3_exec(db, sql, callback, 0, &zErrMsg);
-	if( rc != SQLITE_OK ){
-		fprintf(stderr, "SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-	} else {
-		fprintf(stdout, "CLASSIFICATIONS Table created successfully\n");
-	}
-	
-	// Create Transient results SQL table
-	sql = "CREATE TABLE IF NOT EXISTS TRANSIENT(" \
-		  "system_row_id INT," \
-		  "system_dincl INT," \
-		  "system_inclination INT," \
-		  "erass_1_ulx_prob REAL," \
-		  "erass_2_P_wind_transient_prob REAL," \
-		  "erass_3_P_wind_transient_prob REAL," \
-		  "erass_4_P_wind_transient_prob REAL," \
-		  "erass_5_P_wind_transient_prob REAL," \
-		  "erass_6_P_wind_transient_prob REAL," \
-		  "erass_7_P_wind_transient_prob REAL," \
-		  "erass_8_P_wind_transient_prob REAL," \
-		  "erass_2_P_sup_transient_prob REAL," \
-		  "erass_3_P_sup_transient_prob REAL," \
-		  "erass_4_P_sup_transient_prob REAL," \
-		  "erass_5_P_sup_transient_prob REAL," \
-		  "erass_6_P_sup_transient_prob REAL," \
-		  "erass_7_P_sup_transient_prob REAL," \
-		  "erass_8_P_sup_transient_prob REAL," \
-		  "erass_P_wind_persistent_prob REAL," \
-		  "erass_P_sup_persistent_prob REAL," \
-		  "run_id CHAR);";
-	
-	
-	
-	
-	rc = sqlite3_exec(db, sql, callback, 0, &zErrMsg);
-	if( rc != SQLITE_OK ){
-		fprintf(stderr, "SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-	} else {
-		fprintf(stdout, "TRANSIENT Table created successfully\n");
-	}
-	
-	
+
 	/* Retrieve sim rows from sql table */
 	sql = sqlite3_mprintf("SELECT row_id, theta_half_deg, Lx1, P_wind_days, P_sup_days, inclination, dincl, lmxrb from ERASS_MC_SAMPLED_SYSTEMS WHERE run_id=%Q", run_id);
 	// sql = sqlite3_mprintf("SELECT * from ERASS_MC_SAMPLED_SYSTEMS WHERE run_id='%Q'", run_id);
@@ -555,14 +490,13 @@ int main(int argc, char *argv[]){
 		lc_t[i] = lc_timestep*i;
 	}
 
-
-	
+    // Loop over all systems    
 	for (int N=0;N<system_N;N++){
-		params[2] =	system_theta[N];		// theta
-		params[3] =	0;	// incl
-		params[4] =	system_dincl[N];		// dincl
+		params[2] =	system_theta[N];	// theta
+		params[3] =	0;	                // incl
+		params[4] =	system_dincl[N];    // dincl
 		if (system_theta[N] > 45){
-			continue;
+			continue;   // If system has opening angle > 45 deg (unbeamed) then don't perform any simulations
 		}
 		// Run the lightcurve model.
 		ulxlc_model(lc_t, lc_nt, lc_flux, params, 7);
@@ -585,20 +519,24 @@ int main(int argc, char *argv[]){
 		lc_min_flux = min(lc_flux, lc_nt);
 		lc_classification = classify_curve(lc_ulx_lim, lc_max_flux, lc_min_flux);
 		
-		// TODO
-		int erass_sample = 1;	// Sample erass yes/no
 		
-		if (system_lmxrb[N] == 1){
+        
+		int erass_sample = 1;	// Sample erass yes/no
+        
+        // Roll for lmxrb systems if we observed the system during an ourburst or not
+		
+        if (system_lmxrb[N] == 1){
 			// printf("System could be in outburst \n");
 			double r = ((double) rand() / (RAND_MAX));
 			// printf("r = %f | duty cycle = %f\n", r, erass_lmxrb_duty_cycle);
 			if (r > erass_lmxrb_duty_cycle){
 				int erass_sample = 0;
-				// printf("NOT SAMPLING zn");
+				// printf("NOT SAMPLING \n");
 			}
 			
 		}
-		// Lightcurve is transient & P_wind or P_sup is below limit
+
+    	// Lightcurve is transient & P_wind or P_sup is below limit (and rolled during ourburst for lmxrb systems)
 		if ((lc_classification == 1) & (erass_sample==1) & (system_P_wind_days[N] < erass_system_period_cutoff || system_P_sup_days[N] < erass_system_period_cutoff) ){ 
 		
 			int erass_1_N_ulx = 0;		// Number of times the system was observed as a ULX on the first cycle.
@@ -632,7 +570,7 @@ int main(int argc, char *argv[]){
 				// printf("lc_P_sup_time_scaling_constant %f \n", lc_P_sup_time_scaling_constant);
 				// printf("---------------------------------------------------------------------------------------------------------------- \n");
 				
-				
+			    // Sample the lightcurve at each erass cycle	
 				for (int i=0; i<8; i++){
 					erass_P_wind_sample_time_days[j][i] = erass_P_wind_start_time_days[j] + i * erass_sample_interval;
 					erass_P_sup_sample_time_days[j][i]  = erass_P_sup_start_time_days[j] + i * erass_sample_interval;
