@@ -29,34 +29,35 @@ Z=0.02   | https://universeathome.pl/universe/pub/z02_data1.dat
 Z=0.002  | https://universeathome.pl/universe/pub/z002_data1.dat
 Z=0.0002 | https://universeathome.pl/universe/pub/z0002_data1.dat
 
-With columns corresponding to the following:
-s.t, s.dt, s.A.M, s.B.M, s.A.K, s.B.K, s.a, s.e,
-s.A.R, s.B.R, s.A.L, s.B.L, s.A.aspin, s.B.aspin,
-s.mt, s.mttype, s.Lxmt, s.Lx, 
-s.A.dMmt,s.A.dMwind,s.B.dMmt,s.B.dMwind,
-s.Vsm[0], s.Vsm[1], s.Vsm[2],
-s.A.Mzams, s.B.Mzams, s.a0, s.e0,
-idum_run, iidd_old, s.evroute
-
-
 These files are ~30gb each and for our analysis we have extracted the systems
 with active mass transfer (mt=1)
 
+[Once downloaded These files may be processed using src/process_startrack.py]
+
 The result is a ~9.3m rows of data that is not provided in this repo.
 
-These files may be processed using src/
-----------
 
-Code
-----
-The code is currently split betwen three main areas:
+
+General Thoughts About the state of the code
+--------------------------------------------
+    - Main population is still stored as csv, might wanna move to SQL.
+    - Literally 0 unit tests.
+    - One big file is just way too much
+    - All the git commits are like 1 word i.e 'updates'
+    - Lots of redudant files... (see src/old)
+    - The SQL stuff could definitely be a lot better
+    
+
+
+THe main three files for the simulation are the following:
 1.  src/populations.py
 2.  src/results_processor.py
-3.  src/ulxlc/
+3.  src/ulxlc/ulxlcmod.c
 
+==============
 populations.py
---------------
-This file contains code for reading in the input data from STARTRACK,
+==============
+This file contains code for reading in the processed input data from STARTRACK,
 calculating seconary quantities, and various functions for calculating
 sampling weights and sub-populations.
 
@@ -66,8 +67,25 @@ population as you would expect it to but instead also contains all possible
 sub-populations within it as various Pandas dataframes, this is highly confusing
 and likely not a good idea.
 
+
+Improvements
+------------
+- Old unused population functions at the start
+    Population Class
+    ----------------
+    - Calc columns has a lot.
+    - calc_sub_populations() calculates rows that are above ulx luminosity
+        - df_ulx should probably be is own object/population
+          along with other subpopulations
+    - A unique binary system corresponds to a unique combination of
+      columns: ['iidum_run', 'iidd_old'], and contains row specifiying their
+      time evolution, maybe these could be seperated into their own
+      'System' Class?
+
+
+====================
 results_processor.py
---------------------
+====================
 One would assume that this file contains code for processing results, however
 it also for some reason contains literally all the other simulation code too.
 
@@ -79,33 +97,32 @@ the main class 'ResultsProcessor' includes functions for:
       the modified ULXLC written in C.
     - all the plotting code.
 
-The other two classes 'Ulx' and 'ErassTransientSampler'
+The other two classes 'Ulx' and 'ErassTransientSampler' are used
+for sampling 
 
 
-General Thoughts About the state of the code
---------------------------------------------
-    - Literally 0 unit tests.
-    - One big file is just way too much
-    - All the git commits are like 1 word i.e 'updates'
-    - Lots of redudant files... (see src/old)
-    
- 
-
-
-
-results_processor.py
---------------------
-
-1.  Too Many similar functions i.e: "table_" functions make things way too convoluted and repetitive.
+Improvements
+------------
+- Too Many similar functions i.e: "table_" functions make things way too
+convoluted and repetitive.
     - Refactoring of this I think could be useful
 
+================
+ulxlc/ulxlcmod.c
+================
+This file contains the code for ULXLC, and additionally within the
+main() contains analysis that i have written for generating lightcurves for
+a specified population as well as analysing several properties in C.
+
+currently, the way this file is used is that it is called by
+'results_processor.py' using subprocess.run() and several parameters
+are passed via command line (e.g. "./a.out param1, param2"), the passed
+parameters tell the script which rows to retrieve from the sqlite database.
 
 
-
-
-
-
-
-
+Improvments
+-----------
+- There are almost no functions in the C code I have written it's just one big
+huge block.
 
 

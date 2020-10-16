@@ -17,12 +17,9 @@ mass transfer 'mt = 1', this provides 9,372,542 rows to work with.
 
 We sample from the set of unique binaries and weight them by the total
 amount of time that they are a ULX.
-    
-# I feel like I have discovered forbidden mathematics
-    print(sys_df['t'].diff().sum())
-    print(sys_df['t'].max() - sys_df['t'].min())
 
 """
+import logging
 from pathlib import Path
 
 import numpy as np
@@ -31,7 +28,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from array import array
 
-from constants import G, c, Myr, R_sol, M_sol, NS_SPIN, BH_SPIN, NS_ISCO, BH_ISCO, epsilon, beta, LMXRB_MASS, eta
+from constants import G, c, Myr, R_sol, M_sol, NS_SPIN, BH_SPIN, NS_ISCO, BH_ISCO, epsilon, beta, eta
 
 
 def startrack():
@@ -58,6 +55,7 @@ def ulx_beamed():
     df = ulx()
     df = df[df['b'] < 1]
     return df
+
 
 def ulx_beamed_l_45():
     """
@@ -89,10 +87,14 @@ def startrack_v2_mt_1_z0002(**kwargs):
 
 def startrack_v2_mt_1_all(**kwargs):
     systems_df_path = Path('../data/interim/startrack/data_mt=1.csv')
-    df = pd.read_csv(systems_df_path, index_col=0, **kwargs)
+    df = pd.read_csv(systems_df_path, **kwargs)
     return df
     
-    
+def set_latex_font():
+    import matplotlib
+    matplotlib.rcParams['mathtext.fontset'] = 'stix'
+    matplotlib.rcParams['font.family'] = 'STIXGeneral'
+
 class Population:
     """
     This class contains functions for describing, plotting, sampling and outputting populations.
@@ -112,6 +114,8 @@ class Population:
         self.df_ulx_Z_subset = None
         
     def calc_columns(self):
+        logging.debug('Calculating population columns')
+        
         self.df['is_bh'] = np.where(self.df['K_a'] == 14, 1, 0)
         
         # Make mass accretion rates positive
@@ -176,10 +180,11 @@ class Population:
         self.df['P_sup_days'] = self.df['P_sup'] / (60*60*24)
         self.df['P_sup_err_days'] = self.df['P_sup_err'] / (60*60*24)
         
-        # LMXRB defined as m_b < 1.5, nuclear mt, and dominated by disc accretion.
-        self.df['lmxrb'] = np.where((self.df['M_b'] < LMXRB_MASS) & (self.df['mttype'] == 1) & (self.df['dMmt_b'] > self.df['dMwind_b']), 1, 0)
+        # LMXRB nuclear mt, and dominated by disc accretion.
+        self.df['lmxrb'] = np.where((self.df['mttype'] == 1) & (self.df['dMmt_b'] > self.df['dMwind_b']), 1, 0)
         
     def calc_sub_populations(self):
+        logging.debug('Calculating subpopulation')
         self.df_ulx = self.df[self.df['Lx1'] > 1e39]
         self.df_ulx = self.df_ulx[self.df_ulx['mttype'] != 5]   # Exclude WD mass transfer systems
         #self.df_ulx_opening_angle_le_45 = self.df_ulx[self.df_ulx['theta_half_deg'] <= 45]
@@ -189,35 +194,49 @@ class Population:
     def filter_df_ulx_by_Z(self, Z):
         self.df_ulx = self.df_ulx[self.df_ulx['Z'] == float(Z)]
         self.df_ulx_Z_subset = float(Z)
-        
+    
+    def split_ns_bh(self, df):
+        logging.debug('Splitting df into ns and bh')
+        df_ns = df[df['K_a'] == 13]
+        df_bh = df[df['K_a'] == 14]
+        return df_ns, df_bh
+    
     def calc_bh_ns_ulx_sub_populations(self):
-        self.df_ulx_bh = self.df_ulx[self.df_ulx['is_bh'] == 1]
-        self.df_ulx_ns = self.df_ulx[self.df_ulx['is_bh'] == 0]
-          
+        logging.debug('Calculating df_ulx_bh and df_ulx_ns')
+        self.df_ulx_ns, self.df_ulx_bh = self.split_ns_bh(self.df_ulx)
+         
+    def gb_sys(self, df):
+        """Get pandas GroupBy object for unique binaries"""
+        logging.debug('Getting system groupby')
+        gb = df.groupby(['idum_run', 'iidd_old'])
+        return gb    
+        
+    
     def get_system_ids(self, df):
         """Get all unique idum_run, iidd_old pairs in a given df.
         returns a list of tuples."""
-        ids = list(pop.df.groupby(['idum_run', 'iidd_old']).groups)
+        logging.debug('Getting system ids')
+        gb = self.gb_sys(df)
+        ids = list(gb.groups)
         return ids
     
     def get_system(self, idum_run, iidd_old):
+        logging.debug('Getting system idum_run: %s iidd_old: %s', idum_run, iidd_old)
         df_system = self.df[self.df['idum_run']==idum_run]
         df_system = df_system[df_system['iidd_old']==iidd_old]
         return df_system
-    
-    def get_unique_system_counts(self, df):
-        df_unique_systems_count = df.groupby(['idum_run', 'iidd_old']).size().reset_index().rename(columns={0:'count'})
-        df_unique_systems_count = df_unique_systems_count.sort_values('count', ascending=False)
-        return df_unique_systems_count
 
 
     def calc_sampling_weights(self, df):
-        sys_time = df.groupby(['idum_run', 'iidd_old'])[['dt']].sum() # system_on_time
+        logging.debug('Calculating sampling weights')
+        gb = self.gb_sys(df)
+        sys_time = gb[['dt']].sum() # system_on_time
         sys_time['P_samp'] = sys_time['dt'] / sys_time['dt'].sum()
         samp_weights = sys_time['P_samp']
         return samp_weights
     
     def calc_ulx_sampling_weights(self):
+        logging.debug('Calculating BH and NS ULX sampling weights')
         try:
             self.df_ulx_bh
         except(AttributeError):
@@ -227,19 +246,27 @@ class Population:
     
     
     def calc_ulx_binary_dict(self):
-        self.binary_dict = self.df_ulx.groupby(['idum_run', 'iidd_old']).groups
-    
+        logging.debug('Calculating ulx binary dictionary')
+        gb = self.gb_sys(self.df_ulx)
+        self.binary_dict = gb.groups
+        
+    def calc_system_averages(self, df):
+        logging.debug('Calculating system_averages')
+        gb = self.gb_sys(df)
+        df_sys_avg = gb.mean().reset_index()
+        return df_sys_avg
+
     def sample_ulxs(self, bh_ratio, size=500):
+        logging.debug('Sampling ulxs bh_ratio=%s size=%s', bh_ratio, size)
         try:
             self.ulx_bh_samp_weights
             self.binary_dict
         except AttributeError:
             self.calc_ulx_sampling_weights()
             self.calc_ulx_binary_dict()
-            
+        
         N_bh = int(size*bh_ratio)
         N_ns = size-N_bh
-        
         
         sampled_bh = np.random.choice(self.ulx_bh_samp_weights.index, size=N_bh, p=self.ulx_bh_samp_weights.values)
         sampled_ns = np.random.choice(self.ulx_ns_samp_weights.index, size=N_ns, p=self.ulx_ns_samp_weights.values)
@@ -248,30 +275,42 @@ class Population:
         
         sampled_indexs = np.array([np.random.choice(self.binary_dict[sampled_ulxs_idum_iidd_pairs[i]]) for i in range(size)])
         return sampled_indexs
-        
     
-    def sample_visible(self, df, include_duty_cycle=False, lmxrb_duty_cycle=0.1):
-        """
-        Randomly sample based on observation probability b and return systems
-        that were visible.
 
-        """        
+   
+    
+    def sample_visible(self, df, include_beaming=True, include_duty_cycle=False, lmxrb_duty_cycle=0.1):
+        """
+        Randomly sample based on observation probability b, and or duty cycle
+        and return systems that were visible.
+        """
+        logging.debug('Sampling visible systems')
+        logging.debug('N of input rows: %s', len(df))
+        
         dfw = df.copy()
         dfw['bin'] = pd.cut(np.log10(dfw['Lx1']), bins=self.bins)
-        dfw['rand'] = np.random.random(size=len(dfw))
-        dfw['visible_b'] = dfw['rand'] < dfw['b']
-        
+        if include_beaming:
+            dfw['rand'] = np.random.random(size=len(dfw))
+            dfw['visible_b'] = dfw['rand'] < dfw['b']
+            
         if include_duty_cycle:
             dfw['duty_cycle'] = np.where(dfw['lmxrb']==1, lmxrb_duty_cycle, 1)
             dfw['rand2'] = np.random.random(size=len(dfw))
             dfw['visible_dc'] = dfw['rand2'] < dfw['duty_cycle']
             df_vis = dfw[(dfw['visible_b'] == True) & (dfw['visible_dc'] == True)]
-            return df_vis
         else:
             df_vis = dfw[(dfw['visible_b'] == True)]
-            return df_vis
+            
+        logging.debug('N of visible rows: %s', len(df_vis))
+        return df_vis
     
-    def XLF_mc_histogram(self, df, include_duty_cycle=False, lmxrb_duty_cycle=0.1, mc_iters=1000):
+    
+    def XLF_mc_histogram(self,
+                         df,
+                         include_beaming=True,
+                         include_duty_cycle=False,
+                         lmxrb_duty_cycle=0.1,
+                         mc_iters=10000):
         """
         Monte-Carlo the XLF in order to obtain errors due to beaming
         
@@ -279,26 +318,31 @@ class Population:
         -------
         hist_results : np.array()
             mc_iters x len(bins) array containing the numbers in each bin.
-
         """
+        
         hist_results = np.ndarray((mc_iters, len(self.bins)-1))
         for i in range(mc_iters):
             df_vis = self.sample_visible(df, include_duty_cycle, lmxrb_duty_cycle)
             if i%100==0:
-                print(f'MC XLF | iteration: {i}/{mc_iters}')
+                print(f'MC XLF | duty_cycle={lmxrb_duty_cycle} include={include_duty_cycle} | iteration: {i}/{mc_iters}')
             h = np.histogram(np.log10(df_vis['Lx1']), bins=self.bins)
             hist_results[i] = h[0]
         return hist_results
-    
-    def set_latex_font(self):
-        import matplotlib
-        matplotlib.rcParams['mathtext.fontset'] = 'stix'
-        matplotlib.rcParams['font.family'] = 'STIXGeneral'
+
+
+    def XLF_plot(self,
+                 df,
+                 by='NSBH',
+                 average_systems=False,
+                 include_beamed=False,
+                 include_duty_cycle=False,
+                 save=False):
         
-    
-    def XLF_plot(self, df, by='NSBH', save=False, include_beamed=False, include_duty_cycle=False):
         fontsize = 10
         
+        if average_systems:
+            df = self.calc_system_averages(df)
+            
         if include_beamed:
             fig, ax = plt.subplots(3, 1, sharex=True,  sharey=True, figsize=(6, 6))
             ax[2].set_xlabel(r'log $L_{x}$ $(\mathrm{erg \ s^{-1}})$', fontsize=fontsize)
@@ -322,50 +366,44 @@ class Population:
         ax[1].set_ylabel(r'N', rotation=0, fontsize=fontsize)
         
 
-
-            
         if by=='NSBH':
-            df_ns = df[df['K_a'] == 13]
-            df_bh = df[df['K_a'] == 14]
-        
-            df_ns_sys = df_ns.groupby(['idum_run', 'iidd_old']).mean().reset_index()
-            df_bh_sys = df_bh.groupby(['idum_run', 'iidd_old']).mean().reset_index()
+            df_ns, df_bh = self.split_ns_bh(df)
             
-            np.log10(df_ns_sys['Lx_iso']).hist(ax=ax[0], bins=self.bins, label='NS | Isotropic Emission',  edgecolor='black', histtype='step', alpha=1.0, grid=False)
-            np.log10(df_bh_sys['Lx_iso']).hist(ax=ax[0], bins=self.bins, label='BH | Isotropic Emission',  edgecolor='grey', histtype='step', alpha=1.0, grid=False, linestyle='--')
+            np.log10(df_ns['Lx_iso']).hist(ax=ax[0], bins=self.bins, label='NS | Isotropic Emission',  edgecolor='black', histtype='step', alpha=1.0, grid=False)
+            np.log10(df_bh['Lx_iso']).hist(ax=ax[0], bins=self.bins, label='BH | Isotropic Emission',  edgecolor='grey', histtype='step', alpha=1.0, grid=False, linestyle='--')
         
-            np.log10(df_ns_sys['Lx1']).hist(ax=ax[1], bins=self.bins, label='NS | With Beaming',  edgecolor='black', histtype='step', alpha=1.0, grid=False)
-            np.log10(df_bh_sys['Lx1']).hist(ax=ax[1], bins=self.bins, label='BH | With Beaming',  edgecolor='grey', histtype='step', alpha=1.0, grid=False, linestyle='--')
+            np.log10(df_ns['Lx1']).hist(ax=ax[1], bins=self.bins, label='NS | With Beaming',  edgecolor='black', histtype='step', alpha=1.0, grid=False)
+            np.log10(df_bh['Lx1']).hist(ax=ax[1], bins=self.bins, label='BH | With Beaming',  edgecolor='grey', histtype='step', alpha=1.0, grid=False, linestyle='--')
             if include_beamed:
-                ns_hist_results = self.XLF_mc_histogram(df_ns_sys, include_duty_cycle)
-                bh_hist_results = self.XLF_mc_histogram(df_bh_sys, include_duty_cycle)
+                ns_hist_results = self.XLF_mc_histogram(df_ns, include_duty_cycle)
+                bh_hist_results = self.XLF_mc_histogram(df_bh, include_duty_cycle)
             
-                df_vis_ns = self.sample_visible(df_ns_sys)
-                df_vis_bh = self.sample_visible(df_bh_sys)
-                
-                mean_ns = np.mean(ns_hist_results, axis=0)
-                std_ns  = np.std(ns_hist_results, axis=0)
-                
-                mean_bh = np.mean(bh_hist_results, axis=0)
-                std_bh  = np.std(bh_hist_results, axis=0)
-                
-                np.log10(df_vis_ns['Lx1']).hist(ax=ax[2], bins=self.bins, label='NS | With Beaming | Visible only',  edgecolor='black', histtype='step', alpha=1.0, grid=False)
-                np.log10(df_vis_bh['Lx1']).hist(ax=ax[2], bins=self.bins, label='BH | With Beaming | Visible only',  edgecolor='grey', histtype='step', alpha=1.0, grid=False, linestyle='--')
-                
-                ax[2].errorbar(self.bin_centers, mean_ns, yerr=std_ns, linestyle='', color='black')
-                ax[2].errorbar(self.bin_centers, mean_bh, yerr=std_bh, linestyle='', color='grey')
-                
-                ax[2].legend(loc='upper left')
+            df_vis_ns = self.sample_visible(df_ns)
+            df_vis_bh = self.sample_visible(df_bh)
             
+            mean_ns = np.mean(ns_hist_results, axis=0)
+            std_ns  = np.std(ns_hist_results, axis=0)
+            
+            mean_bh = np.mean(bh_hist_results, axis=0)
+            std_bh  = np.std(bh_hist_results, axis=0)
+            
+            np.log10(df_vis_ns['Lx1']).hist(ax=ax[2], bins=self.bins, label='NS | With Beaming | Visible only',  edgecolor='black', histtype='step', alpha=1.0, grid=False)
+            np.log10(df_vis_bh['Lx1']).hist(ax=ax[2], bins=self.bins, label='BH | With Beaming | Visible only',  edgecolor='grey', histtype='step', alpha=1.0, grid=False, linestyle='--')
+            
+            ax[2].errorbar(self.bin_centers, mean_ns, yerr=std_ns, linestyle='', color='black')
+            ax[2].errorbar(self.bin_centers, mean_bh, yerr=std_bh, linestyle='', color='grey')
+            
+            ax[2].legend(loc='upper left')
+        
 
         elif by=='mttype':
             df_nuc = df[df['mttype'] == 1]
             df_therm = df[df['mttype'] == 4]
             # df_wd = df[df['mttype'] == 5]
             
-            df_nuc_sys = df_nuc.groupby(['idum_run', 'iidd_old']).mean().reset_index()
-            df_therm_sys = df_therm.groupby(['idum_run', 'iidd_old']).mean().reset_index()
-            # df_wd_sys = df_wd.groupby(['idum_run', 'iidd_old']).mean().reset_index()
+            df_nuc_sys = self.calc_system_averages(df_nuc)
+            df_therm_sys = self.calc_system_averages(df_therm)
+            # df_wd_sys = self.calc_system_averages(df_wd)
         
             np.log10(df_nuc_sys['Lx_iso']).hist(ax=ax[0], bins=self.bins, label='Nuclear MT | Isotropic Emission',  edgecolor='black', histtype='stepfilled', fc='green', alpha=0.5, grid=False)
             np.log10(df_therm_sys['Lx_iso']).hist(ax=ax[0], bins=self.bins, label='Thermal MT | Isotropic Emission',  edgecolor='black', histtype='stepfilled', fc='red', alpha=0.5, grid=False)
@@ -376,18 +414,17 @@ class Population:
             # np.log10(df_wd_sys['Lx1']).hist(ax=ax[1], bins=self.bins, label='WD MT | With Beaming',  edgecolor='black', histtype='stepfilled', fc='white', alpha=0.5, grid=False)
             
         elif by=='both':
-            df_ns = df[df['K_a'] == 13]
-            df_bh = df[df['K_a'] == 14]
+            df_ns, df_bh = self.split_ns_bh(df)
             
             df_nuc_bh   = df_bh[df_bh['mttype'] == 1]
             df_therm_bh = df_bh[df_bh['mttype'] == 4]
             df_nuc_ns   = df_ns[df_ns['mttype'] == 1]
             df_therm_ns = df_ns[df_ns['mttype'] == 4]
             
-            df_nuc_bh_sys = df_nuc_bh.groupby(['idum_run', 'iidd_old']).mean().reset_index()
-            df_therm_bh_sys = df_therm_bh.groupby(['idum_run', 'iidd_old']).mean().reset_index()
-            df_nuc_ns_sys = df_nuc_ns.groupby(['idum_run', 'iidd_old']).mean().reset_index()
-            df_therm_ns_sys = df_therm_ns.groupby(['idum_run', 'iidd_old']).mean().reset_index()
+            df_nuc_bh_sys = self.calc_system_averages(df_nuc_bh)
+            df_therm_bh_sys = self.calc_system_averages(df_therm_bh)
+            df_nuc_ns_sys = self.calc_system_averages(df_nuc_ns)
+            df_therm_ns_sys = self.calc_system_averages(df_therm_ns)
         
             np.log10(df_nuc_bh_sys['Lx_iso']).hist(ax=ax[0], bins=self.bins, label='BH | Nuclear MT | Isotropic Emission',  edgecolor='black', histtype='stepfilled', fc='cyan', alpha=0.5, grid=False)
             np.log10(df_therm_bh_sys['Lx_iso']).hist(ax=ax[0], bins=self.bins, label='BH | Thermal MT | Isotropic Emission',  edgecolor='black', histtype='stepfilled', fc='purple', alpha=0.5, grid=False)
@@ -416,6 +453,21 @@ class Population:
                     plt.savefig('../reports/figures/XLF_by_MT_NSBH.png', dpi=500)
                     plt.savefig('../reports/figures/XLF_by_MT_NSBH.eps')
                     plt.savefig('../reports/figures/XLF_by_MT_NSBH.pdf')
+                    
+    def XLF_plot_by_time(self):
+        times = [(0,100),(100,500), (500,1000), (1000,2000), (2000,8000)]
+        for i in range(len(times)):
+    
+            low = times[i][0]
+            high = times[i][1]
+            print(i, high, low)
+            cut = self.df[(pop.df['t']>low) & (pop.df['t']<high)]
+            cut = self.calc_system_averages(cut)
+            plt.yscale('log')
+            plt.hist(np.log10(cut['Lx1']), bins=self.bins, label=f'{low} - {high} Myr', histtype='step')
+            
+        plt.legend()
+    
 
     def pivot_binaries_count(self, df):
         piv = pd.pivot_table(df, columns=['is_bh'], index=['Z'], aggfunc='count', margins=True, margins_name='total')['theta_half_deg']
@@ -557,12 +609,13 @@ class Population:
         print(f'N b>=1 rows binaries: {N_binaries_unbeamed} ({N_binaries_unbeamed/N_binaries*100:0.2f}%)')
         print(f'N b<1 binaries: {N_binaries_beamed} ({N_binaries_beamed/N_binaries*100:0.2f}%)')
         print('--------------------------')
-  
-    
+
 if __name__ == "__main__":
-    df = startrack_v2_mt_1_all(nrows=100000) #
+    logging.basicConfig(level=logging.DEBUG)
+    
+    df = startrack_v2_mt_1_all()#nrows=10000
     pop = Population(df)
-    df_sys = pop.df.groupby(['idum_run', 'iidd_old']).mean().reset_index()
+    df_sys = pop.calc_system_averages(pop.df)
     
     
     # Population Statistics
@@ -570,67 +623,89 @@ if __name__ == "__main__":
     # pop.describe(pop.df_ulx, 'df_ulx')
     
     # Plotting
-    pop.set_latex_font()
-    # pop.XLF_plot(df_sys, include_beamed=True, include_duty_cycle=True, save=True)
+    set_latex_font()
+    # pop.XLF_plot(df=pop.df,
+    #              by='NSBH',
+    #              average_systems=True,
+    #              include_beamed=True,
+    #              include_duty_cycle=True,
+    #              save=False)
 
-    # =============================================================================
-    # LMXRB XLF NEEDS REDOING
-    # =============================================================================
-        
+    """
+    XLF
+    ---
+    Currently we are building our XLF by calculating the mean luminosity over
+    a given system's lifetime, this is far from ideal as many systems are dead
+    for long periods of time/and or have very large increases/decreases in flux
+    in short periods of time.
+    
+    A better method for dealing with this would be the following:
+    For every binary in our population, we sample a random point during its
+    lifetime to obtain a luminosity.
+    
+    We then repeat this process 10,000 times for each system to build a
+    distribution of luminosities the source could have.
+    
+    Step 1.
+    Sample a random luminosity for each binary.
+    
+    
+    Low mass X-ray binary (LMXRB)
+    -----------------------------
+    Defined in our simulatinos as systems with:
+            - Nuclear MT
+            - Disc accretion > Wind accretion
+            - Companion masses < 1.5 M_sol
+            
+    A given ULX lifetime over its lifetime may only spend some of its time
+    as a lmxrb. The mt type may change, or enough mass may be accreted from
+    the secondary for it to fall below the <1.5 threshold, or wind accretion
+    may begin to dominate.
+    
+    We first take all the systems that spend atleast some of their lifetimes
+    as LMXRB ULXs, this provides us with 12,909 binaries that spend atleast
+    some of the time as a LMXRB ULX.
+    
+    Duty Cycle
+    ----------
+    The duty cycle for LMXRBs is defined as:
+    t_outburst / (t_outburst + t_quiescence)
+    i.e a source with a duty cycle of d = 0.1 will spend 10% of its lifetime
+    in outburst. This means that we essentially have a 10% chance of catching
+    the source as alive or transient and a 90% chance of catching the source as
+    being dead.
 
+    This effects the following things: XLF, Classifications, and eRASS simulations.
+    XLF --> serve to lower the contribution from lmxrb systems.
+    Classifications --> Serve to increase the number of dead systems, while reducing the number of transient/alive ones
+    eRASS simulations --> Will be far more dead systems for a given population.
+
+    """
+    
+    
+    
+            
+    
+    
     # lmxrb = pop.df[pop.df['lmxrb'] == 1]
-    # lmxrb_ns = lmxrb[lmxrb['K_a'] == 13]
-    # lmxrb_bh = lmxrb[lmxrb['K_a'] == 14]
+    # lmxrb_sys = pop.calc_system_averages(lmxrb)
+    # gb = pop.gb_sys(lmxrb)
+    # mean = gb['Lx1'].mean()
+    # std = gb['Lx1'].std()
     
-    # # lmxrb = lmxrb.groupby(['idum_run', 'iidd_old']).mean().reset_index()
-
     # plt.yscale('log')
-    # plt.hist(np.log10(pop.df['Lx1']), bins=pop.bins, histtype='step', label='full')
-    
-    # # plt.hist(np.log10(lmxrb['Lx1']), bins=pop.bins, histtype='step', label='lmxrb')
-    # plt.hist(np.log10(lmxrb_ns['Lx1']), bins=pop.bins, histtype='step', label='lmxrb_NS')
-    # plt.hist(np.log10(lmxrb_bh['Lx1']), bins=pop.bins, histtype='step', label='lmxrb_BH')
-    # # plt.text(x=38,y=100,s='LMXRBs')
-    # plt.legend()
+    # plt.errorbar([0]*len(mean), mean, yerr=std)
     
     
+    # # lmxrb_sys
+    # # dc = 0.1
     
-    # df_ns = lmxrb[lmxrb['K_a'] == 13]
-    # df_bh = lmxrb[lmxrb['K_a'] == 14]
-
-    # df_ns_sys = df_ns.groupby(['idum_run', 'iidd_old']).mean().reset_index()
-    # df_bh_sys = df_bh.groupby(['idum_run', 'iidd_old']).mean().reset_index()
+    # vis = pop.sample_visible(lmxrb_sys, True, True)
     
-    # for dc in [0.1, 0.2, 0.3, 1.0]:
-        
-    #     vis = pop.sample_visible(lmxrb, include_duty_cycle=True, lmxrb_duty_cycle=dc)
-        
-    #     ns_hist_results = pop.XLF_mc_histogram(df_ns_sys, True, lmxrb_duty_cycle=dc)
-    #     bh_hist_results = pop.XLF_mc_histogram(df_bh_sys, True, lmxrb_duty_cycle=dc)
+    # h = np.histogram(np.log10(vis['Lx1']), bins=pop.bins)
     
-    #     df_vis_ns = pop.sample_visible(df_ns_sys)
-    #     df_vis_bh = pop.sample_visible(df_bh_sys)
-        
-    #     mean_ns = np.mean(ns_hist_results, axis=0)
-    #     std_ns  = np.std(ns_hist_results, axis=0)
-        
-    #     mean_bh = np.mean(bh_hist_results, axis=0)
-    #     std_bh  = np.std(bh_hist_results, axis=0)
-        
-    #     np.log10(df_vis_ns['Lx1']).hist(bins=pop.bins, label=f'NS | With Beaming | Visible only | d={dc}', histtype='step', alpha=1.0, grid=False)
-    #     np.log10(df_vis_bh['Lx1']).hist(bins=pop.bins, label=f'BH | With Beaming | Visible only | d={dc}',histtype='step', alpha=1.0, grid=False, linestyle='--')
-        
-    #     plt.errorbar(pop.bin_centers, mean_ns, yerr=std_ns, linestyle='', capsize=1.0, label=f'NS | With Beaming | Visible only | d={dc}')
-    #     plt.errorbar(pop.bin_centers, mean_bh, yerr=std_bh, linestyle='', capsize=1.0, label=f'BH | With Beaming | Visible only | d={dc}')
-        
-                
-    #     # plt.hist(np.log10(vis['Lx1']), bins=pop.bins, histtype='step', label=f'd = {dc}')
-    #     plt.legend()
-        
-        
-    # plt.xlabel(r'log $L_{x}$ $(\mathrm{erg \ s^{-1}})$')
-    # plt.legend()
-    # plt.savefig('../reports/figures/XLF_lmxrb_sys_inc_dc.png', dpi=500)
-    # plt.savefig('../reports/figures/XLF_lmxrb_sys_inc_dc.eps')
-    # plt.savefig('../reports/figures/XLF_lmxrb_sys_inc_dc.pdf')
-    
+    # hist = pop.XLF_mc_histogram(lmxrb_sys,
+    #                             include_beaming=True,
+    #                             include_duty_cycle=True,
+    #                             lmxrb_duty_cycle=dc,
+    #                             mc_iters=1000)
