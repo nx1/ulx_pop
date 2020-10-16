@@ -89,6 +89,13 @@ def startrack_v2_mt_1_all(**kwargs):
     systems_df_path = Path('../data/interim/startrack/data_mt=1.csv')
     df = pd.read_csv(systems_df_path, **kwargs)
     return df
+
+def startrack_v2_mt_1_test_subset(**kwargs):
+    systems_df_path = Path('../data/interim/startrack/data_mt=1_test_subset.csv')
+    df = pd.read_csv(systems_df_path, **kwargs)
+    return df
+
+   
     
 def set_latex_font():
     import matplotlib
@@ -614,8 +621,10 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
     
     df = startrack_v2_mt_1_all()#nrows=10000
+    # df = startrack_v2_mt_1_test_subset()
+    
     pop = Population(df)
-    df_sys = pop.calc_system_averages(pop.df)
+    # df_sys = pop.calc_system_averages(pop.df)
     
     
     # Population Statistics
@@ -630,63 +639,11 @@ if __name__ == "__main__":
     #              include_beamed=True,
     #              include_duty_cycle=True,
     #              save=False)
+    
 
-    """
-    XLF
-    ---
-    Currently we are building our XLF by calculating the mean luminosity over
-    a given system's lifetime, this is far from ideal as many systems are dead
-    for long periods of time/and or have very large increases/decreases in flux
-    in short periods of time.
-    
-    A better method for dealing with this would be the following:
-    For every binary in our population, we sample a random point during its
-    lifetime to obtain a luminosity.
-    
-    We then repeat this process 10,000 times for each system to build a
-    distribution of luminosities the source could have.
-    
-    Step 1.
-    Sample a random luminosity for each binary.
-    
-    
-    Low mass X-ray binary (LMXRB)
-    -----------------------------
-    Defined in our simulatinos as systems with:
-            - Nuclear MT
-            - Disc accretion > Wind accretion
-            - Companion masses < 1.5 M_sol
-            
-    A given ULX lifetime over its lifetime may only spend some of its time
-    as a lmxrb. The mt type may change, or enough mass may be accreted from
-    the secondary for it to fall below the <1.5 threshold, or wind accretion
-    may begin to dominate.
-    
-    We first take all the systems that spend atleast some of their lifetimes
-    as LMXRB ULXs, this provides us with 12,909 binaries that spend atleast
-    some of the time as a LMXRB ULX.
-    
-    Duty Cycle
-    ----------
-    The duty cycle for LMXRBs is defined as:
-    t_outburst / (t_outburst + t_quiescence)
-    i.e a source with a duty cycle of d = 0.1 will spend 10% of its lifetime
-    in outburst. This means that we essentially have a 10% chance of catching
-    the source as alive or transient and a 90% chance of catching the source as
-    being dead.
-
-    This effects the following things: XLF, Classifications, and eRASS simulations.
-    XLF --> serve to lower the contribution from lmxrb systems.
-    Classifications --> Serve to increase the number of dead systems, while reducing the number of transient/alive ones
-    eRASS simulations --> Will be far more dead systems for a given population.
-
-    """
-    
-    
-    
-            
-    
-    
+    # =============================================================================
+    #     
+    # =============================================================================
     # lmxrb = pop.df[pop.df['lmxrb'] == 1]
     # lmxrb_sys = pop.calc_system_averages(lmxrb)
     # gb = pop.gb_sys(lmxrb)
