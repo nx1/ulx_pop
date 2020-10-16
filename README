@@ -1,21 +1,27 @@
 ULX Population Study
 ====================
 
+Dependencies
+------------
+cfitsio - https://heasarc.gsfc.nasa.gov/fitsio/
+Python 3
+pandas 1.1+
+
 What is this?
 -------------
 Ultraluminous X-ray sources (ULXs) are a subset of X-ray binaries
 lightcurves often display long term modulations on the order
 of months.
 
-One explaination for these modulations is that they are caused by
+One explanation for these modulations is that they are caused by
 some form of precession of the accretion flow near the compact object.
 
 One model created to describe these modulations is ULXLC:
 http://www.sternwarte.uni-erlangen.de/~dauser/research/ulxlc/
 and allows the creation of lightcurves for a variety of system parameters.
 
-This code uses a modifed version of ULXLC coupled with an
-artifically created population of binary systems in order
+This code uses a modified version of ULXLC coupled with an
+artificially created population of binary systems in order
 to try and answer the question of how does precession affect
 the observed population of ULXs.
 
@@ -37,19 +43,18 @@ with active mass transfer (mt=1)
 The result is a ~9.3m rows of data that is not provided in this repo.
 
 
-
 General Thoughts About the state of the code
 --------------------------------------------
     - Main population is still stored as csv, might wanna move to SQL.
     - Literally 0 unit tests.
     - One big file is just way too much
     - All the git commits are like 1 word i.e 'updates'
-    - Lots of redudant files... (see src/old)
+    - Lots of redundant files... (see src/old)
     - The SQL stuff could definitely be a lot better
     
 
 
-THe main three files for the simulation are the following:
+The main three files for the simulation are the following:
 1.  src/populations.py
 2.  src/results_processor.py
 3.  src/ulxlc/ulxlcmod.c
@@ -58,7 +63,7 @@ THe main three files for the simulation are the following:
 populations.py
 ==============
 This file contains code for reading in the processed input data from STARTRACK,
-calculating seconary quantities, and various functions for calculating
+calculating secondary quantities, and various functions for calculating
 sampling weights and sub-populations.
 
 Currently all the code is pretty much held in one class called 'Population'
@@ -78,8 +83,8 @@ Improvements
         - df_ulx should probably be is own object/population
           along with other subpopulations
     - A unique binary system corresponds to a unique combination of
-      columns: ['iidum_run', 'iidd_old'], and contains row specifiying their
-      time evolution, maybe these could be seperated into their own
+      columns: ['iidum_run', 'iidd_old'], and contains row specifying their
+      time evolution, maybe these could be separated into their own
       'System' Class?
 
 
@@ -120,9 +125,10 @@ are passed via command line (e.g. "./a.out param1, param2"), the passed
 parameters tell the script which rows to retrieve from the sqlite database.
 
 
-Improvments
------------
+Improvements
+------------
 - There are almost no functions in the C code I have written it's just one big
 huge block.
+
 
 

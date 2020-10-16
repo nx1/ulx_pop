@@ -52,62 +52,6 @@ Code
 [ ] Ensure duty cycle is doing the right thing.
 [ ] Remove the mass from lmxrb classification
 
-Refactoring
------------
-
-Now
----
-Population
-    -XLF
-
-ResultsProcessor
-    -db + SQL
-    -MC simulation
-    -MC results processing
-    -MC results plotting
-
-Sim_eRASS
-ulx
-
-
-New
----
-SQLite db
----------
-Tables:
-    -Full mt=1 population
-    -mc_info
-    -mc_sampled_systems
-    -classifications
-    -mc_results
-    -transient
-
-Population
-
-Simulation
-    - Input parameters
-        - size
-        - dincl_cutoff
-        - Z
-        - bh ratio
-        - period_cutoff (obselete)
-        - lmxrb_duty_cycle
-
-    - Input population
-    - 
-
-
-Plotter
-    Plot_XLF
-    Plot_ADT
-    Plot_eRASS_transients
-    Plot_
-    
-
-
-
-
-
 Plots
 -----
 [ ] XLF - The low luminosity ULXs dominate the entire population \citep{Earnshaw_ULX_cat} and these are thought to be dominated by black hole systems. - is this now true?}
@@ -133,7 +77,7 @@ Paper
 
 
 
-#####################################################################################
+=====
 NOTES
 =====
 
@@ -928,3 +872,58 @@ Draw 500 ULXs
 
             calculate the number of transients for each eRASS cycle
                  sum all the probabilites
+
+
+16/10/20
+
+XLF
+---
+Currently we are building our XLF by calculating the mean luminosity over
+a given system's lifetime, this is far from ideal as many systems are dead
+for long periods of time/and or have very large increases/decreases in flux
+in short periods of time.
+
+A better method for dealing with this would be the following:
+For every binary in our population, we sample a random point during its
+lifetime to obtain a luminosity.
+
+We then repeat this process 10,000 times for each system to build a
+distribution of luminosities the source could have.
+
+Step 1.
+Sample a random luminosity for each binary.
+
+
+Low mass X-ray binary (LMXRB)
+-----------------------------
+Defined in our simulatinos as systems with:
+        - Nuclear MT
+        - Disc accretion > Wind accretion
+        - Companion masses < 1.5 M_sol
+        
+A given ULX lifetime over its lifetime may only spend some of its time
+as a lmxrb. The mt type may change, or enough mass may be accreted from
+the secondary for it to fall below the <1.5 threshold, or wind accretion
+may begin to dominate.
+
+We first take all the systems that spend atleast some of their lifetimes
+as LMXRB ULXs, this provides us with 12,909 binaries that spend atleast
+some of the time as a LMXRB ULX.
+
+Duty Cycle
+----------
+The duty cycle for LMXRBs is defined as:
+t_outburst / (t_outburst + t_quiescence)
+i.e a source with a duty cycle of d = 0.1 will spend 10% of its lifetime
+in outburst. This means that we essentially have a 10% chance of catching
+the source as alive or transient and a 90% chance of catching the source as
+being dead.
+
+This effects the following things: XLF, Classifications, and eRASS simulations.
+XLF --> serve to lower the contribution from lmxrb systems.
+Classifications --> Serve to increase the number of dead systems, while reducing the number of transient/alive ones
+eRASS simulations --> Will be far more dead systems for a given population.
+
+
+
+
