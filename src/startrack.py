@@ -1,9 +1,16 @@
 # -*- coding: utf-8 -*-
 """
 Created on Mon Jun 29 12:51:09 2020
+------------------------------------------------
+Read in STARTRACK DATA
 
-@author: norma
+1. Download data (urls at bottom of script)
+2. Set INTERIM_DATA_PATH and EXTERNAL_DATA_PATH
+3. Uncomment run()
+------------------------------------------------
 
+Email From Greg
+-------------------------------------------------------------------------------
 Sorry that it took so long. You can download the data files
 (raw output from PS code) from
 https://universeathome.pl/universe/pub/z*_data1.dat where * is the fractional
@@ -17,6 +24,7 @@ every line follows the following format (splitted for better readability):
             s.Vsm[0], s.Vsm[1], s.Vsm[2],
             s.A.Mzams, s.B.Mzams, s.a0, s.e0,
             idum_run, iidd_old, s.evroute
+
 
 A/B is a star A/B. K is the evolutionary type as described here
 https://arxiv.org/pdf/astro-ph/0511811.pdf (Sec. 2.2).
@@ -34,6 +42,7 @@ we can do it also (if my quick response wasn't descriptive enough)
 
 Cheers,
 Greg
+-------------------------------------------------------------------------------
 """
 
 import os
@@ -42,8 +51,26 @@ from urllib.request import urlopen
 from shutil import copyfileobj
 
 import pandas as pd
-from auxil import download_file
+import logging
 
+def download_file(url, path):
+    """
+    Download file from a url
+
+    Parameters
+    ----------
+    url : string
+        url of item to download
+    path : TYPE
+        path to download file to
+
+    """
+    if os.path.isfile(path):
+        print(f'{path} already exists, not downloading.')
+    else:
+        print(f'downloading {path}')
+        with urlopen(url) as in_stream, open(path, 'wb') as out_file:
+            copyfileobj(in_stream, out_file)
 
 def fix_csv_file(path, fixed_path, number_of_commas):
     """
@@ -78,7 +105,7 @@ def process_fixed_csv_file(fixed_path, processed_csv_path):
         Output csv filepath.
     """
     if os.path.isfile(processed_csv_path):
-        print(f'{processed_csv_path} already exists, not processing')
+        print(f'{processed_csv_path} already is already a file not processing')
     else:
         df = pd.DataFrame()
         for chunk in pd.read_csv(fixed_path, chunksize=chunksize, names=cols):
@@ -89,15 +116,19 @@ def process_fixed_csv_file(fixed_path, processed_csv_path):
 
 def run():
     for i in range(number_of_downloads):
+        
         print(f'Downloading {data_urls[i]}')
         download_file(data_urls[i], save_paths[i])
+
         print(f'Fixing file {save_paths[i]}')
         fix_csv_file(save_paths[i], fixed_paths[i], number_of_commas)
+        
         print(f'Reading file {fixed_paths[i]}')
         process_fixed_csv_file(fixed_paths[i], processed_csvs_paths[i])
 
+
 if __name__ == "__main__":
-    EXTERNAL_DATA_PATH = Path('D:/startrack/')
+    EXTERNAL_DATA_PATH = Path('../data/interim/startrack/')
     INTERIM_DATA_PATH = Path('../data/interim/startrack/')
     
     data_urls = ['https://universeathome.pl/universe/pub/z02_data1.dat',
@@ -105,6 +136,7 @@ if __name__ == "__main__":
                  'https://universeathome.pl/universe/pub/z0002_data1.dat']
     
     filenames            = ['z02_data1.dat', 'z002_data1.dat', 'z0002_data1.dat']
+    save_paths           = [EXTERNAL_DATA_PATH / fn for fn in filenames]
     save_paths           = [EXTERNAL_DATA_PATH / fn for fn in filenames]
     fixed_paths          = [EXTERNAL_DATA_PATH / (fn[:-4]+'_fixed.csv') for fn in filenames]
     processed_csvs_paths = [INTERIM_DATA_PATH / (fn[:-4]+'.csv') for fn in filenames]
@@ -115,11 +147,6 @@ if __name__ == "__main__":
     number_of_commas = len(cols)-1
     
     chunksize = 1000000
-    
-    run()
+    # run()
 
 
-
-
-        
-    

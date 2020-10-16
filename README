@@ -19,14 +19,6 @@ artifically created population of binary systems in order
 to try and answer the question of how does precession affect
 the observed population of ULXs.
 
-
-
-
-
-
-
-
-
 Input Data
 ----------
 The code makes uses of the output from the population synthesis code
@@ -92,14 +84,20 @@ The other two classes 'Ulx' and 'ErassTransientSampler'
 
 General Thoughts About the state of the code
 --------------------------------------------
+    - Literally 0 unit tests.
+    - One big file is just way too much
+    - All the git commits are like 1 word i.e 'updates'
+    - Lots of redudant files... (see src/old)
+    
+ 
+
+
 
 results_processor.py
 --------------------
-1.  Too Many similar functions i.e: "table_" functions make things way too convoluted and repetitive.
-    - Refactoring of this 
 
-2. Literally 0 unit tests.
-3. Some things are just plain awful, like 
+1.  Too Many similar functions i.e: "table_" functions make things way too convoluted and repetitive.
+    - Refactoring of this I think could be useful
 
 
 
