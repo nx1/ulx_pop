@@ -466,7 +466,7 @@ int main(int argc, char *argv[]){
 	sqlite3_stmt *res;
 
 	/* Retrieve sim rows from sql table */
-	sql = sqlite3_mprintf("SELECT row_id, theta_half_deg, Lx1, P_wind_days, P_sup_days, inclination, dincl, lmxrb from ERASS_MC_SAMPLED_SYSTEMS WHERE run_id=%Q", run_id);
+	sql = sqlite3_mprintf("SELECT system_row_id, theta_half_deg, Lx1, P_wind_days, P_sup_days, inclination, dincl, lmxrb from ERASS_MC_SAMPLED_SYSTEMS WHERE run_id=%Q", run_id);
 	// sql = sqlite3_mprintf("SELECT * from ERASS_MC_SAMPLED_SYSTEMS WHERE run_id='%Q'", run_id);
 	rc = sqlite3_open(filename_database, &db);
 	rc = sqlite3_prepare_v2(db, sql, -1, &res, 0);

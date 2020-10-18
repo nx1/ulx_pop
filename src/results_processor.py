@@ -121,71 +121,71 @@ class Ulx:
 
 
 
+
+
+
 class ErassTransientSampler:
     """
     This class is used to sample the transient probabilities outputted from /ulxlc/ulxlcmod.c
     to determine how the observational nature of ULXs change over the course of eRASS.
     """
-    def __init__(self, systems):
+    def __init__(self):
         logging.debug('Initializing eRASS transient sampler')
-
-        self.systems = systems      # Systems is provided as a list containing Ulxs [Ulx(), Ulx(), ...]
-        self.size = len(self.systems)
         
+        self.db = None              # SQL Database path
+        self.run_id = None          # run_id to retrieve
+        self.period = None          # Which period to use for simulation 'P_sup' or 'P_wind'
+        self.systems = None      # Systems is provided as a list containing Ulxs [Ulx(), Ulx(), ...]
+
         # These are the two directly observable quantities we are concerning outselves with.
         self.N_new_systems 				   = np.array([0,0,0,0,0,0,0,0])
         self.N_old_system_become_transient = np.array([0,0,0,0,0,0,0,0])
-    
+
+    def set_db(self, db):
+        self.db = db
+
+    def set_period(self, period):
+        """Either 'P_wind or P_sup'"""
+        self.period = period
+
     def set_duty_cycle(self, duty_cycle):
+        """Not Implemented"""
         self.lmxrb_duty_cycle = duty_cycle
     
-    def calc_secondary_quantities(self):
-        logging.debug('Calculating secondary observable quantities')
-        self.N_delta_obs_ulx = self.N_new_systems - self.N_old_system_become_transient
-        self.N_observed_ulxs = np.cumsum(self.N_delta_obs_ulx)
-        self.N_transients = self.N_new_systems[1:] + self.N_old_system_become_transient[1:]
-        self.N_transients = np.insert(self.N_transients, 0, 0)
-        self.N_transients_cum = np.cumsum(self.N_transients)
-        self.N_total_systems = np.cumsum(self.N_new_systems)
-        self.N_persistent_ulx_systems = self.N_new_systems[0] - np.cumsum(self.N_old_system_become_transient)
-
-    @classmethod
-    def from_run_id(cls, db, run_id, period):
+    def get_systems_from_run_id(self, run_id, period):
         """
-        Create eRASS simulation from specified database, run_id and use either
-        'P_wind' or 'P_sup'.
+        Populate systems list from a given run_id and period
 
         Parameters
         ----------
-        db : Path
-            SQL database file
         run_id : str
-            run_id
+            run_id to retrieve
         period : str
             'P_wind' or 'P_sup'
             
         Returns
         -------
-        ErassTransientSampler : object
-            Simulation object
+        systems : list
+            list of Ulx() objects
         """
 
-        def load_table(self, table_name, run_id):
+        def load_table(db, table_name, run_id):
             logging.debug('Getting run_id: %s from table: %s', run_id, table_name)
             sql = f"""SELECT * FROM {table_name}
                       WHERE run_id='{run_id}'"""
-            conn = sqlite3.connect(self.db)
+            conn = sqlite3.connect(db)
             df = pd.read_sql_query(sql, conn)
             conn.close()
             return df
-
-        logging.debug('Initializing ErassTransientSampler with db=%s, run_id=%s, period=%s', db, run_id, period)
+      
+      
+        logging.debug('Getting systems with db=%s, run_id=%s, period=%s', self.db, run_id, period)
        
-        df_sampled_systems = load_table('ERASS_MC_SAMPLED_SYSTEMS', run_id)
-        df_classifications = load_table('CLASSIFICATIONS', run_id)
-        df_transient = load_table('TRANSIENT', run_id)
+        # Retrieve rows from SQL database
+        df_sampled_systems = load_table(self.db, 'ERASS_MC_SAMPLED_SYSTEMS', run_id)
+        df_classifications = load_table(self.db, 'CLASSIFICATIONS', run_id)
+        df_transient = load_table(self.db, 'TRANSIENT', run_id)
         
-
         # TODO
         # Check for LMXRB systems
         df_lmxrb = df_sampled_systems[df_sampled_systems['lmxrb'] == 1]
@@ -210,20 +210,20 @@ class ErassTransientSampler:
             logging.debug('No transient systems found, setting N_transient_systems=0')
             N_transient_systems = 0
         else:
-            N_dead_systems = class_count[0]
+            N_transient_systems = class_count[0]
              
         if 2 not in class_count.index:
             logging.debug('No alive systems found, setting N_alive_systems=0')
             N_alive_systems = 0
         else:
             N_alive_systems = class_count[2]
-            
-        
+
+
         N_sampled = len(df_sampled_systems)                                 # Total sampled systems
         N_simulated = len(df_classifications)                               # Systems with opening angles < 45
         N_classifications_not_simulated = N_sampled - N_simulated           # Systems with opening angles > 45 (These systems are persistent)
         N_transient_sampled = len(df_transient)                             # Systems sampled for eRASS
-        N_transient_not_sampled = N_transient_systems - N_transient_sampled # Systems not sampled for eRASS (currently systems with long periods)
+        N_transient_not_sampled = N_transient_systems - N_transient_sampled # Systems with period > erass_systems_period_cuttoff
         N_persistent_systems = N_classifications_not_simulated + N_alive_systems + N_transient_not_sampled # Total number of persistent systems
         
         logging.debug('N_sampled = %s', N_sampled)
@@ -233,18 +233,30 @@ class ErassTransientSampler:
         logging.debug('N_transient_not_sampled = %s', N_sampled)
         logging.debug('N_persistent_systems = %s', N_sampled)
 
-           
-        
+
         persistent_systems = [Ulx.persistent_alive_system() for i in range(N_persistent_systems)]
         dead_systems = [Ulx.persistent_dead_system() for i in range(N_dead_systems)]
         transient_systems = [Ulx.from_table_transient_row(row, period) for i, row in df_transient.iterrows()]
         
-        systems = persistent_systems + dead_systems + transient_systems
-        ErassTransientSampler = cls(systems)
-        return ErassTransientSampler
-         
+        self.systems = persistent_systems + dead_systems + transient_systems
+        return self.systems
+     
+    def calc_secondary_quantities(self):
+        logging.debug('Calculating secondary observable quantities')
+        self.N_delta_obs_ulx = self.N_new_systems - self.N_old_system_become_transient
+        self.N_observed_ulxs = np.cumsum(self.N_delta_obs_ulx)
+        self.N_transients = self.N_new_systems[1:] + self.N_old_system_become_transient[1:]
+        self.N_transients = np.insert(self.N_transients, 0, 0)
+        self.N_transients_cum = np.cumsum(self.N_transients)
+        self.N_total_systems = np.cumsum(self.N_new_systems)
+        self.N_persistent_ulx_systems = self.N_new_systems[0] - np.cumsum(self.N_old_system_become_transient)
+
+     
 
     def run(self):
+        """
+        Run eRASS Transient probability sampler.
+        """
         for cycle in range(8):
             new_systems = 0
             old_system_become_transient = 0
@@ -725,11 +737,12 @@ class ResultsProcessor:
         # Sample transient probabilities
         for period in ['P_wind', 'P_sup']:
             logging.debug('initializing using %s', period)
-            sim = ErassTransientSampler.from_run_id(self.db, run_id, period)
-            logging.debug('Running erass transient sampling sim')
-            sim.run()
-            logging.debug('Collecting sim reults')
-            res = sim.collect_results()
+            
+            ets = ErassTransientSampler()
+            ets.set_db(self.db)
+            ets.get_systems_from_run_id(run_id, period) 
+            ets.run()
+            res = ets.collect_results()
 
             logging.debug('Appending period and run_id')
             res['period'] = period
