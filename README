@@ -3,6 +3,7 @@ ULX Population Study
 
 Dependencies
 ------------
+sqlite3 - (sudo apt-get install libsqlite3-dev)
 cfitsio - https://heasarc.gsfc.nasa.gov/fitsio/
 Python 3
 pandas 1.1+
@@ -24,6 +25,7 @@ This code uses a modified version of ULXLC coupled with an
 artificially created population of binary systems in order
 to try and answer the question of how does precession affect
 the observed population of ULXs.
+
 
 Input Data
 ----------
@@ -51,7 +53,8 @@ General Thoughts About the state of the code
     - All the git commits are like 1 word i.e 'updates'
     - Lots of redundant files... (see src/old)
     - The SQL stuff could definitely be a lot better
-    
+    - Because the code is split between C and python
+      it's pretty hard to put into parallel.
 
 
 The main three files for the simulation are the following:
