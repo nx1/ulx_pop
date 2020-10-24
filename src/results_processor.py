@@ -16,7 +16,6 @@ from matplotlib.transforms import Affine2D
 
 import populations
 
-
 class ResultsProcessor:
     def __init__(self):
         self.plot_set_latex_font()
@@ -60,8 +59,7 @@ class ResultsProcessor:
                 bh_ratio REAL,
                 dincl_cutoff INT,
                 Z CHAR,
-                erass_system_period_cutoff INT,
-                erass_lmxrb_duty_cycle REAL);"""
+                erass_system_period_cutoff INT);"""
         conn.execute(sql)
         sql = """CREATE INDEX IF NOT EXISTS idx_mc_info_run_id
          ON ERASS_MC_INFO (run_id);"""
@@ -71,8 +69,6 @@ class ResultsProcessor:
     def table_create_classifications(self):
         logging.debug('Creating table CLASSIFICATIONS')
         conn = sqlite3.connect(self.db)
-        
-        
         sql = """CREATE TABLE IF NOT EXISTS CLASSIFICATIONS(
                   system_row_id INT,
                   system_theta REAL,
@@ -88,8 +84,6 @@ class ResultsProcessor:
          ON CLASSIFICATIONS (run_id);"""
         conn.execute(sql)
         conn.close()
-        
-        
         
     def table_create_transient(self):
         logging.debug('Creating table TRANSIENT')
@@ -120,8 +114,6 @@ class ResultsProcessor:
         sql = """CREATE INDEX IF NOT EXISTS idx_transient_run_id
          ON TRANSIENT (run_id);"""
         conn.execute(sql)
-    
-
     
     def table_create_erass_mc_results(self):
         logging.debug('Creating table ERASS_MC_RESULTS')
@@ -164,29 +156,56 @@ class ResultsProcessor:
                  ON ERASS_MC_SAMPLED_SYSTEMS (run_id);"""
         conn.execute(sql)
         conn.close()
+        
+    def table_create_erass_evolution(self):
+        conn = sqlite3.connect(self.db)
+        sql = """CREATE TABLE IF NOT EXISTS ERASS_EVOLUTION(
+                erass_cycle INT,
+                N_new_systems INT,
+                N_old_system_become_transient INT,
+                N_observed_ulxs INT,
+                N_delta_obs_ulx INT,
+                N_transients INT,
+                N_transients_cum INT,
+                N_total_systems INT,
+                N_persistent_ulx_systems INT,
+                period CHAR,
+                duty_cycle REAL,
+                run_id CHAR);"""
+        conn.execute(sql)
+        sql = """CREATE INDEX IF NOT EXISTS idx_erass_evolution_run_id
+         ON ERASS_EVOLUTION (run_id);"""
+        conn.execute(sql)
+        conn.close()
     
     def table_load(self, table_name):
+        """
+        Load all rows from SQLite table.
+        """
         logging.debug('Loading table %s', table_name)
         conn = sqlite3.connect(self.db)
         df = pd.read_sql_query(f"SELECT * from {table_name}", conn)
         conn.close()
         return df
     
-    def table_load_transient(self):
-        self.df_transient = self.table_load('TRANSIENT')
-
-    def table_load_classifications(self):
-        self.df_classifications = self.table_load('CLASSIFICATIONS')
-        
     def table_load_erass_mc_info(self):
         self.df_erass_mc_info = self.table_load('ERASS_MC_INFO')
-        
-    def table_load_erass_mc_results(self):
-        self.df_erass_mc_results = self.table_load('ERASS_MC_RESULTS')
-        
+    
     def table_load_erass_mc_sampled_systems(self):
         self.df_erass_mc_sampled_systems = self.table_load('ERASS_MC_SAMPLED_SYSTEMS')
+    
+    def table_load_classifications(self):
+        self.df_classifications = self.table_load('CLASSIFICATIONS')
+    
+    def table_load_transient(self):
+        self.df_transient = self.table_load('TRANSIENT')
         
+    def table_load_erass_mc_results(self):
+        self.df_erass_evolution = self.table_load('ERASS_MC_RESULTS')
+        
+    def table_load_erass_evolution(self):
+        self.df_erass_evolution = self.table_load('ERASS_EVOLUTION')
+
     def table_erass_mc_results_map_info(self):
         logging.debug('Mapping ERASS_MC_INFO to ERASS_MC_RESULTS')
         try:
@@ -194,16 +213,16 @@ class ResultsProcessor:
         except:
             self.table_load_erass_mc_info()
         try:
-            self.df_erass_mc_results
+            self.df_erass_evolution
         except:
-            self.table_load_erass_mc_results()
+            self.table_load_erass_evolution()
 
         info = self.df_erass_mc_info.set_index('run_id')
-        self.df_erass_mc_results['bh_ratio'] = self.df_erass_mc_results['run_id'].map(info['bh_ratio'])    
-        self.df_erass_mc_results['size'] = self.df_erass_mc_results['run_id'].map(info['size'])    
-        self.df_erass_mc_results['dincl_cutoff'] = self.df_erass_mc_results['run_id'].map(info['dincl_cutoff'])
-        self.df_erass_mc_results['Z'] = self.df_erass_mc_results['run_id'].map(info['Z'])  
-        self.df_erass_mc_results['erass_system_period_cutoff'] = self.df_erass_mc_results['run_id'].map(info['erass_system_period_cutoff'])
+        self.df_erass_evolution['bh_ratio'] = self.df_erass_evolution['run_id'].map(info['bh_ratio'])    
+        self.df_erass_evolution['size'] = self.df_erass_evolution['run_id'].map(info['size'])    
+        self.df_erass_evolution['dincl_cutoff'] = self.df_erass_evolution['run_id'].map(info['dincl_cutoff'])
+        self.df_erass_evolution['Z'] = self.df_erass_evolution['run_id'].map(info['Z'])  
+        self.df_erass_evolution['erass_system_period_cutoff'] = self.df_erass_evolution['run_id'].map(info['erass_system_period_cutoff'])
         
 
     def table_classifications_map_systems(self):
@@ -217,16 +236,16 @@ class ResultsProcessor:
         self.df_classifications['P_wind_days'] = self.df_classifications['system_row_id'].map(self.pop.df['P_wind_days'])
         self.df_classifications['a*'] = self.df_classifications['system_row_id'].map(self.pop.df['a*'])
         self.df_classifications['Z'] = self.df_classifications['system_row_id'].map(self.pop.df['Z'])
-        self.df_classifications['lmxrb'] = self.df_classifications['system_row_id'].map(self.pop.df['lmxrb'])
+        self.df_classifications['lmxrb'] = self.df_classifications['system_row_id'].map(self.pop.df['lmxrb'])   
         
         
     def table_classifications_map_info(self):
         logging.debug('Mapping ERASS_MC_INFO to CLASSIFICATIONS')
         info = self.df_erass_mc_info.set_index('run_id')
-        self.df_classifications['bh_ratio'] = self.df_erass_mc_results['run_id'].map(info['bh_ratio'])    
-        self.df_classifications['size'] = self.df_erass_mc_results['run_id'].map(info['size'])    
-        self.df_classifications['dincl_cutoff'] = self.df_erass_mc_results['run_id'].map(info['dincl_cutoff'])
-        self.df_classifications['Z'] = self.df_erass_mc_results['run_id'].map(info['Z'])
+        self.df_classifications['bh_ratio'] = self.df_erass_evolution['run_id'].map(info['bh_ratio'])    
+        self.df_classifications['size'] = self.df_erass_evolution['run_id'].map(info['size'])    
+        self.df_classifications['dincl_cutoff'] = self.df_erass_evolution['run_id'].map(info['dincl_cutoff'])
+        self.df_classifications['Z'] = self.df_erass_evolution['run_id'].map(info['Z'])
 
 
     def table_classifications_pivot(self, margins=True, split_Z=True):
@@ -296,9 +315,33 @@ class ResultsProcessor:
         self.a_i_percent = (self.a_i_N/systems_per_i_bin * 100).sort_index()
         self.t_i_percent = (self.t_i_N/systems_per_i_bin * 100).sort_index()
         self.d_i_percent = (self.d_i_N/systems_per_i_bin * 100).sort_index()
-
+        
+        
+        
+        
+        
 
     def MC_bh_ratio_classifications_sampler(self, N=10000, size=500, dincl_cutoff=46, Z='all'):
+        """
+        Re-sample lightcurve classifications.
+
+        Parameters
+        ----------
+        N : int
+            Number of repeats. The default is 10000.
+        size : int
+            Number of clasifications per run. The default is 500.
+        dincl_cutoff : TYPE, optional
+            DESCRIPTION. The default is 46.
+        Z : TYPE, optional
+            DESCRIPTION. The default is 'all'.
+
+        Returns
+        -------
+        class_dict : TYPE
+            DESCRIPTION.
+
+        """
         def create_classification_dict():
             df_classifications_reindexed = self.df_classifications.set_index(['system_row_id', 'system_dincl', 'system_inclination'])
             class_dict = dict(df_classifications_reindexed['lc_classification'])
@@ -347,8 +390,7 @@ class ResultsProcessor:
                                 dincl_cutoff=46,
                                 Z='all',
                                 bh_ratio=0.5,
-                                erass_system_period_cutoff=1460,
-                                erass_lmxrb_duty_cycle=0.1):
+                                erass_system_period_cutoff=1460):
         """
         eRASS Monte-Carlo Simulation
         ----------------------------
@@ -375,9 +417,6 @@ class ResultsProcessor:
         erass_system_period_cutoff : int, optional
             Maximum period in days after which systems will be considered as persistent.
             The default is 1460.
-        erass_lmxrb_duty_cycle : float, optional
-            Duty cycle to use for LMXRB systems.
-            The default is 0.1.
         Returns
         -------
         None.
@@ -426,7 +465,6 @@ class ResultsProcessor:
         df_info['dincl_cutoff'] = [dincl_cutoff]
         df_info['Z'] = [Z]
         df_info['erass_system_period_cutoff'] = [erass_system_period_cutoff]
-        df_info['erass_lmxrb_duty_cycle'] = [erass_lmxrb_duty_cycle]
         
         # Sample Systems
         logging.debug('Sampling systems, inclinations and dincl')
@@ -452,30 +490,7 @@ class ResultsProcessor:
         
         # Call ULXLC
         logging.debug('Calling ulxlc')
-        run(["ulxlc/ulxlc_code_v0.1/a.out", str(run_id), str(size), str(erass_system_period_cutoff), str(erass_lmxrb_duty_cycle)])
-
-        
-        
-        logging.debug('Sampling transient probabilities')
-        
-        # Sample transient probabilities
-        for period in ['P_wind', 'P_sup']:
-            logging.debug('initializing using %s', period)
-            
-            ets = ErassTransientSampler()
-            ets.set_db(self.db)
-            ets.get_systems_from_run_id(run_id, period) 
-            ets.run()
-            res = ets.collect_results()
-
-            logging.debug('Appending period and run_id')
-            res['period'] = period
-            res['run_id'] = run_id
-            
-            logging.debug('Writing results to ERASS_MC_RESULTS')
-            conn = sqlite3.connect(self.db)
-            res.to_sql('ERASS_MC_RESULTS', conn, if_exists='append', index=False)
-            conn.close()
+        run(["ulxlc/ulxlc_code_v0.1/a.out", str(run_id), str(size), str(erass_system_period_cutoff)])
 
 
     def MC_calc_N_persistent(self, size=500):
@@ -484,7 +499,7 @@ class ResultsProcessor:
         self.df_N_persistent = size - self.df_classifications['run_id'].value_counts()
 
     
-    def MC_get_run_ids(self, group_period_cutoff=True, group_lmxrb_duty_cycle=True):
+    def MC_get_run_ids(self, group_period_cutoff=True):
         """
         Get simulation parameters run_id dictionary.
 
@@ -515,8 +530,6 @@ class ResultsProcessor:
         
         if group_period_cutoff:
             sim_cols.remove('erass_system_period_cutoff')
-        if group_lmxrb_duty_cycle:
-            sim_cols.remove('erass_lmxrb_duty_cycle')
             
         self.dict_MC_run_ids = info.groupby(by=sim_cols).groups
         return self.dict_MC_run_ids
@@ -556,9 +569,9 @@ class ResultsProcessor:
             self.MC_get_run_ids(group_period_cutoff=False)
         
         ids = self.dict_MC_run_ids[key]
-        df_erass_mc_results = self.df_erass_mc_results.set_index('run_id')
-        df_erass_mc_results = df_erass_mc_results.loc[df_erass_mc_results.index.intersection(ids).unique()]
-        return df_erass_mc_results
+        df_erass_evolution = self.df_erass_evolution.set_index('run_id')
+        df_erass_evolution = df_erass_evolution.loc[df_erass_evolution.index.intersection(ids).unique()]
+        return df_erass_evolution
     
     def MC_ADT_result_stats(self):
         try:
@@ -569,11 +582,38 @@ class ResultsProcessor:
         
     def MC_ERASS_result_stats(self):
         try:
-            self.df_erass_mc_results['dincl_cutoff']
+            self.df_erass_evolution['dincl_cutoff']
         except:
             self.table_erass_mc_results_map_info()
             
-        self.df_erass_mc_stats = self.df_erass_mc_results.groupby(['dincl_cutoff', 'Z', 'bh_ratio', 'period', 'erass_cycle']).agg(['min', 'mean', 'max', 'std', 'count'])
+        self.df_erass_mc_stats = self.df_erass_evolution.groupby(['dincl_cutoff', 'Z', 'bh_ratio', 'period', 'erass_cycle']).agg(['min', 'mean', 'max', 'std', 'count'])
+
+
+
+    def MC_classifications_sampler_with_duty_cycle(self, duty_cycle):
+        """
+        Run through classifications and apply a duty cycle to calculate
+        'lc_classification_new'.
+        
+        Parameters
+        ----------
+        duty_cycle : float
+            between 0.0 and 1.0.
+        """
+        rp.table_load_classifications()
+        rp.table_classifications_map_systems()
+         
+        logging.debug('Recalculating classifcations using duty cycle=%s', duty_cycle)
+        
+        self.df_classifications['duty_cycle'] = np.where(self.df_classifications['lmxrb']==1, duty_cycle, 1.0)
+        self.df_classifications[['lc_classification', 'duty_cycle']]
+        self.df_classifications['rand'] = np.random.random(size=len(self.df_classifications))
+        self.df_classifications['rand>dc'] =  self.df_classifications['rand'] > self.df_classifications['duty_cycle']#System is off
+        
+        # rolled duty cycle = dead and if alive or transient then make dead
+        cond = (self.df_classifications['rand>dc']==True) & ( (self.df_classifications['lc_classification']==1) | (self.df_classifications['lc_classification']==2))
+        self.df_classifications['lc_classification_new'] = np.where(cond, 0, self.df_classifications['lc_classification'])
+        
 
 
     def MC_calc_classification_counts(self, key):
@@ -759,7 +799,7 @@ class ResultsProcessor:
 
     def plot_erass_mc_results_hist(self, key, by='cycle', save=False):
         try:
-            self.df_erass_mc_results['Z']
+            self.df_erass_evolution['Z']
         except:
             self.table_erass_mc_results_map_info()
         
@@ -909,14 +949,14 @@ class Ulx:
         """
         Create ULX system that is persistently a ULX
         over the course of eRASS."""
-        logging.debug('Initializing persistent alive ULX')
+        # logging.debug('Initializing persistent alive ULX')
         Ulx = cls()
         Ulx.P_cycle_1_ulx = 1.0
         return Ulx
     
     @classmethod
     def persistent_dead_system(cls):
-        logging.debug('Initializing persistent dead ULX')
+        # logging.debug('Initializing persistent dead ULX')
         Ulx = cls()
         Ulx.P_cycle_1_ulx = 0.0
         return Ulx
@@ -933,7 +973,7 @@ class Ulx:
         period : string
             Which period to use, either 'P_wind' or 'P_sup'
         """
-        logging.debug('initializing ULX from row, period=%s', period)
+        # logging.debug('initializing ULX from row, period=%s', period)
         
         Ulx = cls()
 
@@ -994,9 +1034,6 @@ class Ulx:
 
 
 
-
-
-
 class ErassTransientSampler:
     """
     This class is used to sample the transient probabilities outputted from /ulxlc/ulxlcmod.c
@@ -1008,7 +1045,8 @@ class ErassTransientSampler:
         self.db = None              # SQL Database path
         self.run_id = None          # run_id to retrieve
         self.period = None          # Which period to use for simulation 'P_sup' or 'P_wind'
-        self.systems = None      # Systems is provided as a list containing Ulxs [Ulx(), Ulx(), ...]
+        self.duty_cycle = None
+        self.systems = None         # Systems is provided as a list containing Ulxs [Ulx(), Ulx(), ...]
 
         # These are the two directly observable quantities we are concerning outselves with.
         self.N_new_systems 				   = np.array([0,0,0,0,0,0,0,0])
@@ -1020,52 +1058,54 @@ class ErassTransientSampler:
     def set_period(self, period):
         """Either 'P_wind or P_sup'"""
         self.period = period
+        
+    def set_run_id(self, run_id):
+        self.run_id = run_id
 
     def set_duty_cycle(self, duty_cycle):
-        """Not Implemented"""
-        self.lmxrb_duty_cycle = duty_cycle
+        self.duty_cycle = duty_cycle
+
+    def set_active_population(self, pop):
+        self.pop = pop
     
-    def get_systems_from_run_id(self, run_id, period):
+    def load_table(self, table_name):
+        logging.debug('Getting run_id: %s from table: %s', self.run_id, table_name)
+        sql = f"""SELECT * FROM {table_name}
+                  WHERE run_id='{self.run_id}'"""
+        conn = sqlite3.connect(self.db)
+        df = pd.read_sql_query(sql, conn)
+        conn.close()
+        return df
+    
+    def table_load(self, table_name):
+        logging.debug('Loading table %s', table_name)
+        conn = sqlite3.connect(self.db)
+        df = pd.read_sql_query(f"SELECT * from {table_name}", conn)
+        conn.close()
+        return df
+    
+    
+    def populate_systems(self):
         """
-        Populate systems list from a given run_id and period
+        Populate systems list from a given run_id and period.
 
         Parameters
         ----------
         run_id : str
             run_id to retrieve
-        period : str
-            'P_wind' or 'P_sup'
             
         Returns
         -------
         systems : list
             list of Ulx() objects
         """
-
-        def load_table(db, table_name, run_id):
-            logging.debug('Getting run_id: %s from table: %s', run_id, table_name)
-            sql = f"""SELECT * FROM {table_name}
-                      WHERE run_id='{run_id}'"""
-            conn = sqlite3.connect(db)
-            df = pd.read_sql_query(sql, conn)
-            conn.close()
-            return df
-      
-      
-        logging.debug('Getting systems with db=%s, run_id=%s, period=%s', self.db, run_id, period)
+        logging.debug('Getting systems with db=%s, run_id=%s, period=%s', self.db, self.run_id, self.period)
        
         # Retrieve rows from SQL database
-        df_sampled_systems = load_table(self.db, 'ERASS_MC_SAMPLED_SYSTEMS', run_id)
-        df_classifications = load_table(self.db, 'CLASSIFICATIONS', run_id)
-        df_transient = load_table(self.db, 'TRANSIENT', run_id)
+        df_sampled_systems = self.load_table('ERASS_MC_SAMPLED_SYSTEMS')
+        df_classifications = self.load_table('CLASSIFICATIONS')
+        df_transient = self.load_table('TRANSIENT')
         
-        # TODO
-        # Check for LMXRB systems
-        df_lmxrb = df_sampled_systems[df_sampled_systems['lmxrb'] == 1]
-        df_lmxrb.set_index('system_row_id')
-        
-        if len(df_lmxrb) > 1:
-            df_transient['lmxrb'] = df_transient['system_row_id'].map(df_lmxrb['lmxrb'])
         
         # Calculate number of systems in each classification
         class_count = df_classifications['lc_classification'].value_counts()
@@ -1074,46 +1114,90 @@ class ErassTransientSampler:
         
         # On the off-chance that we got none of a paticular classification 
         if 0 not in class_count.index:
-            logging.debug('No dead systems found, setting N_dead_systems=0')
-            N_dead_systems = 0
+            logging.debug('No dead systems found, setting N_class_dead=0')
+            N_class_dead = 0
         else:
-            N_dead_systems = class_count[0]
+            N_class_dead = class_count[0]
         
         if 1 not in class_count.index:
-            logging.debug('No transient systems found, setting N_transient_systems=0')
-            N_transient_systems = 0
+            logging.debug('No transient systems found, setting N_class_trans=0')
+            N_class_trans = 0
         else:
-            N_transient_systems = class_count[0]
-             
+            N_class_trans = class_count[0]
+            
         if 2 not in class_count.index:
-            logging.debug('No alive systems found, setting N_alive_systems=0')
-            N_alive_systems = 0
+            logging.debug('No alive systems found, setting N_class_alive=0')
+            N_class_alive = 0
         else:
-            N_alive_systems = class_count[2]
-
-
-        N_sampled = len(df_sampled_systems)                                 # Total sampled systems
-        N_simulated = len(df_classifications)                               # Systems with opening angles < 45
-        N_classifications_not_simulated = N_sampled - N_simulated           # Systems with opening angles > 45 (These systems are persistent)
-        N_transient_sampled = len(df_transient)                             # Systems sampled for eRASS
-        N_transient_not_sampled = N_transient_systems - N_transient_sampled # Systems with period > erass_systems_period_cuttoff
-        N_persistent_systems = N_classifications_not_simulated + N_alive_systems + N_transient_not_sampled # Total number of persistent systems
+            N_class_alive = class_count[2]
+                
+        N_samp = len(df_sampled_systems)                   # Total sampled systems
+        N_class = len(df_classifications)                  # Systems with opening angles < 45
+        N_class_not_simulated = N_samp - N_class           # Systems with opening angles > 45 (These systems are persistent)
+        N_trans = len(df_transient)                        # Systems sampled for eRASS
+        N_trans_not_simulated = N_class - N_trans          # Systems with period > erass_systems_period_cuttoff 
+        N_alive = N_class_not_simulated + N_class_alive    # Total number of persistent systems
         
-        logging.debug('N_sampled = %s', N_sampled)
-        logging.debug('N_simulated = %s', N_sampled)
-        logging.debug('N_classifications_not_simulated = %s', N_sampled)
-        logging.debug('N_transient_sampled = %s', N_sampled)
-        logging.debug('N_transient_not_sampled = %s', N_sampled)
-        logging.debug('N_persistent_systems = %s', N_sampled)
+        logging.debug('N_samp = %s', N_samp)
+        logging.debug('N_class = %s', N_class)
+        logging.debug('N_class_not_simulated = %s', N_class_not_simulated)
+        logging.debug('N_trans = %s', N_trans)
+        logging.debug('N_trans_not_simulated = %s', N_trans_not_simulated)
+        logging.debug('N_alive = %s', N_alive)
 
-
-        persistent_systems = [Ulx.persistent_alive_system() for i in range(N_persistent_systems)]
-        dead_systems = [Ulx.persistent_dead_system() for i in range(N_dead_systems)]
-        transient_systems = [Ulx.from_table_transient_row(row, period) for i, row in df_transient.iterrows()]
+        # Check for LMXRB systems
+        if self.duty_cycle != None or self.duty_cycle != 1.0:
+            logging.debug('duty cyle=%s | not None or not 1.0, looking for lmxrb systems', self.duty_cycle)
+            
+            df_lmxrb = df_sampled_systems.loc[df_sampled_systems['lmxrb'] == 1]
+            N_samp_lmxrb = len(df_lmxrb)
         
-        self.systems = persistent_systems + dead_systems + transient_systems
+        
+            if N_samp_lmxrb > 1:
+                logging.debug('lmxrb systems found N_samp_lmxrb=%s', N_samp_lmxrb)
+                
+                logging.debug('mapping lmxrb flag to df_transient')
+                df_transient.loc[:, 'lmxrb'] = df_transient['system_row_id'].map(self.pop.df['lmxrb'])
+        
+                # get lmxrb transient systems
+                df_transient_lmxrb = df_transient.loc[df_transient['lmxrb'] == 1].copy()
+                df_transient_non_lmxrb = df_transient.loc[df_transient['lmxrb'] == 0].copy()
+                
+                N_trans_lmxrb = len(df_transient_lmxrb)
+                
+                logging.debug('N_trans_lmxrb=%s',N_trans_lmxrb)
+                
+                logging.debug('Sampling lmxrb transients via duty cycle')
+                
+                # Sample lmxrb transients using duty cycle
+                df_transient_lmxrb['duty_cycle'] = self.duty_cycle
+                df_transient_lmxrb['rand'] = np.random.random(size=N_trans_lmxrb)
+                df_transient_lmxrb['rand<duty_cycle'] = df_transient_lmxrb['rand'] < df_transient_lmxrb['duty_cycle']
+                df_transient_lmxrb_active = df_transient_lmxrb[df_transient_lmxrb['rand<duty_cycle']==True]
+                
+                # Also get the number of transients thrown out (these are dead)
+                N_trans_lmxrb_active = len(df_transient_lmxrb_active)
+                N_trans_lmxrb_dead = N_trans_lmxrb - N_trans_lmxrb_active
+                
+                logging.debug('N_trans_lmxrb_active=%s', N_trans_lmxrb_active)
+                logging.debug('N_trans_lmxrb_dead=%s', N_trans_lmxrb_dead)
+
+
+        systems_alive = [Ulx.persistent_alive_system() for i in range(N_alive)]
+        systems_dead = [Ulx.persistent_dead_system() for i in range(N_class_dead)]
+        
+        
+        if self.duty_cycle != None or self.duty_cycle!=1.0:
+            systems_transient = [Ulx.from_table_transient_row(row, self.period) for i, row in df_transient_non_lmxrb.iterrows()]
+            systems_transient_lmxrb = [Ulx.from_table_transient_row(row, self.period) for i, row in df_transient_lmxrb_active.iterrows()]
+            systems_dead_lmxrb = [Ulx.persistent_dead_system() for i in range(N_trans_lmxrb_dead)]
+            self.systems = systems_alive + systems_dead + systems_transient + systems_transient_lmxrb + systems_dead_lmxrb
+        else:
+            systems_transient = [Ulx.from_table_transient_row(row, self.period) for i, row in df_transient.iterrows()]
+            self.systems = systems_alive + systems_dead + systems_transient
         return self.systems
      
+        
     def calc_secondary_quantities(self):
         logging.debug('Calculating secondary observable quantities')
         self.N_delta_obs_ulx = self.N_new_systems - self.N_old_system_become_transient
@@ -1125,7 +1209,6 @@ class ErassTransientSampler:
         self.N_persistent_ulx_systems = self.N_new_systems[0] - np.cumsum(self.N_old_system_become_transient)
 
      
-
     def run(self):
         """
         Run eRASS Transient probability sampler.
@@ -1162,14 +1245,120 @@ class ErassTransientSampler:
         res['N_transients_cum'] = self.N_transients_cum
         res['N_total_systems'] = self.N_total_systems
         res['N_persistent_ulx_systems'] = self.N_persistent_ulx_systems
+        res['period'] = self.period
+        res['duty_cycle'] = self.duty_cycle
+        res['run_id'] = self.run_id
         self.res = res
         return res
+    
+    def write_results_to_erass_evolution(self):
+        logging.debug('Writing results to ERASS_MC_RESULTS')
+        conn = sqlite3.connect(self.db)
+        self.res.to_sql('ERASS_EVOLUTION', conn, if_exists='append', index=False)
+        conn.close()
+        
 
 
+
+class Plotter:
+    def __init__(self):
+        self.color_dead  = 'C3'
+        self.color_trans = 'C1'
+        self.color_alive = 'C2'
+        
+        self.linestyle_dead = 'dotted'
+        self.linestyle_trans = '--'
+        self.linestyle_alive = '-'
+        
+        
+        #Code for these figures are in ../reports/investigations.ipynb
+        self.PERCENT_ALIVE_EARNSHAW = 0.8271604938271605 * 100
+        self.PERCENT_ALIVE_EARNSHAW_ERROR = 0.12256472421344072 * 100
+        
+        self.PERCENT_ALIVE_EARNSHAW_UPPER = self.PERCENT_ALIVE_EARNSHAW + self.PERCENT_ALIVE_EARNSHAW_ERROR
+        self.PERCENT_ALIVE_EARNSHAW_LOWER = self.PERCENT_ALIVE_EARNSHAW - self.PERCENT_ALIVE_EARNSHAW_ERROR
+        
+        self.PERCENT_TRANS_EARNSHAW = 0.1728395061728395 * 100
+        self.PERCENT_TRANS_EARNSHAW_ERROR = 0.03744750536124969 * 100
+        self.PERCENT_TRANS_EARNSHAW_UPPER = self.PERCENT_TRANS_EARNSHAW + self.PERCENT_TRANS_EARNSHAW_ERROR
+        self.PERCENT_TRANS_EARNSHAW_LOWER = self.PERCENT_TRANS_EARNSHAW - self.PERCENT_TRANS_EARNSHAW_ERROR
+        
+    def set_results_processor(self, ResultsProcessor):
+        self.rp = ResultsProcessor
+        
+    def plot_erass_transients(self, erass_system_period_cutoff=1460, Z='all', save=False):
+        cycles = ['1', '2', '3', '4', '5', '6', '7', '8']
+        dincls = self.rp.df_erass_mc_info['dincl_cutoff'].unique()
+        bh_percents = np.sort(self.rp.df_erass_mc_info['bh_ratio'].unique())
+        
+        nbars = 8
+        spacing = 0.1
+        linewidth = 1.0
+        
+        fig, ax = plt.subplots(ncols=2, nrows=len(dincls), figsize=(6,6), sharey='row')
+        
+        ax[-1][0].set_xlabel('eRASS cycle')
+        ax[-1][1].set_xlabel('eRASS cycle')
+        
+        clist = ["#ff595e", "#ffca3a", "#8ac926", "#1982c4", "#6a4c93"]
+        
+        for i, dincl in enumerate(dincls):
+            for j, bh in enumerate(bh_percents):
+                key = (500, bh, dincl, Z, erass_system_period_cutoff)
+                df = self.rp.MC_get_erass_mc_results(key)
+                
+                sub_wind = df[df['period'] == 'P_wind']
+                sub_sup = df[df['period'] == 'P_sup']
+                
+                
+                stats_wind = sub_wind.groupby(['erass_cycle']).agg(['mean', 'std'])['N_transients']
+                stats_sup = sub_sup.groupby(['erass_cycle']).agg(['mean', 'std'])['N_transients']
+                
+                bh_label = f'$\%_{{BH}}$ = {bh*100}'            
+                
+                trans1 = Affine2D().translate(-spacing*(nbars)/4 + spacing*j, 0.0) + ax[0][i].transData
+                trans2 = Affine2D().translate(-spacing*(nbars)/4 + spacing*j, 0.0) + ax[1][i].transData
+        
+                ax[0][i].errorbar(cycles, stats_wind['mean'], yerr=stats_wind['std'], linestyle="none",
+                                  linewidth=linewidth, capsize=1.0, transform=trans1, label=bh_label, c=clist[j])
+                
+                ax[1][i].errorbar(cycles, stats_sup['mean'], yerr=stats_sup['std'], linestyle="none",
+                      linewidth=linewidth, capsize=1.0, transform=trans2, label=bh_label, c=clist[j])
+        
+    
+                ax[0][i].set_title(f'$\Delta i_{{max}} = {dincl}^{{\circ}}$ | $P_{{wind}}$ | Z = {Z}')
+                ax[1][i].set_title(f'$\Delta i_{{max}} = {dincl}^{{\circ}}$ | $P_{{sup}}$ | Z = {Z}')
+        
+                
+                ax[i][0].grid(axis='y')
+                ax[i][1].grid(axis='y')
+                #ax[1][i].grid(axis='y')
+                #ax[0][i].tick_params(labelrotation=90)
+                #ax[1][i].tick_params(axis='x', labelrotation=90)
+                
+        ax[0][0].set_ylabel('N Transients')
+        ax[1][0].set_ylabel('N Transients')
+        
+        ax[0][0].set_ylim(0,35)
+        ax[1][0].set_ylim(0,95)
+        
+        ax[0][0].legend()
+        #ax[0][0].legend()
+        
+        plt.subplots_adjust(wspace=0)
+        
+        plt.tight_layout()
+        if save:
+            plt.savefig(f'../reports/figures/erass_N_transients_Z={Z}.eps', bbox_inches='tight')
+            plt.savefig(f'../reports/figures/erass_N_transients_Z={Z}.png', bbox_inches='tight', dpi=1000)
+
+        
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
+    # logging.basicConfig(level=logging.DEBUG)
+    # logging.basicConfig(level=0)
+    
     
     # Load population
     df = populations.startrack_v2_mt_1_all()
@@ -1186,43 +1375,108 @@ if __name__ == "__main__":
     rp.set_parent_population(pop)
 
     
-    dc = 1.0
-    # Run Simulations
-    for Z in ['0.02', '0.002', '0.0002']:
+
+    # rp.MC_bh_ratio_classifications_sampler(N=10)
+    # rp.MC_classifications_sampler_with_duty_cycle(duty_cycle=0.1)
+
+    
+    # =============================================================================
+    # Table related functions
+    # =============================================================================
+    # Load tables
+    rp.table_load_erass_mc_info()
+    # rp.table_load_classifications()
+    rp.table_load_transient()
+    # rp.table_load_erass_mc_results()
+    rp.table_load_erass_evolution()
+
+    
+    # rp.table_erass_mc_results_map_info()
+    # rp.table_classifications_map_systems()
+    # rp.table_classifications_pivot()
+    
+    # rp.table_classifications_calc_intermediate()
+    # rp.table_classifications_map_systems()
+    # rp.table_classifications_pivot()
+    
+    # =============================================================================
+    # MC related functions
+    # =============================================================================
+    # rp.MC_ADT_result_stats()
+    # rp.MC_ERASS_result_stats()
+    # rp.MC_ERASS_simulation_run()
+    # rp.MC_bh_ratio_classifications_sampler()
+    # rp.MC_calc_N_persistent()
+    # rp.MC_calc_all_classifications_count_stats()
+    # rp.MC_calc_classification_counts()
+    # rp.MC_classifications_sampler_with_duty_cycle()
+    # rp.MC_get_classifications()
+    # rp.MC_get_erass_rp.MC_results()
+    # rp.MC_get_run_counts()
+    # rp.MC_get_run_ids(group_period_cutoff=False)
+    # rp.MC_get_run_counts()
+
+    # =============================================================================
+    # Run ULXLC over simulation parameter grid
+    # =============================================================================
+    """
+    for Z in ['0.002', '0.0002', '0.02']:
         pop = populations.Population(df)
         rp.set_parent_population(pop)
-        for i in range(100):
+        for i in range(500):
             for dincl in [21, 46]:
                 for bh_ratio in [0.0, 0.25, 0.5, 0.75, 1.0]:
                     print(i, bh_ratio, dincl, Z, dc)
                     # import pdb; pdb.set_trace()
                     rp.MC_ERASS_simulation_run(size=500,
-                                               dincl_cutoff=dincl,
-                                               Z=Z,
-                                               erass_lmxrb_duty_cycle=dc,
-                                               erass_system_period_cutoff=999999)
+                                            dincl_cutoff=dincl,
+                                            Z=Z,
+                                            bh_ratio=bh_ratio,
+                                            erass_system_period_cutoff=999999)
+    """
+    
+
+    # =============================================================================
+    # Simulate transient probabilities
+    # =============================================================================
+
+    # rp.table_load_erass_evolution()
+    # ids_unique_info = rp.df_erass_mc_info.run_id.unique()
+    # ids_unique_erass_evolution = rp.df_erass_evolution.run_id.unique()
+    # ids_to_simulate = np.setdiff1d(ids_unique_info, ids_unique_erass_evolution)
+    
+    # from tqdm import tqdm
+    
+    # for run_id in tqdm(ids_to_simulate):
+    #     for duty_cycle in [1.0, 0.1, 0.2, 0.3]:
+    #         for period in ['P_wind', 'P_sup']:
+    #             ets = ErassTransientSampler()
+                
+    #             ets.set_period(period)
+    #             ets.set_db('ulxlc.db')
+    #             ets.set_duty_cycle(duty_cycle)
+    #             ets.set_active_population(pop)
+    #             ets.set_run_id(run_id)
+    #             systems = ets.populate_systems()
+                
+    #             ets.run()
+                
+    #             res = ets.collect_results()
+                
+    #             ets.write_results_to_erass_evolution()
+                
 
 
-    # rp.MC_bh_ratio_classifications_sampler(N=10)
 
-    # Load tables
-    # rp.table_load_classifications()
-    # rp.table_load_transient()
-    # rp.table_load_erass_mc_info()
-    # rp.table_load_erass_mc_results()
-    
-    # # Process tables
-    # rp.table_erass_mc_results_map_info()
-    # # rp.table_classifications_map_systems()
-    # # rp.table_classifications_pivot()
-    
-    # # rp.table_classifications_calc_intermediate()
-    # # rp.table_classifications_map_systems()
-    # # rp.table_classifications_pivot()
-    
-    # # MC related functions
-    # rp.MC_get_run_ids(group_period_cutoff=True, group_lmxrb_duty_cycle=True)
-    # rp.MC_get_run_counts()
+    # =============================================================================
+    # Plotting Functions
+    # =============================================================================
+    p = Plotter()
+    p.set_results_processor(rp)
+    p.plot_erass_transients(erass_system_period_cutoff=999999, Z=0.02, save=False)
+            
+
+
 
     # # Plot results
     
@@ -1236,8 +1490,9 @@ if __name__ == "__main__":
     # rp.plot_erass_mc_results_hist(key)
     # rp.plot_classifications_hist('0.002', 46, frac_visible=True, save=False)
     # rp.plot_classifications_dincl_i()
-    # rp.plot_classifications_dincl_i(percent=True)   
-    # rp.plot_classifications_hist('all', 20, frac_visible=True, save=True)
+    # rp.plot_classifications_dincl_i(percent=True)
+    
+    # rp.plot_classifications_hist('all', 21, frac_visible=True, save=False)
 
     # rp.plot_erass_mc_results_hist(period='P_sup',
     #                               by='bh_ratio',
@@ -1247,4 +1502,7 @@ if __name__ == "__main__":
     #                               save=True)
 
     # rp.MC_calc_N_persistent()
+
+    
+    # rp.table_create_erass_evolution()
     

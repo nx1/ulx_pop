@@ -114,7 +114,7 @@ class Population:
         # XLF settings
         self.bin_min = 34
         self.bin_max = 44
-        self.bin_width = 0.1
+        self.bin_width = 0.25
         self.bins = np.arange(self.bin_min, self.bin_max, self.bin_width)
         self.bin_centers = 0.5 * (self.bins[:-1] + self.bins[1:])
         
@@ -152,6 +152,7 @@ class Population:
     
         # Observed Luminosity
         self.df['Lx1'] = self.df['Lx_iso']/self.df['b']
+        self.df['log_Lx1'] = np.log10(self.df['Lx1'])
     
         self.df['theta'] = 2 * np.arccos(1-self.df['b'])     # Full opening angle in rad
         self.df['theta_deg'] = self.df['theta'] * 180/np.pi  # degrees
@@ -229,8 +230,8 @@ class Population:
     
     def get_system(self, idum_run, iidd_old):
         logging.debug('Getting system idum_run: %s iidd_old: %s', idum_run, iidd_old)
-        df_system = self.df[self.df['idum_run']==idum_run]
-        df_system = df_system[df_system['iidd_old']==iidd_old]
+        gb = self.gb_sys(self.df)
+        df_system = gb.get_group((idum_run, iidd_old))
         return df_system
 
 
@@ -618,13 +619,14 @@ class Population:
         print('--------------------------')
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
+    # logging.basicConfig(level=logging.DEBUG)
     
-    df = startrack_v2_mt_1_all()#nrows=10000
+    df = startrack_v2_mt_1_all() #nrows=100000
     # df = startrack_v2_mt_1_test_subset()
     
     pop = Population(df)
-    # df_sys = pop.calc_system_averages(pop.df)
+    
+    df_sys = pop.calc_system_averages(pop.df)
     
     
     # Population Statistics
@@ -639,30 +641,104 @@ if __name__ == "__main__":
     #              include_beamed=True,
     #              include_duty_cycle=True,
     #              save=False)
-    
 
-    # =============================================================================
-    #     
-    # =============================================================================
-    # lmxrb = pop.df[pop.df['lmxrb'] == 1]
-    # lmxrb_sys = pop.calc_system_averages(lmxrb)
-    # gb = pop.gb_sys(lmxrb)
-    # mean = gb['Lx1'].mean()
-    # std = gb['Lx1'].std()
+    def sample_with_bh_ns(df):
+        df_samp = df[['K_a', 'log_Lx1']].sample(n=1000, replace=True)
+        L = df_samp['log_Lx1'].values
+        K_a = df_samp['K_a'].values
+        return np.array([L, K_a])
+
+
+    gb = pop.gb_sys(pop.df)
+    samp = gb.apply(sample_with_bh_ns)
+
+    val = np.stack(samp.values, axis=0) #(N_sys x 2 x N_iters) array of luminosities
     
-    # plt.yscale('log')
-    # plt.errorbar([0]*len(mean), mean, yerr=std)
+    val_L = val[:,0,:]
+    val_K = val[:,1,:]
+    
+    ns_mask = ~(val_K==13)
+    bh_mask = ~(val_K==14)
+    
+    ns_L_ma = np.ma.masked_array(data=val_L, mask=ns_mask)
+    bh_L_ma = np.ma.masked_array(data=val_L, mask=bh_mask)
+    
+    ns_L = ns_L_ma.filled(fill_value=0)
+    bh_L = bh_L_ma.filled(fill_value=0)
+    
+    ns_hists = [np.histogram(ns_L[i], bins=pop.bins)[0] for i in range(len(ns_L))]
+    bh_hists = [np.histogram(bh_L[i], bins=pop.bins)[0] for i in range(len(bh_L))]
+    
+    bh_means = np.mean(bh_hists, axis=0)
+    bh_stds  = np.std(bh_hists, axis=0)
+    
+    ns_means = np.mean(ns_hists, axis=0)
+    ns_stds  = np.std(ns_hists, axis=0)
+    
+    plt.errorbar(x=pop.bin_centers, y=bh_means, yerr=bh_stds, linestyle='', capsize=1.0, label='BH')
+    plt.errorbar(x=pop.bin_centers, y=ns_means, yerr=ns_stds, linestyle='', capsize=1.0, label='NS')
+
+
+    # def sample(series):
+    #     """For use using GroupBy[key].apply(sample)"""
+    #     return np.random.choice(series, size=10000, replace=True)
+
+    # def sample_with_beaming(df):
+    #     """For use using GroupBy.apply(sample_with_beaming)"""
+    #     N_sys = len(df)
+    #     df['1-b'] = 1 - df['b']
+    #     L_0 = np.zeros(shape=N_sys)
+    #     L     = np.concatenate([df['log_Lx1'],L_0])
+    #     p_obs = np.concatenate([df['b'],df['1-b']]) / N_sys
+    #     p_obs = abs(p_obs)
+    #     p_obs /= p_obs.sum()  # normalize
+    #     # return np.random.multinomial(L, p_obs, size=10000)
+    #     return np.random.choice(L, size=10000, replace=True, p=p_obs)
+    
+    # def sample_with_beaming_and_duty_cycle(df):
+    #     """For use using GroupBy.apply(sample_with_beaming_and_duty_cycle)"""
+    #     duty_cycle = 0.3
+    #     N_sys = len(df)
+    #     df['dc'] = np.where(df['lmxrb']==1, duty_cycle, 1.0)
+    #     df['p_obs'] = df['b'] * df['dc']
+    #     df['1-p_obs'] = 1 - df['p_obs']
+        
+    #     L_0 = np.zeros(shape=N_sys)
+    #     L   = np.concatenate([df['log_Lx1'],L_0])
+    #     p_obs = np.concatenate([df['p_obs'],df['1-p_obs']]) / N_sys
+        
+    #     p_obs = abs(p_obs)
+    #     p_obs /= p_obs.sum()  # normalize
+
+    #     return np.random.choice(L, size=10000, replace=True, p=p_obs)
+    
+    # gb = pop.gb_sys(pop.df)
+    # print('calc res')
+    # res = gb['log_Lx1'].apply(sample)
+    # print('calc res2')
+    # res2 = gb.apply(sample_with_beaming)
+    # print('calc res3')
+    # res3 = gb.apply(sample_with_beaming_and_duty_cycle)  
     
     
-    # # lmxrb_sys
-    # # dc = 0.1
+    # def plot_res(res, label):
+        
+    #     val = np.stack(res.values, axis=0) #(N_sys by N_iters) array of luminosities
+        
+    #     val = val.T
+        
+    #     hists = [np.histogram(val[i], bins=pop.bins)[0] for i in range(len(val))]
+    #     hists = np.array(hists)
+        
+    #     means = np.mean(hists, axis=0)
+    #     stds  = np.std(hists, axis=0)
+        
+    #     plt.yscale('log')
+    #     plt.axvline(39, c='r', linestyle='--')
+    #     plt.errorbar(x=pop.bin_centers, y=means, yerr=stds, linestyle='', capsize=1.0, label=f'{label}')
+        
+    # plot_res(res, 'beamed')
+    # plot_res(res2, 'observed beamed')
+    # plot_res(res3, 'observed beamed + dc=0.3')
     
-    # vis = pop.sample_visible(lmxrb_sys, True, True)
-    
-    # h = np.histogram(np.log10(vis['Lx1']), bins=pop.bins)
-    
-    # hist = pop.XLF_mc_histogram(lmxrb_sys,
-    #                             include_beaming=True,
-    #                             include_duty_cycle=True,
-    #                             lmxrb_duty_cycle=dc,
-    #                             mc_iters=1000)
+        

@@ -364,10 +364,9 @@ int main(int argc, char *argv[]){
 	// argv[1] = run_id
 	// argv[2] = size (system_N)
 	// argv[3] = erass_system_period_cutoff
-	// argv[4] = lmxrb_duty_cycle
 	
-	if(argc!=5){
-		printf("Incorrect number of parameters passed (%d / %d) \n", argc-1, 4); 
+	if(argc!=4){
+		printf("Incorrect number of parameters passed (%d / %d) \n", argc-1, 3); 
 		exit(1);
 	}
 
@@ -413,7 +412,6 @@ int main(int argc, char *argv[]){
 	double system_Lx[system_N];		// In units of 10^39 erg s^-1
 	double system_P_wind_days[system_N];
 	double system_P_sup_days[system_N];
-	int	   system_lmxrb[system_N];				// Is the system defined as a LMXRB that could go into outburst?
 	
 	// Not Used
 	int    system_mttype = 0; 				// Mass transfer type: 0 = None, 1 = Nuclear, 2 = Thermal, 3 = WD mass transfer
@@ -422,8 +420,6 @@ int main(int argc, char *argv[]){
 	int	   erass_system_period_cutoff = atoi(argv[3]);  // Treat sources that are over a wind period length as persistent sources
 	int    erass_sample_interval = 30*6;	      // Sampling interval in days
 	int    erass_sample_iterations = 10000;	      // Number of Monte Carlo cycle repeats
-	
-	float  erass_lmxrb_duty_cycle = atof(argv[4]);	// Duty Cycle for LMXRBs used in eRASS simulation
 	
 	int    erass_P_wind_start_time_days[erass_sample_iterations];		// Used to hold time of first observation
 	int    erass_P_sup_start_time_days[erass_sample_iterations];		// Used to hold time of first observation
@@ -466,7 +462,7 @@ int main(int argc, char *argv[]){
 	sqlite3_stmt *res;
 
 	/* Retrieve sim rows from sql table */
-	sql = sqlite3_mprintf("SELECT system_row_id, theta_half_deg, Lx1, P_wind_days, P_sup_days, inclination, dincl, lmxrb from ERASS_MC_SAMPLED_SYSTEMS WHERE run_id=%Q", run_id);
+	sql = sqlite3_mprintf("SELECT system_row_id, theta_half_deg, Lx1, P_wind_days, P_sup_days, inclination, dincl from ERASS_MC_SAMPLED_SYSTEMS WHERE run_id=%Q", run_id);
 	// sql = sqlite3_mprintf("SELECT * from ERASS_MC_SAMPLED_SYSTEMS WHERE run_id='%Q'", run_id);
 	rc = sqlite3_open(filename_database, &db);
 	rc = sqlite3_prepare_v2(db, sql, -1, &res, 0);
@@ -479,7 +475,6 @@ int main(int argc, char *argv[]){
 		system_P_sup_days[r]  = sqlite3_column_double(res, 4);
 		system_inclination[r] = sqlite3_column_int(res, 5);
 		system_dincl[r]	      = sqlite3_column_int(res, 6);
-		system_lmxrb[r]	      = sqlite3_column_int(res, 7);
 		r++;
 	}
 	sqlite3_finalize(res);
@@ -518,26 +513,10 @@ int main(int argc, char *argv[]){
 		lc_max_flux = max(lc_flux, lc_nt);
 		lc_min_flux = min(lc_flux, lc_nt);
 		lc_classification = classify_curve(lc_ulx_lim, lc_max_flux, lc_min_flux);
-		
-		
-        
-		int erass_sample = 1;	// Sample erass yes/no
-        
-        // Roll for lmxrb systems if we observed the system during an ourburst or not
-		
-        if (system_lmxrb[N] == 1){
-			// printf("System could be in outburst \n");
-			double r = ((double) rand() / (RAND_MAX));
-			// printf("r = %f | duty cycle = %f\n", r, erass_lmxrb_duty_cycle);
-			if (r > erass_lmxrb_duty_cycle){
-				int erass_sample = 0;
-				// printf("NOT SAMPLING \n");
-			}
-			
-		}
+
 
     	// Lightcurve is transient & P_wind or P_sup is below limit (and rolled during ourburst for lmxrb systems)
-		if ((lc_classification == 1) & (erass_sample==1) & (system_P_wind_days[N] < erass_system_period_cutoff || system_P_sup_days[N] < erass_system_period_cutoff) ){ 
+		if ((lc_classification == 1) & (system_P_wind_days[N] < erass_system_period_cutoff || system_P_sup_days[N] < erass_system_period_cutoff) ){ 
 		
 			int erass_1_N_ulx = 0;		// Number of times the system was observed as a ULX on the first cycle.
 			
@@ -698,7 +677,6 @@ int main(int argc, char *argv[]){
 		// printf("system_P_wind_days: %f days\n", system_P_wind_days);
 		// printf("system_P_sup_days: %f days\n", system_P_sup_days);
 		// printf("system_mttype: %d \n", system_mttype[0]);
-		// printf("system_lmxrb: %f \n", system_lmxrb[0]);
 		// 
 		// printf("\n");
 		// 
