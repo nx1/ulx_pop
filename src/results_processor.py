@@ -11,37 +11,17 @@ from uuid import uuid4
 import sqlite3
 import numpy as np
 import pandas as pd
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.transforms import Affine2D
+from scipy.stats import norm
 
 import populations
 
 class ResultsProcessor:
     def __init__(self):
-        self.plot_set_latex_font()
-        
-        # matplotlib colors
-        self.color_dead  = 'C3'
-        self.color_trans = 'C1'
-        self.color_alive = 'C2'
-        
-        self.linestyle_dead = 'dotted'
-        self.linestyle_trans = '--'
-        self.linestyle_alive = '-'
-        
-        
-        #Code for these figures are in ../reports/investigations.ipynb
-        self.PERCENT_ALIVE_EARNSHAW = 0.8271604938271605 * 100
-        self.PERCENT_ALIVE_EARNSHAW_ERROR = 0.12256472421344072 * 100
-        
-        self.PERCENT_ALIVE_EARNSHAW_UPPER = self.PERCENT_ALIVE_EARNSHAW + self.PERCENT_ALIVE_EARNSHAW_ERROR
-        self.PERCENT_ALIVE_EARNSHAW_LOWER = self.PERCENT_ALIVE_EARNSHAW - self.PERCENT_ALIVE_EARNSHAW_ERROR
-        
-        self.PERCENT_TRANS_EARNSHAW = 0.1728395061728395 * 100
-        self.PERCENT_TRANS_EARNSHAW_ERROR = 0.03744750536124969 * 100
-        self.PERCENT_TRANS_EARNSHAW_UPPER = self.PERCENT_TRANS_EARNSHAW + self.PERCENT_TRANS_EARNSHAW_ERROR
-        self.PERCENT_TRANS_EARNSHAW_LOWER = self.PERCENT_TRANS_EARNSHAW - self.PERCENT_TRANS_EARNSHAW_ERROR
-        
+        pass
+    
     def set_active_db(self, path):
         logging.debug('Setting active db to %s', path)
         self.db = path
@@ -317,80 +297,13 @@ class ResultsProcessor:
         self.d_i_percent = (self.d_i_N/systems_per_i_bin * 100).sort_index()
         
         
-        
-        
-        
-
-    def MC_bh_ratio_classifications_sampler(self, N=10000, size=500, dincl_cutoff=46, Z='all'):
-        """
-        Re-sample lightcurve classifications.
-
-        Parameters
-        ----------
-        N : int
-            Number of repeats. The default is 10000.
-        size : int
-            Number of clasifications per run. The default is 500.
-        dincl_cutoff : TYPE, optional
-            DESCRIPTION. The default is 46.
-        Z : TYPE, optional
-            DESCRIPTION. The default is 'all'.
-
-        Returns
-        -------
-        class_dict : TYPE
-            DESCRIPTION.
-
-        """
-        def create_classification_dict():
-            df_classifications_reindexed = self.df_classifications.set_index(['system_row_id', 'system_dincl', 'system_inclination'])
-            class_dict = dict(df_classifications_reindexed['lc_classification'])
-            return class_dict
-        
-        try:
-            self.class_dict
-        except:
-            self.class_dict = create_classification_dict()
-            
-        if Z!='all':
-            self.pop.df_ulx[self.pop.df_ulx['Z'] == Z]
-        
-        res = []
- 
-        for i in range(N):
-            print(i)
-            for bh_ratio in np.arange(0, 1.05, 0.05):
-                
-                selected_systems = self.pop.sample_ulxs(bh_ratio, size=size)
-                selected_dincls = np.random.randint(0, dincl_cutoff, size=size)
-                selected_inclinations = np.random.randint(0, 91, size=size)
-                selected_keys = list(zip(selected_systems, selected_dincls, selected_inclinations))
-
-                res_classications = [self.class_dict.get(key) for key in selected_keys]
-
-                # None systems correspond to opening angles > 45 and are considered alive
-                N_alive = res_classications.count(2) + res_classications.count(None)
-                N_transient = res_classications.count(1)
-                N_dead = res_classications.count(0)
-        
-                res.append([bh_ratio, N_alive, N_transient, N_dead, i])
-        
-        df_res = pd.DataFrame(res, columns=['bh_ratio', 'alive', 'transient', 'dead', 'iter'])
-        self.df_bh_ratio = df_res
-        
-        #savepath = '../data/interim/bh_ns_sampling_results/'
-        #filename = f'Z = {Z}.csv'
-        
-        #df_res.to_csv(savepath+filename, index=False)
-        # df_res.to_csv(savepath+filename, mode='a', header=False, index=False)
-
     
-    def MC_ERASS_simulation_run(self,
-                                size=500,
-                                dincl_cutoff=46,
-                                Z='all',
-                                bh_ratio=0.5,
-                                erass_system_period_cutoff=1460):
+    def sim_erass_run(self,
+                      size=500,
+                      dincl_cutoff=46,
+                      Z='all',
+                      bh_ratio=0.5,
+                      erass_system_period_cutoff=1460):
         """
         eRASS Monte-Carlo Simulation
         ----------------------------
@@ -493,13 +406,101 @@ class ResultsProcessor:
         run(["ulxlc/ulxlc_code_v0.1/a.out", str(run_id), str(size), str(erass_system_period_cutoff)])
 
 
-    def MC_calc_N_persistent(self, size=500):
+    def sim_classifications_sampler_with_duty_cycle(self, duty_cycle):
+        """
+        Run through classifications and apply a duty cycle to calculate
+        'lc_classification_new'.
+        
+        Parameters
+        ----------
+        duty_cycle : float
+            between 0.0 and 1.0.
+        """
+        rp.table_load_classifications()
+        rp.table_classifications_map_systems()
+         
+        logging.debug('Recalculating classifcations using duty cycle=%s', duty_cycle)
+        
+        self.df_classifications['duty_cycle'] = np.where(self.df_classifications['lmxrb']==1, duty_cycle, 1.0)
+        self.df_classifications[['lc_classification', 'duty_cycle']]
+        self.df_classifications['rand'] = np.random.random(size=len(self.df_classifications))
+        self.df_classifications['rand>dc'] =  self.df_classifications['rand'] > self.df_classifications['duty_cycle']#System is off
+        
+        # rolled duty cycle = dead and if alive or transient then make dead
+        cond = (self.df_classifications['rand>dc']==True) & ( (self.df_classifications['lc_classification']==1) | (self.df_classifications['lc_classification']==2))
+        self.df_classifications['lc_classification_new'] = np.where(cond, 0, self.df_classifications['lc_classification'])
+
+    def sim_bh_ratio_classifications_sampler(self, N=10000, size=500, dincl_cutoff=46, Z='all'):
+        """
+        Re-sample lightcurve classifications.
+
+        Parameters
+        ----------
+        N : int
+            Number of repeats. The default is 10000.
+        size : int
+            Number of clasifications per run. The default is 500.
+        dincl_cutoff : TYPE, optional
+            DESCRIPTION. The default is 46.
+        Z : TYPE, optional
+            DESCRIPTION. The default is 'all'.
+
+        Returns
+        -------
+        class_dict : TYPE
+            DESCRIPTION.
+
+        """
+        def create_classification_dict():
+            df_classifications_reindexed = self.df_classifications.set_index(['system_row_id', 'system_dincl', 'system_inclination'])
+            class_dict = dict(df_classifications_reindexed['lc_classification'])
+            return class_dict
+        
+        try:
+            self.class_dict
+        except:
+            self.class_dict = create_classification_dict()
+            
+        if Z!='all':
+            self.pop.df_ulx[self.pop.df_ulx['Z'] == Z]
+        
+        res = []
+ 
+        for i in range(N):
+            print(i)
+            for bh_ratio in np.arange(0, 1.05, 0.05):
+                
+                selected_systems = self.pop.sample_ulxs(bh_ratio, size=size)
+                selected_dincls = np.random.randint(0, dincl_cutoff, size=size)
+                selected_inclinations = np.random.randint(0, 91, size=size)
+                selected_keys = list(zip(selected_systems, selected_dincls, selected_inclinations))
+
+                res_classications = [self.class_dict.get(key) for key in selected_keys]
+
+                # None systems correspond to opening angles > 45 and are considered alive
+                N_alive = res_classications.count(2) + res_classications.count(None)
+                N_transient = res_classications.count(1)
+                N_dead = res_classications.count(0)
+        
+                res.append([bh_ratio, N_alive, N_transient, N_dead, i])
+        
+        df_res = pd.DataFrame(res, columns=['bh_ratio', 'alive', 'transient', 'dead', 'iter'])
+        self.df_bh_ratio = df_res
+        
+        #savepath = '../data/interim/bh_ns_sampling_results/'
+        #filename = f'Z = {Z}.csv'
+        
+        #df_res.to_csv(savepath+filename, index=False)
+        # df_res.to_csv(savepath+filename, mode='a', header=False, index=False)
+
+
+    def calc_N_persistent(self, size=500):
         """Calculate the number of systems that had half opening angles > 45
         and thus were not put through the lightcurve simulation"""
         self.df_N_persistent = size - self.df_classifications['run_id'].value_counts()
 
-    
-    def MC_get_run_ids(self, group_period_cutoff=True):
+
+    def get_run_ids(self, group_period_cutoff=True):
         """
         Get simulation parameters run_id dictionary.
 
@@ -507,9 +508,6 @@ class ResultsProcessor:
         ----------
         group_period_cutoff : bool
             Group results together irrespective of period cutoff.
-            The default is True.
-        group_lmxrb_duty_cycle : bool
-            Group results together irrespective of period lmxrb duty cycle.
             The default is True.
 
         Returns
@@ -534,13 +532,13 @@ class ResultsProcessor:
         self.dict_MC_run_ids = info.groupby(by=sim_cols).groups
         return self.dict_MC_run_ids
     
-    def MC_get_run_counts(self):
+    def get_run_counts(self):
         count_dict = {}
         for k, v in self.dict_MC_run_ids.items():
             count_dict[k] = len(v)
         return count_dict
 
-    def MC_get_classifications(self, key):
+    def get_classifications(self, key):
         """
         Parameters
         ----------
@@ -549,7 +547,7 @@ class ResultsProcessor:
         try:
             self.dict_MC_run_ids
         except:
-            self.MC_get_run_ids()
+            self.get_run_ids()
         
         ids = self.dict_MC_run_ids[key]
         df_classifications = self.df_classifications.set_index('run_id')
@@ -557,7 +555,7 @@ class ResultsProcessor:
         df_classifications = df_classifications.loc[df_classifications.index.intersection(ids).unique()]
         return df_classifications
     
-    def MC_get_erass_mc_results(self, key):
+    def get_erass_evolution_from_key(self, key):
         """
         Parameters
         ----------
@@ -566,66 +564,37 @@ class ResultsProcessor:
         try:
             self.dict_MC_run_ids
         except:
-            self.MC_get_run_ids(group_period_cutoff=False)
+            self.get_run_ids(group_period_cutoff=False)
         
         ids = self.dict_MC_run_ids[key]
         df_erass_evolution = self.df_erass_evolution.set_index('run_id')
         df_erass_evolution = df_erass_evolution.loc[df_erass_evolution.index.intersection(ids).unique()]
         return df_erass_evolution
     
-    def MC_ADT_result_stats(self):
-        try:
-            self.df_classifications['Z']
-        except:
-            self.table_classifications_map_info()
-        self.df_classifications_stats = self.df_classifications.groupby(['dincl_cutoff', 'Z', 'bh_ratio']).agg(['min', 'mean', 'max', 'std', 'count'])
-        
-    def MC_ERASS_result_stats(self):
-        try:
-            self.df_erass_evolution['dincl_cutoff']
-        except:
-            self.table_erass_mc_results_map_info()
-            
-        self.df_erass_mc_stats = self.df_erass_evolution.groupby(['dincl_cutoff', 'Z', 'bh_ratio', 'period', 'erass_cycle']).agg(['min', 'mean', 'max', 'std', 'count'])
 
 
-
-    def MC_classifications_sampler_with_duty_cycle(self, duty_cycle):
+    def calc_classification_counts(self, key):
         """
-        Run through classifications and apply a duty cycle to calculate
-        'lc_classification_new'.
-        
+        Count the number of alive, dead and persistent sources for a given
+        key.
+
         Parameters
         ----------
-        duty_cycle : float
-            between 0.0 and 1.0.
+        key : tuple
+            key from dict_MC_run_ids.
+
+        Returns
+        -------
+        df_classification_counts : TYPE
+            DESCRIPTION.
+
         """
-        rp.table_load_classifications()
-        rp.table_classifications_map_systems()
-         
-        logging.debug('Recalculating classifcations using duty cycle=%s', duty_cycle)
-        
-        self.df_classifications['duty_cycle'] = np.where(self.df_classifications['lmxrb']==1, duty_cycle, 1.0)
-        self.df_classifications[['lc_classification', 'duty_cycle']]
-        self.df_classifications['rand'] = np.random.random(size=len(self.df_classifications))
-        self.df_classifications['rand>dc'] =  self.df_classifications['rand'] > self.df_classifications['duty_cycle']#System is off
-        
-        # rolled duty cycle = dead and if alive or transient then make dead
-        cond = (self.df_classifications['rand>dc']==True) & ( (self.df_classifications['lc_classification']==1) | (self.df_classifications['lc_classification']==2))
-        self.df_classifications['lc_classification_new'] = np.where(cond, 0, self.df_classifications['lc_classification'])
-        
-
-
-    def MC_calc_classification_counts(self, key):
         try:
             self.df_N_persistent
         except AttributeError:
-            self.MC_calc_N_persistent()
+            self.calc_N_persistent()
             
-        if len(key) != 4:
-            print('key length !=4, probably seperated by precessional angle cut.')
-            
-        df_c = self.MC_get_classifications(key)
+        df_c = self.get_classifications(key)
         
         df_d = df_c[df_c['lc_classification']==0]
         df_t = df_c[df_c['lc_classification']==1]
@@ -646,11 +615,11 @@ class ResultsProcessor:
         return df_classification_counts
     
     
-    def MC_calc_all_classifications_count_stats(self):
+    def calc_all_classifications_count_stats(self):
         res = pd.DataFrame()
         for k in self.dict_MC_run_ids.keys():
             print(k)
-            df = self.MC_calc_classification_counts(k)
+            df = self.calc_classification_counts(k)
             df['size'] = k[0]
             df['bh_ratio'] = k[1]
             df['dincl_cutoff'] = k[2]
@@ -659,274 +628,24 @@ class ResultsProcessor:
         gb = res.groupby(['Z', 'dincl_cutoff', 'bh_ratio']).agg(['min', 'mean', 'max', 'std', 'count'])
         gb = gb.drop('size', axis=1)
         self.df_classifications_counts_stats = gb
-
-
-    def plot_set_latex_font(self):
-        import matplotlib
-        matplotlib.rcParams['mathtext.fontset'] = 'stix'
-        matplotlib.rcParams['font.family'] = 'STIXGeneral'    
-    
-    def plot_classifications_hist(self, key, frac_visible=False, save=False):
-        """
-        Plot classifications histogram for a given simulation key.
-
-        Parameters
-        ----------
-        key : tuple
-            Simulation key eg (500, 0.5, 21, '0.0002')
-        frac_visible : bool
-            Plot the % of visible systems i.e alive and transient.
-            The default is False.
-        save : bool
-            Save to disc
-        Returns
-        -------
-        None.
-        """
-        fig, ax = plt.subplots(5,1, sharex=True, sharey=True, figsize=(6, 4.5))
-        
-        Z = key[3]
-        dincl_cut = key[2]
-        
-        ax[0].set_title(fr'Z = {Z} | $\Delta i_{{max}} =$ {dincl_cut}$^{{\circ}}$')
-
-        for i, bh in enumerate([0.0, 0.25, 0.5, 0.75, 1.0]):
-            print(i, bh)
-            
-            df_classification_counts = self.MC_calc_classification_counts(key)
-            if frac_visible==False:
-                df_classification_counts['N_dead'].hist(bins=np.arange(0,500,5), label='Dead', alpha=0.8, edgecolor='black', linestyle=self.linestyle_dead, histtype='step', ax=ax[i], grid=False)
-                df_classification_counts['N_trans'].hist(bins=np.arange(0,500,5), label='Transient', alpha=0.8, edgecolor='black', linestyle=self.linestyle_trans, histtype='step', ax=ax[i], grid=False)
-                df_classification_counts['N_alive_persistent'].hist(bins=np.arange(0,500,5), label='Alive', alpha=0.8, edgecolor='black', linestyle=self.linestyle_alive, histtype='step', ax=ax[i], grid=False)
-                ax[-1].set_xlabel('Number of observed ULXs')
-            else:
-                ax[i].axvspan(self.PERCENT_ALIVE_EARNSHAW_LOWER, self.PERCENT_ALIVE_EARNSHAW_UPPER, alpha=0.3, color='grey')
-                ax[i].axvspan(self.PERCENT_TRANS_EARNSHAW_LOWER, self.PERCENT_TRANS_EARNSHAW_UPPER, alpha=0.7, color='grey')
-                
-                df_classification_counts['frac_alive_visible'].hist(bins=np.arange(0,100,1), label='% Alive', alpha=0.8, edgecolor='black', linestyle=self.linestyle_alive, histtype='step', ax=ax[i], grid=False)
-                df_classification_counts['frac_trans_visible'].hist(bins=np.arange(0,100,1), label='% Transient', alpha=0.8, edgecolor='black', linestyle=self.linestyle_trans, histtype='step', ax=ax[i], grid=False)
-                ax[-1].set_xlabel('% of observed ULXs')
-                
-            ax[i].text(x=350, y=ax[i].get_ylim()[1]*(1/2), s=r'$\%_{{BH}} = $ {}'.format((bh)*100), fontsize=9)    
-            ax[i].legend(fontsize=7, loc='right')
-        
-        if frac_visible:
-            ax[0].text(x=(self.PERCENT_ALIVE_EARNSHAW_LOWER)+0.25, y=ax[0].get_ylim()[1]+5, s='Alive $1 \sigma$ XMM', fontsize=7)
-            ax[0].text(x=(self.PERCENT_TRANS_EARNSHAW_LOWER)+0.25, y=ax[0].get_ylim()[1]+5, s='Transient $1 \sigma$ XMM', fontsize=7)                
-
-
-        
-        plt.tight_layout()
-        plt.subplots_adjust(hspace=0.0)
-        
-        if save:
-            if frac_visible==False:
-                plt.savefig(f'../reports/figures/ADT_{Z}_{dincl_cut}.png', dpi=500)
-                plt.savefig(f'../reports/figures/ADT_{Z}_{dincl_cut}.eps')
-                plt.savefig(f'../reports/figures/ADT_{Z}_{dincl_cut}.pdf')
-            else:
-                plt.savefig(f'../reports/figures/ADT_frac_{Z}_{dincl_cut}.png', dpi=500)
-                plt.savefig(f'../reports/figures/ADT_frac_{Z}_{dincl_cut}.eps')
-                plt.savefig(f'../reports/figures/ADT_frac_{Z}_{dincl_cut}.pdf')
         
         
-        
-    def plot_classifications_dincl_i(self, percent=False, savefig=False):
+    def ADT_result_stats(self):
         try:
-            self.df_d
+            self.df_classifications['Z']
         except:
-            self.table_classifications_calc_intermediate()
+            self.table_classifications_map_info()
+        self.df_classifications_stats = self.df_classifications.groupby(['dincl_cutoff', 'Z', 'bh_ratio']).agg(['min', 'mean', 'max', 'std', 'count'])
+        return self.df_classifications_stats
         
-        fig, ax = plt.subplots(ncols=2, nrows=1, figsize=(8,3))
-        plt.tight_layout()
-        ax[0].set_xlim(0,max(self.df_d['system_dincl']))
-        ax[0].set_xlabel(r'Precessional angle $\Delta i$')
-        
-        ax[0].minorticks_on()
-        
-        
-        ax[1].set_xlim(0,max(self.df_d['system_inclination']))
-        ax[1].set_xlabel(r'Inclination $i$')
-        ax[1].minorticks_on()
-        
-        
-        
-        
-        if percent == False:
-            ax[0].set_ylabel(r'Number of systems')
-            ax[1].set_ylabel(r'Number of systems')
-            
-            # dincl vs Number systems
-            self.a_dincl_N.plot(label='Alive', linestyle=self.linestyle_alive, color='black', linewidth=0.8, ax=ax[0])
-            self.t_dincl_N.plot(label='Transient', linestyle=self.linestyle_trans, color='black', linewidth=0.8, ax=ax[0])
-            self.d_dincl_N.plot(label='Dead', linestyle=self.linestyle_dead, color='black', linewidth=0.8, ax=ax[0])
-            
-            # inclination vs Number systems
-            self.a_i_N.plot(label='Alive', linestyle=self.linestyle_alive, color='black', linewidth=0.8, ax=ax[1])
-            self.t_i_N.plot(label='Transient', linestyle=self.linestyle_trans, color='black', linewidth=0.8, ax=ax[1])
-            self.d_i_N.sort_index().plot(label='Dead', linestyle=self.linestyle_dead, color='black', linewidth=0.8, ax=ax[1])
-            
-            ax[1].set_ylabel(r'Number of systems')
-            
-            if savefig:
-                plt.savefig('../reports/figures/dincl_i_classifications.png', dpi=1000)
-                plt.savefig('../reports/figures/dincl_i_classifications.eps')
-            
-        else:
-            ax[0].set_ylabel(r'% of systems')
-            ax[1].set_ylabel(r'% of systems')
-            ax[0].set_ylim(0,100)
-            ax[1].set_ylim(0,100)
-            
-            # dincl vs percentages
-            self.a_dincl_percent.plot(label='Alive', linestyle=self.linestyle_alive, color='black', linewidth=0.8, ax=ax[0])
-            self.t_dincl_percent.plot(label='Transient', linestyle=self.linestyle_trans, color='black', linewidth=0.8, ax=ax[0])
-            self.d_dincl_percent.plot(label='Dead', linestyle=self.linestyle_dead, color='black', linewidth=0.8, ax=ax[0])
-            
-            # inclination vs percentages
-            self.a_i_percent.plot(label='Alive', linestyle='-', color='black', linewidth=0.8, ax=ax[1])
-            self.t_i_percent.plot(label='Transient', linestyle='--', color='black', linewidth=0.8, ax=ax[1])
-            self.d_i_percent.plot(label='Dead', linestyle='dotted', color='black', linewidth=0.8, ax=ax[1])
-            
-            
-            if savefig:
-                plt.savefig('../reports/figures/dincl_i_classifications_percent.png', dpi=1000)
-                plt.savefig('../reports/figures/dincl_i_classifications_percent.eps')
-        ax[0].legend()
-        ax[1].legend()
-        plt.show()
-
-
-    def plot_erass_mc_results_hist(self, key, by='cycle', save=False):
+    def ERASS_result_stats(self):
         try:
-            self.df_erass_evolution['Z']
+            self.df_erass_evolution['dincl_cutoff']
         except:
             self.table_erass_mc_results_map_info()
-        
-        params = ['N_new_systems',
-                  'N_old_system_become_transient',
-                  'N_observed_ulxs',
-                  'N_delta_obs_ulx',
-                  'N_transients',
-                  'N_transients_cum',
-                  'N_total_systems']
-        
-        res = self.MC_get_erass_mc_results(key)
-        
-        if by == 'cycle':
-            for p in params:
-                print(f'Plotting {p}')
-                fig, axes  = plt.subplots(2, 4, figsize=(12,10))
-                for i, ax in enumerate(axes.flat):
-                    cycle = i+1
-                    ax.set_title(f'eRASS_{cycle}_{p}')
-                    sub = res[res['erass_cycle'] == cycle]
-                    for b in unique_bhs:
-                        sub1 = sub[sub['bh_ratio'] == b]
-                        ax.hist(sub1[p], bins=np.arange(sub1[p].min(), sub1[p].max()+5, 1), label=f'%bh={b}', edgecolor='black', histtype='stepfilled', alpha=0.5)
-                        ax.set_xlabel('N')
-                        ax.legend()
-
-        if by == 'bh_ratio':
-            for p in params:
-                print(f'Plotting {p}')
-                fig, axes  = plt.subplots(len(unique_bhs), 2, figsize=(12,10), sharex=True)
-                for i, b in enumerate(unique_bhs):
-                    sub = res[res['bh_ratio'] == b]
-                    for c in range(1, 9):
-                        sub1 = sub[sub['erass_cycle'] == c]
-                        sub_wind = sub1[sub1['period'] == 'P_wind']
-                        sub_sup = sub1[sub1['period'] == 'P_sup']
-                        
-                        axes[i][0].tick_params(axis='both', labelsize=8, labelbottom=True)
-                        axes[i][1].tick_params(axis='both', labelsize=8, labelbottom=True)
-                        
-                        axes[i][0].hist(sub_wind[p], bins=np.arange(sub_wind[p].min(), sub_wind[p].max()+1, 1), label=f'cycle={c}', edgecolor='black', histtype='stepfilled', alpha=0.5)
-                        axes[i][1].hist(sub_sup[p], bins=np.arange(sub_sup[p].min(), sub_sup[p].max()+1, 1), label=f'cycle={c}', edgecolor='black', histtype='stepfilled', alpha=0.5)
-                        
-                        axes[i][0].set_title(f'{p} | bh_ratio = {b} |P_wind')
-                        # axes[i][0].set_xlabel('N')
-                        axes[i][0].legend(fontsize=7)
-                        
-                        axes[i][1].set_title(f'{p} | bh_ratio = {b} |P_sup')
-                        # axes[i][1].set_xlabel('N')
-                        axes[i][1].legend(fontsize=7)
-                plt.tight_layout()
-                if save==True:
-                    plt.savefig(f'../reports/figures/e_{p}_{by}_{erass_system_period_cutoff}_{dincl_cutoff}_{Z}.png',dpi=500)
-                    plt.savefig(f'../reports/figures/e_{p}_{by}_{erass_system_period_cutoff}_{dincl_cutoff}_{Z}.eps')
-                    plt.savefig(f'../reports/figures/e_{p}_{by}_{erass_system_period_cutoff}_{dincl_cutoff}_{Z}.pdf')
-
-    def plot_bar_classifications_Z(self):
-        piv = self.table_classifications_pivot(margins=False)
-        piv.plot(kind='bar')
-        
-    def plot_erass_transients(self, erass_system_period_cutoff=1460, Z='all', save=False):
-    
-        cycles = ['1', '2', '3', '4', '5', '6', '7', '8']
-        dincls = [46, 20]
-        bh_percents = [0, 0.25, 0.5, 0.75, 1.0]
-        
-        nbars = 8
-        spacing = 0.1
-        linewidth = 1.0
-        
-        fig, ax = plt.subplots(ncols=2, nrows=len(dincls), figsize=(6,6), sharey='row')
-        
-        ax[-1][0].set_xlabel('eRASS cycle')
-        ax[-1][1].set_xlabel('eRASS cycle')
-        
-        clist = ["#ff595e", "#ffca3a", "#8ac926", "#1982c4", "#6a4c93"]
-        
-        for i, dincl in enumerate(dincls):
-            for j, bh in enumerate(bh_percents):
-                key = (500, bh, dincl, Z, erass_system_period_cutoff)
-                df = self.MC_get_erass_mc_results(key)
-                
-                sub_wind = df[df['period'] == 'P_wind']
-                sub_sup = df[df['period'] == 'P_sup']
-                
-                
-                stats_wind = sub_wind.groupby(['erass_cycle']).agg(['mean', 'std'])['N_transients']
-                stats_sup = sub_sup.groupby(['erass_cycle']).agg(['mean', 'std'])['N_transients']
-                
-                bh_label = f'$\%_{{BH}}$ = {bh*100}'            
-                
-                trans1 = Affine2D().translate(-spacing*(nbars)/4 + spacing*j, 0.0) + ax[0][i].transData
-                trans2 = Affine2D().translate(-spacing*(nbars)/4 + spacing*j, 0.0) + ax[1][i].transData
-        
-                ax[0][i].errorbar(cycles, stats_wind['mean'], yerr=stats_wind['std'], linestyle="none",
-                                  linewidth=linewidth, capsize=1.0, transform=trans1, label=bh_label, c=clist[j])
-                
-                ax[1][i].errorbar(cycles, stats_sup['mean'], yerr=stats_sup['std'], linestyle="none",
-                      linewidth=linewidth, capsize=1.0, transform=trans2, label=bh_label, c=clist[j])
-        
-    
-                ax[0][i].set_title(f'$\Delta i_{{max}} = {dincl}^{{\circ}}$ | $P_{{wind}}$ | Z = {Z}')
-                ax[1][i].set_title(f'$\Delta i_{{max}} = {dincl}^{{\circ}}$ | $P_{{sup}}$ | Z = {Z}')
-        
-                
-                ax[i][0].grid(axis='y')
-                ax[i][1].grid(axis='y')
-                #ax[1][i].grid(axis='y')
-                #ax[0][i].tick_params(labelrotation=90)
-                #ax[1][i].tick_params(axis='x', labelrotation=90)
-                
-        ax[0][0].set_ylabel('N Transients')
-        ax[1][0].set_ylabel('N Transients')
-        
-        ax[0][0].set_ylim(0,35)
-        ax[1][0].set_ylim(0,95)
-        
-        ax[0][0].legend()
-        #ax[0][0].legend()
-        
-        plt.subplots_adjust(wspace=0)
-        
-        plt.tight_layout()
-        if save:
-            plt.savefig(f'../reports/figures/erass_N_transients_Z={Z}.eps', bbox_inches='tight')
-            plt.savefig(f'../reports/figures/erass_N_transients_Z={Z}.png', bbox_inches='tight', dpi=1000)
+            
+        self.df_erass_mc_stats = self.df_erass_evolution.groupby(['dincl_cutoff', 'Z', 'duty_cycle', 'bh_ratio', 'period', 'erass_cycle']).agg(['min', 'mean', 'max', 'std', 'count'])
+        return self.df_erass_mc_stats
 
 
 class Ulx:
@@ -1283,10 +1002,274 @@ class Plotter:
         self.PERCENT_TRANS_EARNSHAW_UPPER = self.PERCENT_TRANS_EARNSHAW + self.PERCENT_TRANS_EARNSHAW_ERROR
         self.PERCENT_TRANS_EARNSHAW_LOWER = self.PERCENT_TRANS_EARNSHAW - self.PERCENT_TRANS_EARNSHAW_ERROR
         
+        self.set_latex_font()
+        self.set_savefig(False)
+    
+    def set_latex_font(self):
+        matplotlib.rcParams['mathtext.fontset'] = 'stix'
+        matplotlib.rcParams['font.family'] = 'STIXGeneral'
+    
     def set_results_processor(self, ResultsProcessor):
         self.rp = ResultsProcessor
         
-    def plot_erass_transients(self, erass_system_period_cutoff=1460, Z='all', save=False):
+    def set_savefig(self, savefig=False):
+        """Turn saving figures on or off"""
+        self.savefig = savefig
+    
+    
+    def bar_classifications_Z(self):
+        piv = self.rp.table_classifications_pivot(margins=False)
+        piv.plot(kind='bar')
+        
+    
+    def classifications_dincl_i(self, percent=False):
+        try:
+            self.rp.df_d
+        except:
+            self.rp.table_classifications_calc_intermediate()
+        
+        fig, ax = plt.subplots(ncols=2, nrows=1, figsize=(8,3))
+        plt.tight_layout()
+        ax[0].set_xlim(0,max(self.rp.df_d['system_dincl']))
+        ax[0].set_xlabel(r'Precessional angle $\Delta i$')
+        
+        ax[0].minorticks_on()
+        
+        
+        ax[1].set_xlim(0,max(self.rp.df_d['system_inclination']))
+        ax[1].set_xlabel(r'Inclination $i$')
+        ax[1].minorticks_on()
+        
+        
+        if percent == False:
+            ax[0].set_ylabel(r'Number of systems')
+            ax[1].set_ylabel(r'Number of systems')
+            
+            # dincl vs Number systems
+            self.rp.a_dincl_N.plot(label='Alive', linestyle=self.linestyle_alive, color='black', linewidth=0.8, ax=ax[0])
+            self.rp.t_dincl_N.plot(label='Transient', linestyle=self.linestyle_trans, color='black', linewidth=0.8, ax=ax[0])
+            self.rp.d_dincl_N.plot(label='Dead', linestyle=self.linestyle_dead, color='black', linewidth=0.8, ax=ax[0])
+            
+            # inclination vs Number systems
+            self.rp.a_i_N.plot(label='Alive', linestyle=self.linestyle_alive, color='black', linewidth=0.8, ax=ax[1])
+            self.rp.t_i_N.plot(label='Transient', linestyle=self.linestyle_trans, color='black', linewidth=0.8, ax=ax[1])
+            self.rp.d_i_N.sort_index().plot(label='Dead', linestyle=self.linestyle_dead, color='black', linewidth=0.8, ax=ax[1])
+            
+            ax[1].set_ylabel(r'Number of systems')
+            
+            if self.savefig:
+                plt.savefig('../reports/figures/dincl_i_classifications.png', dpi=1000)
+                plt.savefig('../reports/figures/dincl_i_classifications.eps')
+            
+        else:
+            ax[0].set_ylabel(r'% of systems')
+            ax[1].set_ylabel(r'% of systems')
+            ax[0].set_ylim(0,100)
+            ax[1].set_ylim(0,100)
+            
+            # dincl vs percentages
+            self.rp.a_dincl_percent.plot(label='Alive', linestyle=self.linestyle_alive, color='black', linewidth=0.8, ax=ax[0])
+            self.rp.t_dincl_percent.plot(label='Transient', linestyle=self.linestyle_trans, color='black', linewidth=0.8, ax=ax[0])
+            self.rp.d_dincl_percent.plot(label='Dead', linestyle=self.linestyle_dead, color='black', linewidth=0.8, ax=ax[0])
+            
+            # inclination vs percentages
+            self.rp.a_i_percent.plot(label='Alive', linestyle='-', color='black', linewidth=0.8, ax=ax[1])
+            self.rp.t_i_percent.plot(label='Transient', linestyle='--', color='black', linewidth=0.8, ax=ax[1])
+            self.rp.d_i_percent.plot(label='Dead', linestyle='dotted', color='black', linewidth=0.8, ax=ax[1])
+            
+            
+            if self.savefig:
+                plt.savefig('../reports/figures/dincl_i_classifications_percent.png', dpi=1000)
+                plt.savefig('../reports/figures/dincl_i_classifications_percent.eps')
+        ax[0].legend()
+        ax[1].legend()
+        plt.show()
+        
+    
+    
+    def erass_mc_results_hist(self, key, by='cycle'):
+        try:
+            self.rp.df_erass_evolution['Z']
+        except:
+            self.rp.table_erass_mc_results_map_info()
+        
+        params = ['N_new_systems',
+                  'N_old_system_become_transient',
+                  'N_observed_ulxs',
+                  'N_delta_obs_ulx',
+                  'N_transients',
+                  'N_transients_cum',
+                  'N_total_systems']
+        
+        res = self.rp.get_erass_evolution_from_key(key)
+        
+        if by == 'cycle':
+            for p in params:
+                print(f'Plotting {p}')
+                fig, axes  = plt.subplots(2, 4, figsize=(12,10))
+                for i, ax in enumerate(axes.flat):
+                    cycle = i+1
+                    ax.set_title(f'eRASS_{cycle}_{p}')
+                    sub = res[res['erass_cycle'] == cycle]
+                    for b in unique_bhs:
+                        sub1 = sub[sub['bh_ratio'] == b]
+                        ax.hist(sub1[p], bins=np.arange(sub1[p].min(), sub1[p].max()+5, 1), label=f'%bh={b}', edgecolor='black', histtype='stepfilled', alpha=0.5)
+                        ax.set_xlabel('N')
+                        ax.legend()
+
+        if by == 'bh_ratio':
+            for p in params:
+                print(f'Plotting {p}')
+                fig, axes  = plt.subplots(len(unique_bhs), 2, figsize=(12,10), sharex=True)
+                for i, b in enumerate(unique_bhs):
+                    sub = res[res['bh_ratio'] == b]
+                    for c in range(1, 9):
+                        sub1 = sub[sub['erass_cycle'] == c]
+                        sub_wind = sub1[sub1['period'] == 'P_wind']
+                        sub_sup = sub1[sub1['period'] == 'P_sup']
+                        
+                        axes[i][0].tick_params(axis='both', labelsize=8, labelbottom=True)
+                        axes[i][1].tick_params(axis='both', labelsize=8, labelbottom=True)
+                        
+                        axes[i][0].hist(sub_wind[p], bins=np.arange(sub_wind[p].min(), sub_wind[p].max()+1, 1), label=f'cycle={c}', edgecolor='black', histtype='stepfilled', alpha=0.5)
+                        axes[i][1].hist(sub_sup[p], bins=np.arange(sub_sup[p].min(), sub_sup[p].max()+1, 1), label=f'cycle={c}', edgecolor='black', histtype='stepfilled', alpha=0.5)
+                        
+                        axes[i][0].set_title(f'{p} | bh_ratio = {b} |P_wind')
+                        # axes[i][0].set_xlabel('N')
+                        axes[i][0].legend(fontsize=7)
+                        
+                        axes[i][1].set_title(f'{p} | bh_ratio = {b} |P_sup')
+                        # axes[i][1].set_xlabel('N')
+                        axes[i][1].legend(fontsize=7)
+                plt.tight_layout()
+                if self.savefig==True:
+                    plt.savefig(f'../reports/figures/e_{p}_{by}_{erass_system_period_cutoff}_{dincl_cutoff}_{Z}.png',dpi=500)
+                    plt.savefig(f'../reports/figures/e_{p}_{by}_{erass_system_period_cutoff}_{dincl_cutoff}_{Z}.eps')
+                    plt.savefig(f'../reports/figures/e_{p}_{by}_{erass_system_period_cutoff}_{dincl_cutoff}_{Z}.pdf')
+
+
+    def classifications_hist(self, key, duty_cycle=1.0, frac_visible=False, normdist=False):
+        """
+        Plot classifications histogram for a given simulation key.
+
+        Parameters
+        ----------
+        key : tuple
+            Simulation key eg (500, 0.5, 21, '0.0002')
+        frac_visible : bool
+            Plot the % of visible systems i.e alive and transient.
+            The default is False.
+        normdist : bool
+            Plot fitted normal histograms
+        Returns
+        -------
+        None.
+        """
+        def make_norm(df, col):
+            """Create scipy.stats.norm object"""
+            n = norm(loc=df_classification_counts[col].mean(),
+                         scale=df_classification_counts[col].std())
+            return n
+        
+        # Confidence intervals ranges for plotting normdists
+        lim_lower = 0.00001
+        lim_upper = 0.99999
+        
+        fig, ax = plt.subplots(5,1, sharex=True, sharey=True, figsize=(6, 4.5))
+        
+        Z = key[3]
+        dincl_cut = key[2]
+        
+        ax[0].set_title(fr'Z = {Z} | $\Delta i_{{max}} ={dincl_cut-1}^{{\circ}}$ | d = {duty_cycle}')
+
+        for i, bh in enumerate([0.0, 0.25, 0.5, 0.75, 1.0]):
+            print(i, bh)
+            
+            key = list(key)
+            key[1] = bh
+            key = tuple(key)
+            
+            df_classification_counts = self.rp.calc_classification_counts(key)
+            
+        
+ 
+            if frac_visible==False:
+                xmax=500
+                ax[-1].set_xlabel('Number of sources')
+                
+                if normdist==False:
+                    xbins = np.arange(0, xmax, 5)
+                    
+                    df_classification_counts['N_dead'].hist(bins=xbins, label='Dead', alpha=0.8, edgecolor='black', linestyle=self.linestyle_dead, histtype='step', ax=ax[i], grid=False)
+                    df_classification_counts['N_trans'].hist(bins=xbins, label='Transient', alpha=0.8, edgecolor='black', linestyle=self.linestyle_trans, histtype='step', ax=ax[i], grid=False)
+                    df_classification_counts['N_alive_persistent'].hist(bins=xbins, label='Alive', alpha=0.8, edgecolor='black', linestyle=self.linestyle_alive, histtype='step', ax=ax[i], grid=False)
+                    
+                if normdist==True:
+                    norm_dead = make_norm(df_classification_counts, 'N_dead')
+                    norm_trans = make_norm(df_classification_counts, 'N_trans')
+                    norm_alive = make_norm(df_classification_counts, 'N_alive_persistent')
+                    
+                    x_d = np.linspace(norm_dead.ppf(lim_lower), norm_dead.ppf(lim_upper), 100)
+                    x_t = np.linspace(norm_trans.ppf(lim_lower), norm_trans.ppf(lim_upper), 100)
+                    x_a = np.linspace(norm_alive.ppf(lim_lower), norm_alive.ppf(lim_upper), 100)
+                    
+                    ax[i].plot(x_d, norm_dead.pdf(x_d), linestyle=self.linestyle_dead, color='black', label='Dead')
+                    ax[i].plot(x_t, norm_trans.pdf(x_t), linestyle=self.linestyle_trans, color='black', label='Transient')
+                    ax[i].plot(x_a, norm_alive.pdf(x_a), linestyle=self.linestyle_alive, color='black', label='Alive')
+                    
+            else:
+                xmax=100
+                ax[-1].set_xlabel('% of observed ULXs')
+                
+                ax[i].axvspan(self.PERCENT_ALIVE_EARNSHAW_LOWER, self.PERCENT_ALIVE_EARNSHAW_UPPER, alpha=0.3, color='grey')
+                ax[i].axvspan(self.PERCENT_TRANS_EARNSHAW_LOWER, self.PERCENT_TRANS_EARNSHAW_UPPER, alpha=0.7, color='grey')
+                
+                if normdist==False:
+                    xbins = np.arange(0, xmax, 1)
+                    df_classification_counts['frac_alive_visible'].hist(bins=xbins, label='% Alive', alpha=0.8, edgecolor='black', linestyle=self.linestyle_alive, histtype='step', ax=ax[i], grid=False, density=True)
+                    df_classification_counts['frac_trans_visible'].hist(bins=xbins, label='% Transient', alpha=0.8, edgecolor='black', linestyle=self.linestyle_trans, histtype='step', ax=ax[i], grid=False, density=True)
+                    
+                    
+                if normdist==True:
+                    norm_alive = make_norm(df_classification_counts, 'frac_alive_visible')
+                    norm_trans = make_norm(df_classification_counts, 'frac_trans_visible')
+                    
+                    x_a = np.linspace(norm_alive.ppf(lim_lower), norm_alive.ppf(lim_upper), 100)
+                    x_t = np.linspace(norm_trans.ppf(lim_lower), norm_trans.ppf(lim_upper), 100)
+                    
+                    ax[i].plot(x_a, norm_alive.pdf(x_a), linestyle=self.linestyle_alive, color='black', label='% Alive')
+                    ax[i].plot(x_t, norm_trans.pdf(x_t), linestyle=self.linestyle_trans, color='black', label='% Transient')
+            
+            ax[i].set_xlim(0, xmax)
+            ax[i].set_ylim(0, 1.1*ax[0].get_ylim()[1])
+            ax[i].text(x=ax[i].get_xlim()[1]*(1/2), y=ax[i].get_ylim()[1]*(1/2), s=r'$\%_{{BH}} = $ {}'.format((bh)*100), fontsize=9)    
+            ax[i].legend(fontsize=7, loc='right')
+            ax[i].tick_params(axis='y',
+                              which='both',
+                              left=False,
+                              labelleft=False)
+        
+        if frac_visible:
+            ymax = ax[0].get_ylim()[1]
+            ax[0].text(x=(self.PERCENT_ALIVE_EARNSHAW_LOWER)+0.25, y=ymax+0.05*ymax, s='Alive $1 \sigma$ XMM', fontsize=7)
+            ax[0].text(x=(self.PERCENT_TRANS_EARNSHAW_LOWER)+0.25, y=ymax+0.05*ymax, s='Transient $1 \sigma$ XMM', fontsize=7)
+
+
+        plt.tight_layout()
+        plt.subplots_adjust(hspace=0.0)
+        
+        if self.savefig:
+            if frac_visible==False:
+                plt.savefig(f'../reports/figures/ADT_{Z}_{dincl_cut}_{duty_cycle}_normdist_{normdist}.png', dpi=500)
+                plt.savefig(f'../reports/figures/ADT_{Z}_{dincl_cut}_{duty_cycle}_normdist_{normdist}.eps')
+                plt.savefig(f'../reports/figures/ADT_{Z}_{dincl_cut}_{duty_cycle}_normdist_{normdist}.pdf')
+            else:
+                plt.savefig(f'../reports/figures/ADT_frac_{Z}_{dincl_cut}_{duty_cycle}_normdist_{normdist}.png', dpi=500)
+                plt.savefig(f'../reports/figures/ADT_frac_{Z}_{dincl_cut}_{duty_cycle}_normdist_{normdist}.eps')
+                plt.savefig(f'../reports/figures/ADT_frac_{Z}_{dincl_cut}_{duty_cycle}_normdist_{normdist}.pdf')
+        
+        
+    def erass_transients(self, erass_system_period_cutoff=999999, Z='all', duty_cycle=0.1):
         cycles = ['1', '2', '3', '4', '5', '6', '7', '8']
         dincls = self.rp.df_erass_mc_info['dincl_cutoff'].unique()
         bh_percents = np.sort(self.rp.df_erass_mc_info['bh_ratio'].unique())
@@ -1305,7 +1288,8 @@ class Plotter:
         for i, dincl in enumerate(dincls):
             for j, bh in enumerate(bh_percents):
                 key = (500, bh, dincl, Z, erass_system_period_cutoff)
-                df = self.rp.MC_get_erass_mc_results(key)
+                df = self.rp.get_erass_evolution_from_key(key)
+                df = df[df['duty_cycle']==duty_cycle]
                 
                 sub_wind = df[df['period'] == 'P_wind']
                 sub_sup = df[df['period'] == 'P_sup']
@@ -1314,7 +1298,7 @@ class Plotter:
                 stats_wind = sub_wind.groupby(['erass_cycle']).agg(['mean', 'std'])['N_transients']
                 stats_sup = sub_sup.groupby(['erass_cycle']).agg(['mean', 'std'])['N_transients']
                 
-                bh_label = f'$\%_{{BH}}$ = {bh*100}'            
+                bh_label = f'$\%_{{BH}}$ = {bh*100}' 
                 
                 trans1 = Affine2D().translate(-spacing*(nbars)/4 + spacing*j, 0.0) + ax[0][i].transData
                 trans2 = Affine2D().translate(-spacing*(nbars)/4 + spacing*j, 0.0) + ax[1][i].transData
@@ -1326,8 +1310,8 @@ class Plotter:
                       linewidth=linewidth, capsize=1.0, transform=trans2, label=bh_label, c=clist[j])
         
     
-                ax[0][i].set_title(f'$\Delta i_{{max}} = {dincl}^{{\circ}}$ | $P_{{wind}}$ | Z = {Z}')
-                ax[1][i].set_title(f'$\Delta i_{{max}} = {dincl}^{{\circ}}$ | $P_{{sup}}$ | Z = {Z}')
+                ax[0][i].set_title(f'$P_{{wind}}$ | $\Delta i_{{max}} = {dincl-1}^{{\circ}}$ | Z = {Z} | d = {duty_cycle}')
+                ax[1][i].set_title(f'$P_{{sup}}$ | $\Delta i_{{max}} = {dincl-1}^{{\circ}}$ | Z = {Z} | d = {duty_cycle}')
         
                 
                 ax[i][0].grid(axis='y')
@@ -1348,11 +1332,11 @@ class Plotter:
         plt.subplots_adjust(wspace=0)
         
         plt.tight_layout()
-        if save:
-            plt.savefig(f'../reports/figures/erass_N_transients_Z={Z}.eps', bbox_inches='tight')
-            plt.savefig(f'../reports/figures/erass_N_transients_Z={Z}.png', bbox_inches='tight', dpi=1000)
+        if self.savefig:
+            plt.savefig(f'../reports/figures/erass_N_transients_Z={Z}_d={duty_cycle}.eps', bbox_inches='tight')
+            plt.savefig(f'../reports/figures/erass_N_transients_Z={Z}_d={duty_cycle}.png', bbox_inches='tight', dpi=1000)
 
-        
+
 
 
 if __name__ == "__main__":
@@ -1374,10 +1358,8 @@ if __name__ == "__main__":
     # Insert population
     rp.set_parent_population(pop)
 
-    
-
-    # rp.MC_bh_ratio_classifications_sampler(N=10)
-    # rp.MC_classifications_sampler_with_duty_cycle(duty_cycle=0.1)
+    # rp.sim_bh_ratio_classifications_sampler(N=10)
+    # rp.sim_classifications_sampler_with_duty_cycle(duty_cycle=0.1)
 
     
     # =============================================================================
@@ -1385,57 +1367,39 @@ if __name__ == "__main__":
     # =============================================================================
     # Load tables
     rp.table_load_erass_mc_info()
-    # rp.table_load_classifications()
-    rp.table_load_transient()
-    # rp.table_load_erass_mc_results()
-    rp.table_load_erass_evolution()
+    rp.table_load_classifications()
+    # rp.table_load_erass_evolution()
 
     
+    # rp.table_load_transient()
+    # rp.table_load_erass_mc_results()    
+
     # rp.table_erass_mc_results_map_info()
     # rp.table_classifications_map_systems()
-    # rp.table_classifications_pivot()
+    rp.table_classifications_pivot()
     
     # rp.table_classifications_calc_intermediate()
     # rp.table_classifications_map_systems()
     # rp.table_classifications_pivot()
-    
-    # =============================================================================
-    # MC related functions
-    # =============================================================================
-    # rp.MC_ADT_result_stats()
-    # rp.MC_ERASS_result_stats()
-    # rp.MC_ERASS_simulation_run()
-    # rp.MC_bh_ratio_classifications_sampler()
-    # rp.MC_calc_N_persistent()
-    # rp.MC_calc_all_classifications_count_stats()
-    # rp.MC_calc_classification_counts()
-    # rp.MC_classifications_sampler_with_duty_cycle()
-    # rp.MC_get_classifications()
-    # rp.MC_get_erass_rp.MC_results()
-    # rp.MC_get_run_counts()
-    # rp.MC_get_run_ids(group_period_cutoff=False)
-    # rp.MC_get_run_counts()
 
     # =============================================================================
     # Run ULXLC over simulation parameter grid
     # =============================================================================
-    """
-    for Z in ['0.002', '0.0002', '0.02']:
-        pop = populations.Population(df)
-        rp.set_parent_population(pop)
-        for i in range(500):
-            for dincl in [21, 46]:
-                for bh_ratio in [0.0, 0.25, 0.5, 0.75, 1.0]:
-                    print(i, bh_ratio, dincl, Z, dc)
-                    # import pdb; pdb.set_trace()
-                    rp.MC_ERASS_simulation_run(size=500,
-                                            dincl_cutoff=dincl,
-                                            Z=Z,
-                                            bh_ratio=bh_ratio,
-                                            erass_system_period_cutoff=999999)
-    """
     
-
+    # for Z in ['0.002', '0.0002', '0.02']:
+    #     pop = populations.Population(df)
+    #     rp.set_parent_population(pop)
+    #     for i in range(300):
+    #         for dincl in [21, 46]:
+    #             for bh_ratio in [0.0, 0.25, 0.75, 1.0]:
+    #                 print(i, bh_ratio, dincl, Z)
+    #                 # import pdb; pdb.set_trace()
+    #                 rp.sim_erass_run(size=500,
+    #                                  dincl_cutoff=dincl,
+    #                                  Z=Z,
+    #                                  bh_ratio=bh_ratio,
+    #                                  erass_system_period_cutoff=999999)
+    
     # =============================================================================
     # Simulate transient probabilities
     # =============================================================================
@@ -1464,45 +1428,104 @@ if __name__ == "__main__":
     #             res = ets.collect_results()
                 
     #             ets.write_results_to_erass_evolution()
-                
+        
+    # =============================================================================
+    # Run over Classifications with duty cycle
+    # =============================================================================
+    # rp.sim_classifications_sampler_with_duty_cycle(0.1)
+    # rp.df_classifications['lc_classification'] = rp.df_classifications['lc_classification_new']
+    
+    # from tqdm import tqdm
+    
+    # rp.get_run_ids(True)
+    
+    # to_latex=True
+    
+    # df2 = pd.DataFrame()
+    # for d in [1.0, 0.3, 0.2, 0.1]:
+    #     print(d)
+    #     if d != 1.0:
+    #         rp.table_load_classifications()
+    #         rp.sim_classifications_sampler_with_duty_cycle(d)
+    #         rp.df_classifications['lc_classification'] = rp.df_classifications['lc_classification_new']
+            
+        
+    #     for k in tqdm(rp.dict_MC_run_ids.keys()):
+    #         res = rp.calc_classification_counts(k)
+    #         df = res.agg(['mean', 'std'])
+    #         df['duty_cycle'] = d
+    #         df['bh_ratio'] = k[1]
+    #         df['dincl_cutoff'] = k[2]
+    #         df['Z'] = k[3]
+    #         df2 = df2.append(df)
+        
+    
+    # if to_latex:
+    #     df2 = df2.drop(['N_alive', 'N_persistent'], axis=1)
+        
+        
+    
+    # df2['quantity'] = df2.index
+    # cols = ['dincl_cutoff', 'duty_cycle', 'Z', 'bh_ratio']
+    # df2 = df2.pivot_table(index=cols, columns='quantity')
+    # if to_latex:
+    #     with open('../reports/table_classifications.txt', mode='w+') as f:
+    #         f.write(df2.to_latex(float_format="%.2f"))
 
+    
+    # =============================================================================
+    # Print Result statistics
+    # =============================================================================
+    
+    
+    
+    # rp.get_run_ids(False)
+    # rp.get_run_counts()
 
+    # df_classifications_stats = rp.ADT_result_stats()
+    # print('Classification stats:')
+    # print(df_classifications_stats)
+    
+    # df_erass_mc_stats = rp.ERASS_result_stats()
+    # print('Erass MC stats:')
+    # print(df_erass_mc_stats)
+    
 
     # =============================================================================
     # Plotting Functions
     # =============================================================================
-    p = Plotter()
-    p.set_results_processor(rp)
-    p.plot_erass_transients(erass_system_period_cutoff=999999, Z=0.02, save=False)
+    
+    # Plot eRASS number of transients
+    
+    # p = Plotter()
+    # p.set_results_processor(rp)
+    # p.set_savefig(True)
+    # rp.get_run_ids(False)
+    
+    
+    # for Z in ['0.02', '0.002', '0.0002']:
+    #     for dc in [1.0, 0.3, 0.2, 0.1]:
+    #         p.erass_transients(erass_system_period_cutoff=999999, Z=Z, duty_cycle=dc)
+    
+    # p.classifications_dincl_i(percent=False)
+    
+    
+    # Plot all classification hists with duty cycle
+    # rp.sim_classifications_sampler_with_duty_cycle()
+    
+    
+    # Plot ADT Histograms
+    
+    # for d in [1.0, 0.3, 0.2, 0.1]:
+    #     print(d)
+    #     if d != 1.0:
+    #         rp.table_load_classifications()
+    #         rp.sim_classifications_sampler_with_duty_cycle(d)
+    #         rp.df_classifications['lc_classification'] = rp.df_classifications['lc_classification_new']
             
+    #     for Z in ['0.02', '0.002', '0.0002']:
+    #         for dincl in [46, 21]:
+    #             key = (500, 0.0, dincl, Z, 999999)
+    #             p.classifications_hist(key, duty_cycle=d, frac_visible=False, normdist=True)
+    #             p.classifications_hist(key, duty_cycle=d, frac_visible=True, normdist=True)
 
-
-
-    # # Plot results
-    
-    # # rp.plot_set_latex_font()
-    # keys = list(rp.dict_MC_run_ids.keys())
-    
-    # rp.plot_classifications_hist(keys[0], frac_visible=False, save=False)
-    # rp.plot_erass_transients()
-
-    
-    # rp.plot_erass_mc_results_hist(key)
-    # rp.plot_classifications_hist('0.002', 46, frac_visible=True, save=False)
-    # rp.plot_classifications_dincl_i()
-    # rp.plot_classifications_dincl_i(percent=True)
-    
-    # rp.plot_classifications_hist('all', 21, frac_visible=True, save=False)
-
-    # rp.plot_erass_mc_results_hist(period='P_sup',
-    #                               by='bh_ratio',
-    #                               erass_system_period_cutoff=1460,
-    #                               dincl_cutoff=46,
-    #                               Z='0.002',
-    #                               save=True)
-
-    # rp.MC_calc_N_persistent()
-
-    
-    # rp.table_create_erass_evolution()
-    

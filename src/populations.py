@@ -95,7 +95,6 @@ def startrack_v2_mt_1_test_subset(**kwargs):
     df = pd.read_csv(systems_df_path, **kwargs)
     return df
 
-   
     
 def set_latex_font():
     import matplotlib
@@ -112,10 +111,11 @@ class Population:
         self.calc_sub_populations()
         
         # XLF settings
-        self.bin_min = 34
+        self.bin_min = 38
         self.bin_max = 44
         self.bin_width = 0.25
         self.bins = np.arange(self.bin_min, self.bin_max, self.bin_width)
+        self.nbins = len(self.bins)
         self.bin_centers = 0.5 * (self.bins[:-1] + self.bins[1:])
         
         self.df_ulx_Z_subset = None
@@ -141,6 +141,7 @@ class Population:
         self.df['mdot_ratio'] = self.df['mdot_gs_b'] / self.df['mdot_Edd']
     
         self.df['Lx_iso'] = np.where(self.df['mdot_ratio'] > 1, self.df['LEdd'] * (1 + np.log(self.df['mdot_ratio'])), self.df['LEdd'] * self.df['mdot_ratio'])
+        self.df['log_Lx_iso'] = np.log10(self.df['Lx_iso'])
         #self.df['Lx_iso'] = self.df['LEdd'] * (1 + np.log(self.df['mdot_ratio']))
     
         # Beaming factor
@@ -619,14 +620,14 @@ class Population:
         print('--------------------------')
 
 if __name__ == "__main__":
-    # logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG)
     
     df = startrack_v2_mt_1_all() #nrows=100000
     # df = startrack_v2_mt_1_test_subset()
     
     pop = Population(df)
     
-    df_sys = pop.calc_system_averages(pop.df)
+    # df_sys = pop.calc_system_averages(pop.df)
     
     
     # Population Statistics
@@ -635,6 +636,7 @@ if __name__ == "__main__":
     
     # Plotting
     set_latex_font()
+    
     # pop.XLF_plot(df=pop.df,
     #              by='NSBH',
     #              average_systems=True,
@@ -642,103 +644,136 @@ if __name__ == "__main__":
     #              include_duty_cycle=True,
     #              save=False)
 
-    def sample_with_bh_ns(df):
-        df_samp = df[['K_a', 'log_Lx1']].sample(n=1000, replace=True)
-        L = df_samp['log_Lx1'].values
-        K_a = df_samp['K_a'].values
-        return np.array([L, K_a])
+
+    # =============================================================================
+    # MONTE CARLO XLF
+    # =============================================================================
 
 
-    gb = pop.gb_sys(pop.df)
-    samp = gb.apply(sample_with_bh_ns)
+    # def sample_l_iso_with_bh_ns(df):
+    #     df_samp = df[['K_a', 'log_Lx_iso']].sample(n=5000, replace=True)
+    #     L = df_samp['log_Lx_iso'].values
+    #     K_a = df_samp['K_a'].values
+    #     return np.array([L, K_a])
 
-    val = np.stack(samp.values, axis=0) #(N_sys x 2 x N_iters) array of luminosities
-    
-    val_L = val[:,0,:]
-    val_K = val[:,1,:]
-    
-    ns_mask = ~(val_K==13)
-    bh_mask = ~(val_K==14)
-    
-    ns_L_ma = np.ma.masked_array(data=val_L, mask=ns_mask)
-    bh_L_ma = np.ma.masked_array(data=val_L, mask=bh_mask)
-    
-    ns_L = ns_L_ma.filled(fill_value=0)
-    bh_L = bh_L_ma.filled(fill_value=0)
-    
-    ns_hists = [np.histogram(ns_L[i], bins=pop.bins)[0] for i in range(len(ns_L))]
-    bh_hists = [np.histogram(bh_L[i], bins=pop.bins)[0] for i in range(len(bh_L))]
-    
-    bh_means = np.mean(bh_hists, axis=0)
-    bh_stds  = np.std(bh_hists, axis=0)
-    
-    ns_means = np.mean(ns_hists, axis=0)
-    ns_stds  = np.std(ns_hists, axis=0)
-    
-    plt.errorbar(x=pop.bin_centers, y=bh_means, yerr=bh_stds, linestyle='', capsize=1.0, label='BH')
-    plt.errorbar(x=pop.bin_centers, y=ns_means, yerr=ns_stds, linestyle='', capsize=1.0, label='NS')
-
-
-    # def sample(series):
-    #     """For use using GroupBy[key].apply(sample)"""
-    #     return np.random.choice(series, size=10000, replace=True)
-
-    # def sample_with_beaming(df):
-    #     """For use using GroupBy.apply(sample_with_beaming)"""
-    #     N_sys = len(df)
-    #     df['1-b'] = 1 - df['b']
-    #     L_0 = np.zeros(shape=N_sys)
-    #     L     = np.concatenate([df['log_Lx1'],L_0])
-    #     p_obs = np.concatenate([df['b'],df['1-b']]) / N_sys
-    #     p_obs = abs(p_obs)
-    #     p_obs /= p_obs.sum()  # normalize
-    #     # return np.random.multinomial(L, p_obs, size=10000)
-    #     return np.random.choice(L, size=10000, replace=True, p=p_obs)
+    # def sample_with_bh_ns(df):
+    #     df_samp = df[['K_a', 'log_Lx1']].sample(n=5000, replace=True)
+    #     L = df_samp['log_Lx1'].values
+    #     K_a = df_samp['K_a'].values
+    #     return np.array([L, K_a])
     
     # def sample_with_beaming_and_duty_cycle(df):
     #     """For use using GroupBy.apply(sample_with_beaming_and_duty_cycle)"""
     #     duty_cycle = 0.3
+    #     df = df[['K_a', 'log_Lx1', 'lmxrb', 'b']]
     #     N_sys = len(df)
     #     df['dc'] = np.where(df['lmxrb']==1, duty_cycle, 1.0)
-    #     df['p_obs'] = df['b'] * df['dc']
-    #     df['1-p_obs'] = 1 - df['p_obs']
+    #     df['p_obs'] = df['b'] * df['dc']    # Observation probability
+    #     df['1-p_obs'] = 1 - df['p_obs']     # Non-Observation prob
         
-    #     L_0 = np.zeros(shape=N_sys)
-    #     L   = np.concatenate([df['log_Lx1'],L_0])
-    #     p_obs = np.concatenate([df['p_obs'],df['1-p_obs']]) / N_sys
+    #     # print(df)
+    #     df_2 = pd.DataFrame()
+    #     df_2['p_obs'] = df['1-p_obs']
+    #     df_2['log_Lx1'] = np.zeros(shape=N_sys) # L=0 for non obs
+    #     df_2['K_a'] = df['K_a']
+    #     # print(df_2)
         
-    #     p_obs = abs(p_obs)
-    #     p_obs /= p_obs.sum()  # normalize
+    #     df_c = pd.concat([df, df_2], axis=0)
+    #     df_c['p_obs'] = df_c['p_obs']/N_sys
+    #     df_c['p_obs'] = df_c['p_obs'].abs()
+    #     df_c['p_obs'] /= df_c['p_obs'].sum()
+    #     # print(df_c)
+        
+    #     df_samp = df_c[['K_a', 'log_Lx1']].sample(n=5000, replace=True, weights=df_c['p_obs'])
+    #     L = df_samp['log_Lx1'].values
+    #     K_a = df_samp['K_a'].values
+    #     return np.array([L, K_a])
+        
 
-    #     return np.random.choice(L, size=10000, replace=True, p=p_obs)
-    
+
+
     # gb = pop.gb_sys(pop.df)
-    # print('calc res')
-    # res = gb['log_Lx1'].apply(sample)
-    # print('calc res2')
-    # res2 = gb.apply(sample_with_beaming)
-    # print('calc res3')
-    # res3 = gb.apply(sample_with_beaming_and_duty_cycle)  
+    # samp = gb.apply(sample_with_beaming_and_duty_cycle)
+    
+    # def samp_2_means_std(samp):
+    #     val = np.stack(samp.values, axis=0) 
+        
+    #     val_L = val[:,0,:]
+    #     val_K = val[:,1,:]
+        
+    #     ns_mask = ~(val_K==13)
+    #     bh_mask = ~(val_K==14)
+        
+    #     ns_L_ma = np.ma.masked_array(data=val_L, mask=ns_mask)
+    #     bh_L_ma = np.ma.masked_array(data=val_L, mask=bh_mask)
+        
+    #     ns_L = ns_L_ma.filled(fill_value=0)
+    #     bh_L = bh_L_ma.filled(fill_value=0)
+        
+    #     ns_L = ns_L.T
+    #     bh_L = bh_L.T
+        
+    #     ns_hists = [np.histogram(ns_L[i], bins=pop.bins)[0] for i in range(len(ns_L))]
+    #     bh_hists = [np.histogram(bh_L[i], bins=pop.bins)[0] for i in range(len(bh_L))]
+        
+    #     # ns_hists = np.where(ns_hists==0, np.nan, ns_hists)
+    #     # bh_hists = np.where(bh_hists==0, np.nan, bh_hists)
+        
+    #     bh_means = np.nanmean(bh_hists, axis=0)
+    #     bh_stds  = np.nanstd(bh_hists, axis=0)
+        
+    #     ns_means = np.nanmean(ns_hists, axis=0)
+    #     ns_stds  = np.nanstd(ns_hists, axis=0)
+    #     return bh_means, bh_stds, ns_means, ns_stds
     
     
-    # def plot_res(res, label):
-        
-    #     val = np.stack(res.values, axis=0) #(N_sys by N_iters) array of luminosities
-        
-    #     val = val.T
-        
-    #     hists = [np.histogram(val[i], bins=pop.bins)[0] for i in range(len(val))]
-    #     hists = np.array(hists)
-        
-    #     means = np.mean(hists, axis=0)
-    #     stds  = np.std(hists, axis=0)
-        
-    #     plt.yscale('log')
-    #     plt.axvline(39, c='r', linestyle='--')
-    #     plt.errorbar(x=pop.bin_centers, y=means, yerr=stds, linestyle='', capsize=1.0, label=f'{label}')
-        
-    # plot_res(res, 'beamed')
-    # plot_res(res2, 'observed beamed')
-    # plot_res(res3, 'observed beamed + dc=0.3')
     
-        
+    # from tqdm import tqdm
+    
+    # tqdm.pandas()
+    
+    # samp = gb.progress_apply(sample_with_bh_ns)
+    # bh_means, bh_stds, ns_means, ns_stds = samp_2_means_std(samp)
+    # del(samp)
+    
+    # samp = gb.progress_apply(sample_with_beaming_and_duty_cycle)
+    # bh_means_obs, bh_stds_obs, ns_means_obs, ns_stds_obs = samp_2_means_std(samp)
+    # del(samp)
+    
+    # samp = gb.progress_apply(sample_l_iso_with_bh_ns)
+    # bh_means_iso, bh_stds_iso, ns_means_iso, ns_stds_iso = samp_2_means_std(samp)
+    
+    
+    
+    # fig, ax = plt.subplots(1,3, sharey=True, figsize=(10,4))
+    
+    # ax[0].errorbar(x=pop.bin_centers, y=bh_means_iso, yerr=bh_stds_iso, linestyle='-', capsize=1.0, label='BH | isotropic emission', c='black')
+    # ax[0].errorbar(x=pop.bin_centers, y=ns_means_iso, yerr=ns_stds_iso, linestyle='--', capsize=1.0, label='NS | isotropic emission', c='grey')
+    # ax[0].set_xlabel(r'log $L_{iso}$ $(\mathrm{erg \ s^{-1}})$', fontsize=10)
+    # ax[0].axvline(39, c='r', linestyle='--')
+    # ax[0].legend(loc='lower right', fontsize=10)
+    
+    
+    # ax[1].errorbar(x=pop.bin_centers, y=bh_means, yerr=bh_stds, linestyle='-', capsize=1.0, label='BH | with beaming', c='black')
+    # ax[1].errorbar(x=pop.bin_centers, y=ns_means, yerr=ns_stds, linestyle='--', capsize=1.0, label='NS | with beaming', c='grey')
+    # ax[1].set_xlabel(r'log $L_{x}$ $(\mathrm{erg \ s^{-1}})$', fontsize=10)
+    # ax[1].axvline(39, c='r', linestyle='--')
+    # ax[1].legend(loc='lower right', fontsize=10)
+    
+    
+    # ax[2].errorbar(x=pop.bin_centers, y=bh_means_obs, yerr=bh_stds_obs, linestyle='-', capsize=1.0, label='BH | observed | d = 0.3', c='black')
+    # ax[2].errorbar(x=pop.bin_centers, y=ns_means_obs, yerr=ns_stds_obs, linestyle='--', capsize=1.0, label='NS | observed | d = 0.3', c='grey')
+    # ax[2].set_xlabel(r'log $L_{x}$ $(\mathrm{erg \ s^{-1}})$', fontsize=10)
+    # ax[2].axvline(39, c='r', linestyle='--')
+    # ax[2].set_yscale('log')
+    # ax[2].legend(loc='lower right', fontsize=10)
+    # plt.tight_layout()
+    # plt.subplots_adjust(wspace=0)
+    
+    # plt.savefig('../reports/figures/XLF_by_bh_ns_samp_5000.png', dpi=500)
+    # plt.savefig('../reports/figures/XLF_by_bh_ns_samp_5000.eps')
+    # plt.savefig('../reports/figures/XLF_by_bh_ns_samp_5000.pdf')
+    
+    
+
+
