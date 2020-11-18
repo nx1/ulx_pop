@@ -8,13 +8,15 @@ Created on Tue Jul  7 14:31:12 2020
 #CGS UNITS
 c    = 3E10          # Speed of Light in cm/s
 M_sol = 1.989E33     # Mass of sun in g
-R_sol = 6.957E10     #cm
+R_sol = 6.957E10     # cm
+L_sol = 3.828E33     # erg s^-1
 
-yr   = 31557600     # 1 yr in Seconds
-Myr  = yr * 1E6     # 1 Myr in Seconds
+sigma = 5.6704E-5    # erg cm^-2 s^-1 K^-4 Stefan-Boltzmann constant
 
-G_SI = 6.67408E-11  # N.(m^2)/(kg)^2 
-G    = 6.674E-8     # (cm)^3 g^-1 s^-2
+yr   = 31557600      # 1 yr in Seconds
+Myr  = yr * 1E6      # 1 Myr in Seconds
+
+G    = 6.674E-8      # (cm)^3 g^-1 s^-2
 
 eta = 1/12 # Accretion efficiency
 

@@ -4,9 +4,8 @@ Created on Tue May 19 12:16:45 2020
 
 @author: norma
 
-This file contains two datasets ontained from startrack.
-The first an old dataset containing #36k rows which we have ommited using as
-the time sampling was not performed uniformly.
+See:
+https://universeathome.pl/universe/bhdb.php
 
 The second dataset is enormous and not fully provided here, instead a subset
 is provided of all the systems accross all metallicities that are undergoing
@@ -28,7 +27,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from array import array
 
-from constants import G, c, Myr, R_sol, M_sol, NS_SPIN, BH_SPIN, NS_ISCO, BH_ISCO, epsilon, beta, eta
+from constants import G, c, Myr, R_sol, M_sol, L_sol, sigma, NS_SPIN, BH_SPIN, NS_ISCO, BH_ISCO, epsilon, beta, eta
 
 
 def startrack():
@@ -188,6 +187,9 @@ class Population:
         self.df['P_orb_days'] = self.df['P_orb'] / (60*60*24)
         self.df['P_sup_days'] = self.df['P_sup'] / (60*60*24)
         self.df['P_sup_err_days'] = self.df['P_sup_err'] / (60*60*24)
+        
+        # Effective temp star a from Stefan-Boltzmann Law
+        self.df['T_eff_b'] = ((self.df['L_b']*L_sol) / (4*np.pi*(self.df['R_b']*R_sol)**2 * sigma))**(1/4)
         
         # LMXRB nuclear mt, and dominated by disc accretion.
         self.df['lmxrb'] = np.where((self.df['mttype'] == 1) & (self.df['dMmt_b'] > self.df['dMwind_b']), 1, 0)
@@ -626,6 +628,14 @@ if __name__ == "__main__":
     # df = startrack_v2_mt_1_test_subset()
     
     pop = Population(df)
+    
+    for k in np.sort(pop.df['K_b'].unique()):
+        print(k)
+        sub = pop.df[pop.df['K_b'] == k]
+        plt.scatter(sub['M_b'], sub['T_eff_b'], label=k, s=1.0, alpha=0.5)
+    plt.legend(loc='left')
+    plt.xlabel('Secondary Mass (M_sol)')
+    plt.ylabel('Secondary T_eff (K)')
     
     # df_sys = pop.calc_system_averages(pop.df)
     

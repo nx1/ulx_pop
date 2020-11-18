@@ -64,13 +64,24 @@ TODO
 
 Code
 ----
+[ ] - Re-calculate LMXRB duty cycle limit.
+    [ ] Calculate effective temperature for secondaries.
+    [ ] Account for moving about on the HRD
+    [ ] Calculate a disc temperature
+    [ ] Re-do sims with the new duty cycle systems
+
+
+
 
 Plots
 -----
+[ ] XLF - Remove WD systems (Maybe join with 'ulx subpopulation' from other sims)
 [ ] XLF - show effect of precession (Panel 4)
 [ ] XLF - Show total (BH + NS) (Panel 5)
 [ ] XLF - Investigate different %_BH (Panel 5)
 [ ] XLF - Compare to actual (Tim Roberts) (Panel 5)
+
+
 
 REMAKE THE PLOT WITH ONLY SOURCES WITH DUTY CYCLES
 
@@ -1159,8 +1170,8 @@ which is then monte carlo'd
 if we also assume a given source may precess, that means that its luminosity can vary substantially.
 
 
-Message to Greg
----------------
+Message to Greg 16/11/20
+------------------------
 
 Dear Greg,
 
@@ -1178,16 +1189,168 @@ Despite the fact that I've have previously said these outbursts apply to
 LMXRBs, we have chosen not to impose a specific mass criteria for the secondary
 in the subpopulation of systems that may display a duty cycle, this is as the
 physics of outburst likely depends on the underlying physics at play within the
-binary rather than an abitrary mass cutoff.
+binary rather than an arbitrary mass cut-off.
 
 Using the above prescription however we still end up with a fairly large amount
 of binaries with large companion masses > 10 M_sol, my question is do you know
-how the evolution of these high mass nuclear timescale systems is likely to proceed,
-or alternatively do you know of a better way to characterise systems that may display
-recurrent outbursts?
+how the evolution of these high mass nuclear timescale systems is likely to
+proceed, whether they will go through outburst cycles similar to LMXBs, or
+alternatively do you know of a better way to characterise systems that may
+display recurrent outbursts?
+
 
 Kind Regards,
 Norman
+
+Reply
+-----
+
+Hi Norman,
+
+Thanks! I hope you are also doing well.
+
+If the star is on the Main Sequence and the accretor is a black hole, then we
+can still have a stable nuclear time-scale mass transfer. Is it the case? If I
+remember correctly, in a typical case the system has a brief phase of thermal
+timescale mass transfer which later stabilizes to a nuclear one. If I sent you
+the raw output files, you should be able to check it by looking for systems
+with different mttype but the same idum and iidd variables.
+
+Do you have a dMtran variable in your data? If so this is an upper limit for
+mass transfer rate for which dynamical instability occurs in the disk
+(outbursts). The relevant papers are:
+
+https://ui.adsabs.harvard.edu/abs/2001NewAR..45..449L
+https://ui.adsabs.harvard.edu/abs/2012MNRAS.424.1991C
+
+Please let me know if you have further questions
+Best wishes,
+Grzegorz
+======================================================================================================
+
+XLF
+---
+
+Starting from our population of mass transfer on systems, we first proceed to
+remove any system that didn't spend its entire lifetime as either a BH or NS.
+From this we obtain 103,602 binary systems. 30,143 of these binary systems
+contain only a single sampling point.
+
+======================================================================================================
+
+Compact Object Modelling with the STARTRACK population synthesis code 
+https://ui.adsabs.harvard.edu/abs/2008ApJS..174..223B/abstract
+Belczynski (2008)
+
+
+Section 5 - Roche Lobe overflow Calculations
+--------------------------------------------
+
+The mass transfer timescale is calculated via:
+
+    \tau_{\mathrm{eq}} = - \frac{M_{\mathrm{don}}}{\dot{M}_{\mathrm{eq}}}
+
+The thermal timescale mass transfer is calculateed via: (See Kaloger & Webbink (1996)
+
+    \tau_{mathrm{th}} = \frac{30 \times M_{\mathrm{don}}^2}{R_{\mathrm{don}} L_{\mathrm{don}}}
+
+In the case of stable RLOF $\tau_{\mathrm{eq}} > \tau_{\mathrm{th}}$, a donor is in thermal equilibrium.
+
+if $\tau_{\mathrm{eq}} > \tau_{\mathrm{th}}$ --> stable RLOF --> donor is in thermal equilibrium.
+if $\tau_{\mathrm{eq}} > \tau_{\mathrm{th}}$ --> thermal RLOF --> 99
+
+
+
+In the case of 
+
+
+Matt Meeting 17/11/20
+---------------------
+
+Are these high mass stars that are feeding the disc via disc nuclear timescale
+mass transfer undergoing the disc instabillity model and displaying recurrent
+outbursts, or do they have constant mass transfer rates. The reason it might be
+constant onto the compact object is because it is always above the hydrogen
+ionisation instabillity.
+
+If Greg doesn't come up with a reasonable answer:
+    
+We say for objects where the star are likely to be hotter than hydrogen
+ionisation are in constant outburst, and thus have a duty cycle of 1.0.
+
+
+---------------------
+
+Dynamical instabillity occurs when you have a high mass star that is
+transfering matter, and as a consequence the roche lobe shrinks what happens
+next is depends on whether or not the outer layers of the star is radiative or
+convective.
+
+If radiative then the star can adjust itself on the thermal timescale, if the
+envolope is convective the star cannot readjust itself and so the star becomes
+dynammically unstable, and as a result you end up getting matter moving very
+rapidly on the dynamical timescale (which is much shorter than the thermal
+timescale), thus you end up throwing material accross, roche lobe shrinks
+violently, which results in faster material transfer rates, this thus spirals
+and doesn't last very long. This sort of behaviour is thought to then lead to a
+common envolope (where both stars exists within the same envolope), at the
+point you can very easily extract angular momentum between the two components
+by dumping the angular momentum into the envolope.  It is commonly thought that
+a common envolope is required for accretion to start anyway, because if you
+have stars a long way away from each other, you require magnetic breaking and
+or a combination of the common envolope phase to get you there as gravitational
+waves a very inefficient with getting there.
+
+See Phillip podiorski (oxford) for a review wrt to dynammical instabillity.
+
+
+There's lots of ways that you can get there:
+
+Thermal
+Dynamical
+RLOF nuclear
+wind-fed
+
+but essentially what is what conditions are needed to cause these recurrent
+outbursts, the only way that this can happen is through the disc instabillity
+model. With the expection of Be- X-ray binaries, which are presumed to be on
+these long ellipical orbits that go through the accretion disc which occurs
+when the star spins very quickly and go into outbursts as a result of the orbit.
+
+
+make a plot to show CO mass vs star mass and see how the systems group together.
+
+----------------------------------------------------------------------------------
+
+Dear Grzegorz,
+
+Thank you for the reply, I went and identified all the binaries in my sample
+that displayed both thermal (mttype=4) and nuclear (mttype=1) mt, I do not have
+dMtran so I was not able to check that.
+
+What I find is that these binaries may spend a very short amount of time at
+thermal timescale mt where the mass transfer rate of the secondary increases
+very dramatically.
+
+
+
+
+
+
+
+
+-----------------
+Mail from Matt 17/11/2020
+
+
+
+
+
+
+T_eff = ((4/3) * pi * R_a^2 * )^1/4
+
+
+
 
 
 
