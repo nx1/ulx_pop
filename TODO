@@ -57,6 +57,7 @@ DONE
 [x] Update classifications table
 [x] Add reference to Lei et al wrt to precession
 [x] Check reference to SS433
+[x] Check duty cycle for GX 339-4
 
 ====
 TODO
@@ -1331,23 +1332,29 @@ dMtran so I was not able to check that.
 What I find is that these binaries may spend a very short amount of time at
 thermal timescale mt where the mass transfer rate of the secondary increases
 very dramatically.
-
-
-
-
-
-
-
-
 -----------------
-Mail from Matt 17/11/2020
+
+The Disc Instabillity model (Lasota 2001) explains the recurrent outbursts
+observed in LMXRBs to be a result of the instabillity created by partial
+hydrogen ionisation occuring at temperatures around 7000K. We make the
+assumption that the temperature of the outer regions of the disc is in thermal
+equilibrium with the the effective temperature of the companion star calculated
+via the Stefan-Boltzmann Law
+
+$T_{\mathrm{eff}} = ( L_{\mathrm{b}}  / (4 * pi * ( R_{\mathrm{b}}^2 * \sigma) )^(1/4)$
+
+Where $\sigma$ is the Stefan-Boltzmann constant.
+
+At temperatures above 7000K we assume that the disc is stable and does not
+display recurrent outbursts i.e $d=1.0$. While systems systems undergoing
+disc-dominated nuclear timescale mass transfer with sufficiently low temperatures
+$T_{\mathrm{eff}} < 7000K$ having the possibilty of displaying recurrent outbursts.
 
 
 
 
 
 
-T_eff = ((4/3) * pi * R_a^2 * )^1/4
 
 
 
