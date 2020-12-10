@@ -27,3 +27,40 @@ BH_ISCO = 1.25
 BH_SPIN = 0.998
 NS_ISCO = 6
 NS_SPIN = 0.01
+
+#ULXLC Constants
+period_default = 50.0
+phase_default = 0.0
+theta_default = 10.0
+incl_default = 5.0
+dincl_default = 20.0
+beta_default = 0.3
+dopulse_default = 0.0
+
+params_default = [period_default,
+                  phase_default,
+                  theta_default,
+                  incl_default,
+                  dincl_default,
+                  beta_default,
+                  dopulse_default]
+
+# StarTrack
+stellar_dict = {0 : 'MS M < 0.7',
+                1 : 'MS M > 0.7',
+                2 : 'Hertzsprung gap star',
+                3 : 'First giant branch star',
+                4 : 'Core helium burning star',
+                5 : 'Early asymptotic giant branch star',
+                6 : 'Thermally pulsing asymptotic giant branch star',
+                7 : 'Main sequence naked helium star (Wolf-Rayet star)',
+                8 : 'Hertzsprung gap naked helium star',
+                9 : 'Giant branch naked helium star',
+                10 : 'Helium white dwarf',
+                11 : 'Carbon/oxygen white dwarf',
+                12 : 'Oxygen/neon white dwarf',
+                13 : 'Neutron star',
+                14 : 'Black hole',
+                15 : 'Massless Remnant',
+                16 : 'Hydrogen White Dwarf',
+                17 : 'Hybrid white dwarf'}

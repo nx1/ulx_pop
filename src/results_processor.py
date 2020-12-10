@@ -15,6 +15,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.transforms import Affine2D
 from scipy.stats import norm
+from scipy.optimize import curve_fit
 
 import populations
 
@@ -185,6 +186,15 @@ class ResultsProcessor:
         
     def table_load_erass_evolution(self):
         self.df_erass_evolution = self.table_load('ERASS_EVOLUTION')
+        
+    def table_delete_erass_evolution_non_1_duty_cycle(self):
+        """Delete all rows in erass_evolution that do not have a duty cycle of 1."""
+        logging.debug('Deleteing all non duty=1.0 rows from ERASS_EVOLUTION')
+        conn = sqlite3.connect(self.db)
+        sql = """DELETE FROM ERASS_EVOLUTION
+                 WHERE duty_cycle != 1.0;"""
+        conn.execute(sql)
+        conn.close()
 
     def table_erass_mc_results_map_info(self):
         logging.debug('Mapping ERASS_MC_INFO to ERASS_MC_RESULTS')
@@ -228,13 +238,23 @@ class ResultsProcessor:
         self.df_classifications['Z'] = self.df_erass_evolution['run_id'].map(info['Z'])
 
 
-    def table_classifications_pivot(self, margins=True, split_Z=True):
+    def table_classifications_pivot(self, margins=True, split_Z=True, split_dincl=True):
         logging.debug('Creating classifications pivot table')
         try:
             self.df_classifications['Z']
         except KeyError:
             self.table_classifications_map_systems()
-        if split_Z==True:
+        
+        if split_dincl and split_Z:
+            self.table_classifications_map_info()
+            piv = pd.pivot_table(self.df_classifications,
+                     columns=['is_bh'],
+                     index=['Z', 'dincl_cutoff', 'lc_classification'],
+                     aggfunc='count',
+                     margins=margins,
+                     margins_name='total').run_id
+        
+        if split_Z:
             piv = pd.pivot_table(self.df_classifications,
                                  columns=['is_bh'],
                                  index=['Z', 'lc_classification'],
@@ -242,7 +262,7 @@ class ResultsProcessor:
                                  margins=margins,
                                  margins_name='total').run_id
 
-        if split_Z==False:
+        if not split_Z:
             piv = pd.pivot_table(self.df_classifications,
                            columns=['is_bh'],
                            index=['lc_classification'],
@@ -352,11 +372,7 @@ class ResultsProcessor:
         # del(self.pop.df)
         
         logging.debug('Checking population Z')
-        # Check if we have the correct Z population
-        if self.pop.df_ulx_Z_subset != float(Z):
-            logging.debug('Filtering population by Z')
-            self.pop.filter_df_ulx_by_Z(Z)
-            self.pop.calc_bh_ns_ulx_sub_populations()
+        self.pop.filter_df_ulx_by_Z(Z)
 
         # Filter population df to only have columns we are interested in to save memory
         logging.debug('Filtering out unused columns')
@@ -416,8 +432,8 @@ class ResultsProcessor:
         duty_cycle : float
             between 0.0 and 1.0.
         """
-        rp.table_load_classifications()
-        rp.table_classifications_map_systems()
+        self.table_load_classifications()
+        self.table_classifications_map_systems()
          
         logging.debug('Recalculating classifcations using duty cycle=%s', duty_cycle)
         
@@ -615,6 +631,46 @@ class ResultsProcessor:
         return df_classification_counts
     
     
+    def calc_bh_ratio_classfication_correlation_constant(self):
+        """
+        Calculate the result of fitting a line with y=mx+c
+        to bh_ratio vs number in each classification
+
+        Returns
+        -------
+        pd.DataFrame
+        """
+        def line(x, m, c):
+            return m*x+c
+        
+        res = []
+        for Z in ['0.02', '0.002', '0.0002']:
+            for dincl in [46, 21]:
+                sub = self.df_classifications_counts_stats.loc[Z,dincl,:]
+                for classification in ['N_alive_persistent',
+                          'N_trans',
+                          'N_dead']:
+    
+                    sub2 = sub[classification]
+                    xdata = [0.0, 0.25, 0.5, 0.75, 1.0]
+                    ydata  = sub2['mean']
+                    ystd  = sub2['std']
+                    
+                    popt, pcov = curve_fit(line, xdata, ydata, sigma=ystd)
+                    perr = np.sqrt(np.diag(pcov))
+                    
+                    m = popt[0]
+                    c = popt[1]
+                    
+                    m_std = perr[0]
+                    c_std = perr[1]
+                    
+                    res.append((Z, dincl, classification, m, m_std))
+                    
+        df_res = pd.DataFrame(res, columns=['Z', 'dincl', 'classification', 'm', 'm_std'])
+        df_res = df_res.set_index(['Z', 'dincl', 'classification'])
+        return df_res
+    
     def calc_all_classifications_count_stats(self):
         res = pd.DataFrame()
         for k in self.dict_MC_run_ids.keys():
@@ -628,6 +684,7 @@ class ResultsProcessor:
         gb = res.groupby(['Z', 'dincl_cutoff', 'bh_ratio']).agg(['min', 'mean', 'max', 'std', 'count'])
         gb = gb.drop('size', axis=1)
         self.df_classifications_counts_stats = gb
+        return self.df_classifications_counts_stats
         
         
     def ADT_result_stats(self):
@@ -1269,7 +1326,7 @@ class Plotter:
                 plt.savefig(f'../reports/figures/ADT_frac_{Z}_{dincl_cut}_{duty_cycle}_normdist_{normdist}.pdf')
         
         
-    def erass_transients(self, erass_system_period_cutoff=999999, Z='all', duty_cycle=0.1):
+    def erass_transients(self, erass_system_period_cutoff=999999, Z='all', duty_cycle=0.1, percent_transient=False):
         cycles = ['1', '2', '3', '4', '5', '6', '7', '8']
         dincls = self.rp.df_erass_mc_info['dincl_cutoff'].unique()
         bh_percents = np.sort(self.rp.df_erass_mc_info['bh_ratio'].unique())
@@ -1290,24 +1347,48 @@ class Plotter:
                 key = (500, bh, dincl, Z, erass_system_period_cutoff)
                 df = self.rp.get_erass_evolution_from_key(key)
                 df = df[df['duty_cycle']==duty_cycle]
-                
+
+
+                df['percent_obs'] = (df['N_total_systems']/500) * 100
+                df['percent_trans_to_obs'] = df['N_transients_cum'] / df['N_total_systems'] * 100
+            
                 sub_wind = df[df['period'] == 'P_wind']
                 sub_sup = df[df['period'] == 'P_sup']
+            
+                agg_wind = sub_wind.groupby(['erass_cycle']).agg(['mean', 'std'])
+                agg_sup = sub_sup.groupby(['erass_cycle']).agg(['mean', 'std'])
                 
+                if not percent_transient:
+                    y_wind = agg_wind['N_transients']['mean']
+                    y_wind_std = agg_wind['N_transients']['std']
+                    y_sup = agg_sup['N_transients']['mean']
+                    y_sup_std = agg_sup['N_transients']['std']
                 
-                stats_wind = sub_wind.groupby(['erass_cycle']).agg(['mean', 'std'])['N_transients']
-                stats_sup = sub_sup.groupby(['erass_cycle']).agg(['mean', 'std'])['N_transients']
+                if percent_transient:
+                    percent_obs_wind = agg_wind['percent_obs']
+                    percent_obs_sup = agg_sup['percent_obs']
+
+                    y_wind = agg_wind['percent_trans_to_obs']['mean']
+                    y_wind_std = agg_wind['percent_trans_to_obs']['std']
+                    y_sup = agg_sup['percent_trans_to_obs']['mean']
+                    y_sup_std = agg_sup['percent_trans_to_obs']['std']
                 
                 bh_label = f'$\%_{{BH}}$ = {bh*100}' 
                 
                 trans1 = Affine2D().translate(-spacing*(nbars)/4 + spacing*j, 0.0) + ax[0][i].transData
                 trans2 = Affine2D().translate(-spacing*(nbars)/4 + spacing*j, 0.0) + ax[1][i].transData
         
-                ax[0][i].errorbar(cycles, stats_wind['mean'], yerr=stats_wind['std'], linestyle="none",
+                ax[0][i].errorbar(cycles, y_wind, yerr=y_wind_std, linestyle="none",
                                   linewidth=linewidth, capsize=1.0, transform=trans1, label=bh_label, c=clist[j])
                 
-                ax[1][i].errorbar(cycles, stats_sup['mean'], yerr=stats_sup['std'], linestyle="none",
+                ax[1][i].errorbar(cycles, y_sup, yerr=y_sup_std, linestyle="none",
                       linewidth=linewidth, capsize=1.0, transform=trans2, label=bh_label, c=clist[j])
+                
+                # ax[0][i].errorbar(cycles, percent_obs_wind['mean'], yerr=percent_obs_wind['std'], linestyle="none",
+                #                   linewidth=linewidth, capsize=1.0, transform=trans1, c=clist[j])
+                
+                # ax[1][i].errorbar(cycles, percent_obs_sup['mean'], yerr=percent_obs_sup['std'], linestyle="none",
+                #                   linewidth=linewidth, capsize=1.0,  transform=trans2, c=clist[j])
         
     
                 ax[0][i].set_title(f'$P_{{wind}}$ | $\Delta i_{{max}} = {dincl-1}^{{\circ}}$ | Z = {Z} | d = {duty_cycle}')
@@ -1319,12 +1400,20 @@ class Plotter:
                 #ax[1][i].grid(axis='y')
                 #ax[0][i].tick_params(labelrotation=90)
                 #ax[1][i].tick_params(axis='x', labelrotation=90)
-                
-        ax[0][0].set_ylabel('N Transients')
-        ax[1][0].set_ylabel('N Transients')
         
-        ax[0][0].set_ylim(0,35)
-        ax[1][0].set_ylim(0,95)
+        if not percent_transient:
+            ax[0][0].set_ylabel('N Transients')
+            ax[1][0].set_ylabel('N Transients')
+            
+            ax[0][0].set_ylim(0,35)
+            ax[1][0].set_ylim(0,95)
+            
+        if percent_transient:
+            ax[0][0].set_ylabel('% Transient')
+            ax[1][0].set_ylabel('% Transient')
+            # ax[0][0].set_ylim(0,100)
+            # ax[1][0].set_ylim(0,100)
+        
         
         ax[0][0].legend()
         #ax[0][0].legend()
@@ -1333,9 +1422,12 @@ class Plotter:
         
         plt.tight_layout()
         if self.savefig:
-            plt.savefig(f'../reports/figures/erass_N_transients_Z={Z}_d={duty_cycle}.eps', bbox_inches='tight')
-            plt.savefig(f'../reports/figures/erass_N_transients_Z={Z}_d={duty_cycle}.png', bbox_inches='tight', dpi=1000)
-
+            if not percent_transient:
+                plt.savefig(f'../reports/figures/erass_N_transients_Z={Z}_d={duty_cycle}.eps', bbox_inches='tight')
+                plt.savefig(f'../reports/figures/erass_N_transients_Z={Z}_d={duty_cycle}.png', bbox_inches='tight', dpi=1000)
+            if percent_transient:
+                plt.savefig(f'../reports/figures/erass_perc_transients_Z={Z}_d={duty_cycle}.eps', bbox_inches='tight')
+                plt.savefig(f'../reports/figures/erass_perc_transients_Z={Z}_d={duty_cycle}.png', bbox_inches='tight', dpi=1000)
 
 
 
@@ -1368,7 +1460,7 @@ if __name__ == "__main__":
     # Load tables
     rp.table_load_erass_mc_info()
     rp.table_load_classifications()
-    # rp.table_load_erass_evolution()
+    rp.table_load_erass_evolution()
 
     
     # rp.table_load_transient()
@@ -1376,11 +1468,15 @@ if __name__ == "__main__":
 
     # rp.table_erass_mc_results_map_info()
     # rp.table_classifications_map_systems()
-    rp.table_classifications_pivot()
+    # rp.table_classifications_pivot()
     
     # rp.table_classifications_calc_intermediate()
     # rp.table_classifications_map_systems()
-    # rp.table_classifications_pivot()
+    
+    # tab = rp.table_classifications_pivot()
+    # with open('../reports/table_mc_class_beamed.txt', mode='w+') as f:
+    #     f.write(tab.to_latex(float_format="%.2f"))
+    
 
     # =============================================================================
     # Run ULXLC over simulation parameter grid
@@ -1403,7 +1499,6 @@ if __name__ == "__main__":
     # =============================================================================
     # Simulate transient probabilities
     # =============================================================================
-
     # rp.table_load_erass_evolution()
     # ids_unique_info = rp.df_erass_mc_info.run_id.unique()
     # ids_unique_erass_evolution = rp.df_erass_evolution.run_id.unique()
@@ -1432,6 +1527,7 @@ if __name__ == "__main__":
     # =============================================================================
     # Run over Classifications with duty cycle
     # =============================================================================
+    
     # rp.sim_classifications_sampler_with_duty_cycle(0.1)
     # rp.df_classifications['lc_classification'] = rp.df_classifications['lc_classification_new']
     
@@ -1477,7 +1573,7 @@ if __name__ == "__main__":
     # Print Result statistics
     # =============================================================================
     
-    
+
     
     # rp.get_run_ids(False)
     # rp.get_run_counts()
@@ -1485,6 +1581,14 @@ if __name__ == "__main__":
     # df_classifications_stats = rp.ADT_result_stats()
     # print('Classification stats:')
     # print(df_classifications_stats)
+    
+    
+    # rp.get_run_ids()
+    
+    # res = pd.DataFrame()
+
+    # rp.calc_all_classifications_count_stats()
+    # bh_ratio_cc = rp.calc_bh_ratio_classfication_correlation_constant()
     
     # df_erass_mc_stats = rp.ERASS_result_stats()
     # print('Erass MC stats:')
@@ -1497,16 +1601,21 @@ if __name__ == "__main__":
     
     # Plot eRASS number of transients
     
-    # p = Plotter()
-    # p.set_results_processor(rp)
-    # p.set_savefig(True)
-    # rp.get_run_ids(False)
+    p = Plotter()
+    p.set_results_processor(rp)
+    p.set_savefig(True)
+    rp.get_run_ids(False)
     
     
-    # for Z in ['0.02', '0.002', '0.0002']:
-    #     for dc in [1.0, 0.3, 0.2, 0.1]:
-    #         p.erass_transients(erass_system_period_cutoff=999999, Z=Z, duty_cycle=dc)
-    
+    for Z in ['0.02', '0.002', '0.0002']:
+        for dc in [1.0, 0.3, 0.2, 0.1]:
+            
+            # Plot num transients
+            # p.erass_transients(erass_system_period_cutoff=999999, Z=Z, duty_cycle=dc, percent_transient=False)
+            
+            # Plot percent transients
+            p.erass_transients(erass_system_period_cutoff=999999, Z=Z, duty_cycle=dc, percent_transient=True)
+
     # p.classifications_dincl_i(percent=False)
     
     
@@ -1528,4 +1637,3 @@ if __name__ == "__main__":
     #             key = (500, 0.0, dincl, Z, 999999)
     #             p.classifications_hist(key, duty_cycle=d, frac_visible=False, normdist=True)
     #             p.classifications_hist(key, duty_cycle=d, frac_visible=True, normdist=True)
-

@@ -25,8 +25,6 @@ int main(){
 							
 				return system_persistent, is_ulx
 
-
-
 	for repeat in range(1000):
 		N_transients = 0
 		N_alive_persistent = 0

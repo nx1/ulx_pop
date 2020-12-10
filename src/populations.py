@@ -117,7 +117,7 @@ class Population:
         self.nbins = len(self.bins)
         self.bin_centers = 0.5 * (self.bins[:-1] + self.bins[1:])
         
-        self.df_ulx_Z_subset = None
+        self.df_ulx_Z_subset = 'all'
         
     def calc_columns(self):
         logging.debug('Calculating population columns')
@@ -131,7 +131,6 @@ class Population:
         #Convert to grams per second
         self.df['mdot_gs_a'] = self.df['dMmt_a'] * (M_sol/Myr)
         self.df['mdot_gs_b'] = self.df['dMmt_b'] * (M_sol/Myr)
-    
     
         #Calculate Eddington luminosity and Eddington accretion rate
         self.df['LEdd'] = 1.3E38 * self.df['M_a']
@@ -191,8 +190,11 @@ class Population:
         # Effective temp star a from Stefan-Boltzmann Law
         self.df['T_eff_b'] = ((self.df['L_b']*L_sol) / (4*np.pi*(self.df['R_b']*R_sol)**2 * sigma))**(1/4)
         
-        # LMXRB nuclear mt, and dominated by disc accretion.
-        self.df['lmxrb'] = np.where((self.df['mttype'] == 1) & (self.df['dMmt_b'] > self.df['dMwind_b']), 1, 0)
+        # LMXRB nuclear mt, and dominated by disc accretion
+        self.df['lmxrb'] = np.where((self.df['mttype'] == 1) &
+                                    (self.df['dMmt_b'] > self.df['dMwind_b']) &
+                                    (self.df['T_eff_b'] < 7000) &
+                                    (self.df['M_b'] < 5), 1, 0)
         
     def calc_sub_populations(self):
         logging.debug('Calculating subpopulation')
@@ -203,8 +205,16 @@ class Population:
         #self.df_ulx_P_sup_l_4_years = self.df_ulx_opening_angle_le_45[self.df_ulx_opening_angle_le_45['P_sup_days'] < 365*4]
         
     def filter_df_ulx_by_Z(self, Z):
-        self.df_ulx = self.df_ulx[self.df_ulx['Z'] == float(Z)]
-        self.df_ulx_Z_subset = float(Z)
+        if self.df_ulx_Z_subset != Z:
+            logging.debug('Population not filtered by Z')
+            logging.debug('Filtering population by Z')
+            self.df_ulx = self.df_ulx[self.df_ulx['Z'] == float(Z)]
+            self.df_ulx_Z_subset = Z
+            self.pop.calc_bh_ns_ulx_sub_populations()
+        else:
+            logging.debug('Population alread filtered by Z')
+            logging.debug('Not filtering')
+        
     
     def split_ns_bh(self, df):
         logging.debug('Splitting df into ns and bh')
@@ -239,6 +249,9 @@ class Population:
 
 
     def calc_sampling_weights(self, df):
+        """
+        P_samp = system alive time / all system alive times.
+        """
         logging.debug('Calculating sampling weights')
         gb = self.gb_sys(df)
         sys_time = gb[['dt']].sum() # system_on_time
@@ -629,16 +642,7 @@ if __name__ == "__main__":
     
     pop = Population(df)
     
-    for k in np.sort(pop.df['K_b'].unique()):
-        print(k)
-        sub = pop.df[pop.df['K_b'] == k]
-        plt.scatter(sub['M_b'], sub['T_eff_b'], label=k, s=1.0, alpha=0.5)
-    plt.legend(loc='left')
-    plt.xlabel('Secondary Mass (M_sol)')
-    plt.ylabel('Secondary T_eff (K)')
-    
     # df_sys = pop.calc_system_averages(pop.df)
-    
     
     # Population Statistics
     # pop.describe(pop.df, 'df')
@@ -783,6 +787,8 @@ if __name__ == "__main__":
     # plt.savefig('../reports/figures/XLF_by_bh_ns_samp_5000.png', dpi=500)
     # plt.savefig('../reports/figures/XLF_by_bh_ns_samp_5000.eps')
     # plt.savefig('../reports/figures/XLF_by_bh_ns_samp_5000.pdf')
+    
+    
     
     
 

@@ -1,0 +1,25 @@
+\begin{tabular}{lllrr}
+\toprule
+       &    &        &       m &  m\_std \\
+Z & dincl & classification &         &        \\
+\midrule
+0.02 & 46 & N\_alive\_persistent &  188.99 &   0.40 \\
+       &    & N\_trans &  -68.15 &   0.54 \\
+       &    & N\_dead & -120.80 &   0.32 \\
+       & 21 & N\_alive\_persistent &  178.56 &   0.26 \\
+       &    & N\_trans &  -29.61 &   0.36 \\
+       &    & N\_dead & -148.99 &   0.38 \\
+0.002 & 46 & N\_alive\_persistent &  134.65 &   0.21 \\
+       &    & N\_trans &  -41.63 &   0.29 \\
+       &    & N\_dead &  -93.08 &   0.28 \\
+       & 21 & N\_alive\_persistent &  131.50 &   0.36 \\
+       &    & N\_trans &  -15.98 &   0.17 \\
+       &    & N\_dead & -115.56 &   0.24 \\
+0.0002 & 46 & N\_alive\_persistent &  184.42 &   0.38 \\
+       &    & N\_trans &  -74.27 &   0.53 \\
+       &    & N\_dead & -110.26 &   0.23 \\
+       & 21 & N\_alive\_persistent &  171.31 &   0.29 \\
+       &    & N\_trans &  -27.79 &   0.55 \\
+       &    & N\_dead & -143.62 &   0.30 \\
+\bottomrule
+\end{tabular}

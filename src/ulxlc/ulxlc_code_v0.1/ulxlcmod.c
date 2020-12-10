@@ -485,7 +485,7 @@ int main(int argc, char *argv[]){
 		lc_t[i] = lc_timestep*i;
 	}
 
-    // Loop over all systems    
+    // Loop over all systems
 	for (int N=0;N<system_N;N++){
 		params[2] =	system_theta[N];	// theta
 		params[3] =	0;	                // incl
