@@ -1072,6 +1072,29 @@ class Plotter:
     def set_savefig(self, savefig=False):
         """Turn saving figures on or off"""
         self.savefig = savefig
+        
+    def plot_theta_vs_bh_ratio(self):
+        """
+        Plot theta/2 distributions as function of %_BH.
+
+        """
+        bhs = [0,0.25,0.5,0.75,1.0]
+        fig, ax = plt.subplots(nrows=len(bhs), ncols=1, sharex=True, figsize=(2.5,7))
+        plt.subplots_adjust(hspace=0)
+        for i, bh in enumerate(bhs):
+            idx = self.pop.sample_ulxs(bh, size=500)
+            df_sampled = self.pop.df.loc[idx]
+            thetas = df_sampled['theta_half_deg'].values
+            
+            
+            ax[i].hist(thetas, bins=np.arange(0,91,5), label=fr'$ \%_{{BH}}$ = {int(bh*100)}', histtype='step')
+            ax[i].set_yscale('log')
+            ax[i].legend()
+        ax[-1].set_xlabel(r'$\theta / 2$')
+        if self.savefig:
+            plt.savefig('../reports/figures/%_BH_vs_theta.png', dpi=1000)
+            plt.savefig('../reports/figures/%_BH_vs_theta.eps')
+            
     
     
     def bar_classifications_Z(self):

@@ -275,6 +275,23 @@ int ulxlc_model(const double* t, const int nt, double* photar, const double* par
 	return status;
 }
 
+// Run ULXLC over a grid of inclinations (0-90) and dincl(0-45)
+int grid_ulxlc_model(double theta[], double Lx[], int N, double* t, int nt, double* photar, double* parameter, int n_parameter){
+    int ret = EXIT_SUCCESS;
+    for(int n=0;n<N;N++){
+        for(int incl=0;incl<91;incl++){
+            parameter[3] = incl;
+            for(int dincl=0;dincl<46;dincl++){
+                parameter[4] = dincl;
+                printf("theta = %f, Lx = %f", theta[n], Lx[n]);
+                printf("incl = %d, dincl = %d", incl, dincl);
+                // ulxlc_model(t, nt, photar, parameter, n_parameter);
+            }
+        }
+    }
+    return ret;
+}
+
 
 
 int classify_curve(double lc_ulx_lim, double lc_max_flux, double lc_min_flux){

@@ -15,13 +15,13 @@ ctypes module.
 import ctypes
 
 class ULXLC:
-    def __init__(self):
+    def __init__(self, lc_nt=5000, lc_timestep=0.01):
         self.path = './ulxlc/ulxlc_code_v0.1/ulxlc_shared.so'
         self.libc = ctypes.CDLL(self.path)
         
         self.params= (ctypes.c_double * 7)()
-        self.lc_timestep = 0.01
-        self.lc_nt = 5000
+        self.lc_timestep = lc_timestep
+        self.lc_nt = lc_nt
         self.lc_t = (ctypes.c_double*self.lc_nt)(*[self.lc_timestep*i for i in range(self.lc_nt)])
         self.lc_flux = (ctypes.c_double * self.lc_nt)()            
     
@@ -54,6 +54,8 @@ class ULXLC:
     def classify_curve(self, lc_ulx_lim, lc_max_flux, lc_min_flux):
         return self.libc.classify_curve(lc_ulx_lim, lc_max_flux, lc_min_flux)
     
+    def grid_ulxlc_model(self):
+        self.libc.grid_ulxlc_model(self.theta, self.Lx, self.lc_t, self.lc_nt, self.lc_flux, self.params, 7)
     
     def ulxlc_model(self):
         self.libc.ulxlc_model(self.lc_t, self.lc_nt, self.lc_flux, self.params, 7)

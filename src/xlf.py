@@ -222,7 +222,7 @@ for i in tqdm(range(N_mc)):
 
 for i in tqdm(range(N_mc)):
     for bh in bh_ratios:
-        
+        break
 
     
 # =============================================================================
