@@ -1331,8 +1331,8 @@ class Plotter:
         
         if frac_visible:
             ymax = ax[0].get_ylim()[1]
-            ax[0].text(x=(self.PERCENT_ALIVE_EARNSHAW_LOWER)+0.25, y=ymax+0.05*ymax, s='Alive $1 \sigma$ XMM', fontsize=7)
-            ax[0].text(x=(self.PERCENT_TRANS_EARNSHAW_LOWER)+0.25, y=ymax+0.05*ymax, s='Transient $1 \sigma$ XMM', fontsize=7)
+            ax[0].text(x=(self.PERCENT_ALIVE_EARNSHAW_LOWER)+0.25, y=ymax+0.05*ymax, s=r'Alive $1 \sigma$ XMM', fontsize=7)
+            ax[0].text(x=(self.PERCENT_TRANS_EARNSHAW_LOWER)+0.25, y=ymax+0.05*ymax, s=r'Transient $1 \sigma$ XMM', fontsize=7)
 
 
         plt.tight_layout()
@@ -1396,7 +1396,7 @@ class Plotter:
                     y_sup = agg_sup['percent_trans_to_obs']['mean']
                     y_sup_std = agg_sup['percent_trans_to_obs']['std']
                 
-                bh_label = f'$\%_{{BH}}$ = {bh*100}' 
+                bh_label = fr'$\%_{{BH}}$ = {bh*100}' 
                 
                 trans1 = Affine2D().translate(-spacing*(nbars)/4 + spacing*j, 0.0) + ax[0][i].transData
                 trans2 = Affine2D().translate(-spacing*(nbars)/4 + spacing*j, 0.0) + ax[1][i].transData
@@ -1414,8 +1414,8 @@ class Plotter:
                 #                   linewidth=linewidth, capsize=1.0,  transform=trans2, c=clist[j])
         
     
-                ax[0][i].set_title(f'$P_{{wind}}$ | $\Delta i_{{max}} = {dincl-1}^{{\circ}}$ | Z = {Z} | d = {duty_cycle}')
-                ax[1][i].set_title(f'$P_{{sup}}$ | $\Delta i_{{max}} = {dincl-1}^{{\circ}}$ | Z = {Z} | d = {duty_cycle}')
+                ax[0][i].set_title(fr'$P_{{wind}}$ | $\Delta i_{{max}} = {dincl-1}^{{\circ}}$ | Z = {Z} | d = {duty_cycle}')
+                ax[1][i].set_title(fr'$P_{{sup}}$ | $\Delta i_{{max}} = {dincl-1}^{{\circ}}$ | Z = {Z} | d = {duty_cycle}')
         
                 
                 ax[i][0].grid(axis='y')
@@ -1457,6 +1457,8 @@ class Plotter:
 if __name__ == "__main__":
     # logging.basicConfig(level=logging.DEBUG)
     # logging.basicConfig(level=0)
+    
+    
     
     
     # Load population

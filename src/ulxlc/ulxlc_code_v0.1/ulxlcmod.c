@@ -376,14 +376,14 @@ int main(int argc, char *argv[]){
 	char* run_id = argv[1];	// run identifier
 
 	// ULXLC parameters
-	double params[7];
-	params[0] =	50.0;	// period
-	params[1] =	0.0;	// phase
-	params[2] =	NAN;	// theta
-	params[3] =	NAN;	// incl
-	params[4] =	NAN;	// dincl
-	params[5] = 0.3;	// beta
-	params[6] = 0;		// dopulse
+	double parameter[7];
+	parameter[0] =	50.0;	// period
+	parameter[1] =	0.0;	// phase
+	parameter[2] =	NAN;	// theta
+	parameter[3] =	NAN;	// incl
+	parameter[4] =	NAN;	// dincl
+	parameter[5] = 0.3;	    // beta
+	parameter[6] = 0;		// dopulse
 
 	// Setup Curve
 	int    lc_nt = 5000;         			// Length of time series
@@ -393,7 +393,7 @@ int main(int argc, char *argv[]){
 	double lc_flux[lc_nt];     				// Photon detection Array (Flux)
 
 	// lightcurve properties
-	double lc_period = params[0];
+	double lc_period = parameter[0];
 	double lc_zero_incl_max_flux;
 	double lc_max_flux;
 	double lc_min_flux;
@@ -487,27 +487,27 @@ int main(int argc, char *argv[]){
 
     // Loop over all systems
 	for (int N=0;N<system_N;N++){
-		params[2] =	system_theta[N];	// theta
-		params[3] =	0;	                // incl
-		params[4] =	system_dincl[N];    // dincl
+		parameter[2] =	system_theta[N];	// theta
+		parameter[3] =	0;	                // incl
+		parameter[4] =	system_dincl[N];    // dincl
 		if (system_theta[N] > 45){
 			continue;   // If system has opening angle > 45 deg (unbeamed) then don't perform any simulations
 		}
 		// Run the lightcurve model.
-		ulxlc_model(lc_t, lc_nt, lc_flux, params, 7);
+		ulxlc_model(lc_t, lc_nt, lc_flux, parameter, 7);
 		
 		// 0 Inclination is treated as maximum possible Lx (Looking straight down the windcone)
-		if (params[3]==0){
+		if (parameter[3]==0){
 			// Calculate Flux normalisation
 			lc_zero_incl_max_flux = max(lc_flux, lc_nt);
 			lc_flux_scaling_constant = system_Lx[N] / lc_zero_incl_max_flux; // Curve Normalisation constant
 			lc_ulx_lim = 1 / lc_flux_scaling_constant;	//Units of 10^39 erg s^-1
 		}
 		
-		params[3] =	system_inclination[N];	// incl
+		parameter[3] =	system_inclination[N];	// incl
 		
 		// Run the lightcurve model.
-		ulxlc_model(lc_t, lc_nt, lc_flux, params, 7);
+		ulxlc_model(lc_t, lc_nt, lc_flux, parameter, 7);
 		
 		// Classify the lightcurve as alive/dead/transient
 		lc_max_flux = max(lc_flux, lc_nt);

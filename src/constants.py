@@ -64,3 +64,9 @@ stellar_dict = {0 : 'MS M < 0.7',
                 15 : 'Massless Remnant',
                 16 : 'Hydrogen White Dwarf',
                 17 : 'Hybrid white dwarf'}
+
+# Matplotlib style commands
+def set_latex_font():
+    import matplotlib
+    matplotlib.rcParams['mathtext.fontset'] = 'stix'
+    matplotlib.rcParams['font.family'] = 'STIXGeneral'

@@ -13,6 +13,7 @@ ctypes module.
 
 """
 import ctypes
+import numpy as np
 
 class ULXLC:
     def __init__(self, lc_nt=5000, lc_timestep=0.01):
@@ -23,8 +24,14 @@ class ULXLC:
         self.lc_timestep = lc_timestep
         self.lc_nt = lc_nt
         self.lc_t = (ctypes.c_double*self.lc_nt)(*[self.lc_timestep*i for i in range(self.lc_nt)])
-        self.lc_flux = (ctypes.c_double * self.lc_nt)()            
-    
+        self.lc_flux = (ctypes.c_double * self.lc_nt)()  
+
+        #libc objects default to return ints, this forces the functions we want to return doubles.
+        self.libc.max.restype = ctypes.c_double   
+        self.libc.min.restype = ctypes.c_double   
+        self.libc.lc_boost.restype = ctypes.c_double
+        self.libc.calc_Lx_prec.restype= ctypes.c_double
+        
     def set_params(self, period, phase, theta, incl, dincl, beta, dopulse):
         self.params= (ctypes.c_double * 7)(period, phase, theta, incl, dincl, beta, dopulse)
         
@@ -43,6 +50,11 @@ class ULXLC:
     def get_lc_min(self):
         return min(self.lc_flux)
     
+    def xlf_calc_L_prec(self,  Lx_prec, Lxs, thetas, incls, dincls, N):
+         # Random indexs to sample from the lc 
+        lc_idx = (ctypes.c_int*self.lc_nt)(*np.random.randint(self.lc_nt, size=N))
+        self.libc.xlf_calc_L_prec(self.lc_t, self.lc_nt, self.lc_flux, lc_idx, Lx_prec, Lxs, thetas, incls, dincls, N)
+    
     def calc_lc_flux_scaling_constant(self, lc_zero_incl_max_flux, Lx):
         lc_flux_scaling_constant = Lx / lc_zero_incl_max_flux;
         return lc_flux_scaling_constant
@@ -54,8 +66,8 @@ class ULXLC:
     def classify_curve(self, lc_ulx_lim, lc_max_flux, lc_min_flux):
         return self.libc.classify_curve(lc_ulx_lim, lc_max_flux, lc_min_flux)
     
-    def grid_ulxlc_model(self):
-        self.libc.grid_ulxlc_model(self.theta, self.Lx, self.lc_t, self.lc_nt, self.lc_flux, self.params, 7)
+    def grid_ulxlc_model(self, theta, Lx, N):
+        self.libc.grid_ulxlc_model(theta, Lx, N, self.lc_t, self.lc_nt, self.lc_flux, self.params, 7)
     
     def ulxlc_model(self):
         self.libc.ulxlc_model(self.lc_t, self.lc_nt, self.lc_flux, self.params, 7)

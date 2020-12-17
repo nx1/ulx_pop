@@ -16,6 +16,14 @@
     Copyright 2016 Thomas Dauser, Remeis Observatory & ECAP
 	
 	Modifcations 2020 by Norman Khan
+	params[0] =	50.0;	// period
+	params[1] =	0.0;	// phase
+	params[2] =	NAN;	// theta
+	params[3] =	NAN;	// incl
+	params[4] =	NAN;	// dincl
+	params[5] = 0.3;	// beta
+	params[6] = 0;		// dopulse
+	
 */
 
 
@@ -275,23 +283,158 @@ int ulxlc_model(const double* t, const int nt, double* photar, const double* par
 	return status;
 }
 
+
+
+// Auxilary (Things that any reasonable programming language should do)
+double max(double* arr, int len){
+	// Get the maximum value of an array
+	// arr : array
+	// len : length of array
+	int i;
+	double t;
+	t = arr[0];
+	for(i=1; i<len; i++){
+		if(arr[i]>t)
+			t=arr[i];
+	}
+	return(t);
+}
+
+double min(double* arr, int len){
+	// Get the minimum value of an array
+	// x : array
+	// len : length of array
+	int i;
+	double t;
+	t = arr[0];
+	for(i=1; i<len; i++){
+		if(arr[i]<t)
+			t=arr[i];
+	}
+	return(t);
+}
+
+int randint(int N){
+	// Return random integert between 0 to N-1
+	srand(time(NULL));					// Initialise random seed
+	return (rand() % ((int) N));
+}
+
+double calc_Lx_prec(double Lx, double lc_max_flux_zero_incl, double lc_flux){
+    // Calculate randomly sampled luminosity from light curve
+	// Lx : System Luminosity
+	// lc_max_flux_zero_incl : ulxlc flux for 0 inclination lc
+	// lc_flux : ulxlc flux to convert to erg s^-1
+    double fsc =  Lx / lc_max_flux_zero_incl; // Flux scaling constant
+    double Lx_prec = lc_flux*fsc;
+    return Lx_prec;
+}
+
+void xlf_calc_L_prec(const double* t, const int nt, double* photar, int lc_idx[], double Lx_prec[], double Lx[], double theta[], double incl[], double dincl[], int N){
+    // ULXLC parameters
+	double parameter[7];
+	parameter[0] =	50.0;	// period
+	parameter[1] =	0.0;	// phase
+	parameter[2] =	NAN;	// theta
+	parameter[3] =	NAN;	// incl
+	parameter[4] =	NAN;	// dincl
+	parameter[5] = 0.3;	    // beta
+	parameter[6] = 0;		// dopulse
+	
+	double lc_flux;
+	double lc_max_flux_zero_incl;
+	
+	
+    for(int n=0;n<N;n++){
+        parameter[2] = theta[n];
+        if (parameter[2] > 45){
+            Lx_prec[n] = Lx[n];
+        }
+        else{
+            parameter[4] = dincl[n];
+            parameter[3] = 0;
+            ulxlc_model(t, nt, photar, parameter, 7);
+            lc_max_flux_zero_incl = max(photar, nt);
+            parameter[3] = incl[n];
+            ulxlc_model(t, nt, photar, parameter, 7);
+			lc_flux = photar[lc_idx[n]];
+            Lx_prec[n] = calc_Lx_prec(Lx[n], lc_max_flux_zero_incl, lc_flux);
+        }
+        
+    }
+}
+
+
+void lc_boost(const double* t, const int nt, double* photar, double c_arr[][6], int N_tot, int N_save_par){
+    // ULXLC parameters
+	double parameter[7];
+	parameter[0] =	50.0;	// period
+	parameter[1] =	0.0;	// phase
+	parameter[2] =	NAN;	// theta
+	parameter[3] =	NAN;	// incl
+	parameter[4] =	NAN;	// dincl
+	parameter[5] = 0.3;	    // beta
+	parameter[6] = 0;		// dopulse
+
+    int n=0;
+    
+    double lc_max;
+    double lc_min;
+    double lc_max_flux_zero_incl;
+    double lc_boost;
+    
+    // double c_arr[N_tot][N_save_par];
+    
+
+    for(int dincl=0;dincl<46;dincl++){
+        parameter[4] = dincl;
+        for(int theta=0;theta<46;theta++){
+            parameter[2] = theta;
+            for(int incl=0;incl<91;incl++){
+                parameter[3] = incl;
+                
+                ulxlc_model(t, nt, photar, parameter, 7);
+                lc_max = max(photar, nt);
+                lc_min = min(photar, nt);
+                
+                if(incl == 0){
+                    lc_max_flux_zero_incl = lc_max;
+                }
+                lc_boost = lc_max_flux_zero_incl / lc_max;
+                
+                c_arr[n][0] = dincl;    // dincl
+                c_arr[n][1] = theta;    // thetas
+                c_arr[n][2] = incl;     // incl
+                c_arr[n][3] = lc_min;   // lc_min
+                c_arr[n][4] = lc_max;   // lc_max
+                c_arr[n][5] = lc_boost; // lc_boost
+                if(n%1000==0){
+                    printf("%d \n", n);
+                }
+                n++;
+            }
+        }
+    }
+}
+
+
+
 // Run ULXLC over a grid of inclinations (0-90) and dincl(0-45)
-int grid_ulxlc_model(double theta[], double Lx[], int N, double* t, int nt, double* photar, double* parameter, int n_parameter){
-    int ret = EXIT_SUCCESS;
-    for(int n=0;n<N;N++){
+int grid_ulxlc_model(double theta[], double Lx[], int N, const double* t, const int nt, double* photar, const double* parameter, const int n_parameter){
+    
+    // Loop over systems
+    for(int n=0; n<N; n++){
+        theta[n];
+        Lx[n];
         for(int incl=0;incl<91;incl++){
-            parameter[3] = incl;
+            // parameter[3] = incl;
             for(int dincl=0;dincl<46;dincl++){
-                parameter[4] = dincl;
-                printf("theta = %f, Lx = %f", theta[n], Lx[n]);
-                printf("incl = %d, dincl = %d", incl, dincl);
+                // parameter[4] = dincl;
                 // ulxlc_model(t, nt, photar, parameter, n_parameter);
             }
         }
     }
-    return ret;
 }
-
 
 
 int classify_curve(double lc_ulx_lim, double lc_max_flux, double lc_min_flux){

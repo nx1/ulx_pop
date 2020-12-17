@@ -25,7 +25,6 @@ import numpy as np
 import pandas as pd
 
 import matplotlib.pyplot as plt
-from array import array
 
 from constants import G, c, Myr, R_sol, M_sol, L_sol, sigma, NS_SPIN, BH_SPIN, NS_ISCO, BH_ISCO, epsilon, beta, eta
 
@@ -93,12 +92,8 @@ def startrack_v2_mt_1_test_subset(**kwargs):
     systems_df_path = Path('../data/interim/startrack/data_mt=1_test_subset.csv')
     df = pd.read_csv(systems_df_path, **kwargs)
     return df
-
     
-def set_latex_font():
-    import matplotlib
-    matplotlib.rcParams['mathtext.fontset'] = 'stix'
-    matplotlib.rcParams['font.family'] = 'STIXGeneral'
+
 
 class Population:
     """
@@ -152,11 +147,13 @@ class Population:
         # Observed Luminosity
         self.df['Lx1'] = self.df['Lx_iso']/self.df['b']
         self.df['log_Lx1'] = np.log10(self.df['Lx1'])
-    
+        
+        # Opening Angle
         self.df['theta'] = 2 * np.arccos(1-self.df['b'])     # Full opening angle in rad
         self.df['theta_deg'] = self.df['theta'] * 180/np.pi  # degrees
         self.df['theta_half_deg'] = self.df['theta_deg'] / 2 # Half opening angle (theta / 2)
-    
+        
+        # `Cotangent of the opening angle of the wind cone'
         self.df['zeta'] = np.tan((np.pi/2) - np.arccos(1 - (73/(self.df['mdot_ratio']**2))))
         self.df['zeta'] = np.where(self.df['zeta'] <= 2, 2, self.df['zeta'])
     
@@ -170,7 +167,7 @@ class Population:
     
         self.df['r_sph'] = self.df['r_isco'] * self.df['mdot_ratio']
         self.df['r_out'] = 3 * epsilon / (beta * self.df['zeta']) * self.df['mdot_ratio']**3/2 * 6 # The 6 R_g makes the calculation correct for eta = 1/12
-    
+        
         self.df['P_inflow_at_rsph'] = (G * self.df['M_a'] * M_sol * np.pi) / (3 * c**3 * self.df['a*']) * self.df['r_sph']**3 * ((1 - (self.df['r_isco']/self.df['r_sph']))**3)/(np.log(self.df['r_sph']/self.df['r_isco']))
         self.df['P_envelope']       = (G * self.df['M_a'] * M_sol * np.pi) / (3 * c**3 * self.df['a*']) * self.df['r_sph']**3 * ((1 - (self.df['r_isco']/self.df['r_sph']))**3)/(np.log(self.df['r_sph']/self.df['r_isco'])) * (self.df['r_out']/self.df['r_sph'])**2
         self.df['P_wind']           = (G * self.df['M_a'] * M_sol * np.pi) / (3 * c**3 * self.df['a*']) * self.df['r_out']**3 * ((1 - (self.df['r_isco']/self.df['r_out']))**3)/(np.log(self.df['r_out']/self.df['r_isco']))
@@ -334,7 +331,7 @@ class Population:
             plt.savefig('../reports/figures/mass_accretion_rates_by_row.eps')
             plt.savefig('../reports/figures/mass_accretion_rates_by_row.pdf')
 
-    def plot_system_luminosity_evolution(self, idum_run, iidd_old):
+    def plot_system_luminosity_evolution(self, idum_run, iidd_old, show=False):
         df_system = self.get_system(idum_run, iidd_old)
         plt.figure()
         plt.title(f'System: {idum_run} {iidd_old}')
@@ -342,7 +339,8 @@ class Population:
         plt.axhline(39, c='r') 
         plt.xlabel('Time (Myr)')
         plt.ylabel('log10 (Lx)')
-        plt.show()
+        if show:
+            plt.show()
         
     def describe(self, df, df_name):        
         df_bh = df[df['K_a'] == 14]
@@ -365,7 +363,6 @@ class Population:
         N_rows_lmxrb = len(df_lmxrb)
         N_rows_unbeamed = len(df_unbeamed)
         N_rows_beamed = len(df_beamed)
-        
         
         N_binaries = len(df.groupby(['idum_run', 'iidd_old']))
         N_binaries_bh = len(df_bh.groupby(['idum_run', 'iidd_old']))
@@ -400,6 +397,8 @@ class Population:
         print(f'N b>=1 rows binaries: {N_binaries_unbeamed} ({N_binaries_unbeamed/N_binaries*100:0.2f}%)')
         print(f'N b<1 binaries: {N_binaries_beamed} ({N_binaries_beamed/N_binaries*100:0.2f}%)')
         print('--------------------------')
+
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)

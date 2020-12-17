@@ -118,7 +118,7 @@ def test_ulxlc_model(ulxlc):
     assert ulxlc.lc_flux[50] == pytest.approx(0.15, 0.1)
     
 def test_calc_lc_flux_scaling_constant(ulxlc):
-    """
+    r"""
     C = Lx / max(lc_i=0)
     $C = L_{x} / \mathrm{max}(L_{\mathrm{curve, \ i=0}})$
     
@@ -138,7 +138,6 @@ def test_calc_lc_flux_scaling_constant(ulxlc):
     [10e39 * erg s^-1] = [10e39 * erg s^-1] / [None] <-- In old code
     
     None.
-
     """
     Lx = 2e39
     ulxlc.set_inclination(0)
@@ -153,15 +152,14 @@ def test_calc_lc_flux_scaling_constant(ulxlc):
 
 
 def test_grid_ulxlc_model(ulxlc):
-    N = 500
+    N = 2
     theta = np.random.normal(20, size=N)
     theta = (ctypes.c_double * N)(*theta)
     
     Lx = np.random.normal(5e39, scale=1e38, size=N)
     Lx = (ctypes.c_double * N)(*Lx)
     
-    #ulxlc.libc.grid_ulxlc_model(theta, Lx, N, ulxlc.lc_t, ulxlc.lc_nt, ulxlc.lc_flux, ulxlc.params, 7)
-
+    ulxlc.libc.grid_ulxlc_model(theta, Lx, N, ulxlc.lc_t, ulxlc.lc_nt, ulxlc.lc_flux, ulxlc.params, 7)
 
 def test_dincl_vs_lc(ulxlc):
     dincls = range(0,46)
@@ -250,14 +248,83 @@ def test_dincl_vs_incl_vs_lc(ulxlc):
     plt.colorbar()
     plt.savefig('../test/figures/dincl_incl_vs_lc_min.png')
     
+def test_c_min_max(ulxlc):
+    """Check if min and max functions work same in python and C."""
+    ulxlc.ulxlc_model()
+    assert ulxlc.get_lc_max() == ulxlc.libc.max(ulxlc.lc_flux, ulxlc.lc_nt)
+    assert ulxlc.get_lc_min() == ulxlc.libc.min(ulxlc.lc_flux, ulxlc.lc_nt)
 
+def test_calc_Lx_prec(ulxlc):
+    lc_max_flux_zero_incl = ctypes.c_double(35)
+    lc_flux = ctypes.c_double(21)
+    Lx = ctypes.c_double(3e39)
+    
+    Lx_prec = ulxlc.libc.calc_Lx_prec(Lx, lc_max_flux_zero_incl, lc_flux)
+    assert Lx_prec == 1.8e+39
+    
+def test_xlf_calc_L_prec(ulxlc):
+    N = 5
+    c_Lx_prec = (ctypes.c_double * N)()
+    c_Lx      = (ctypes.c_double * N)(*np.random.normal(loc=2e39, scale=1e38, size=N))
+    c_thetas  = (ctypes.c_double * N)(*np.random.randint(low=2.25e-01, high=46, size=N))
+    c_incls   = (ctypes.c_double * N)(*np.random.randint(low=0, high=91, size=N))
+    c_dincls  = (ctypes.c_double * N)(*np.random.randint(low=0, high=46, size=N))
+    
+    ulxlc.xlf_calc_L_prec(c_Lx_prec, c_Lx, c_thetas, c_incls, c_dincls, N)
+    for n in range(N):
+        assert c_Lx[n] != 0.0
+
+
+def test_randint(ulxlc):
+    high = 4
+    N = 50
+    for n in range(N):
+        r = ulxlc.libc.randint(high)
+
+        assert r<high
+        assert r>=0
+    
+
+# def test_calc_scaling_constant_grid():
+#     # Grid values
+#     incl_min = 0
+#     incl_max = 91
+#     incl_step = 1
+    
+#     dincl_min = 0
+#     dincl_max = 46
+#     dincl_step = 1
+    
+#     theta_min = 0
+#     theta_max = 46
+#     theta_step = 1
+    
+    # incls  = np.arange(0,91,1)
+    # dincls = np.arange(0,46,1)
+    # thetas = np.arange(0,46,1)
+    
+    # N_incls  = len(incls)
+    # N_dincls = len(dincls)
+    # N_thetas = len(thetas)
+    
+    # N_tot = N_incls*N_dincls*N_thetas
+    
+    # save_par = ['dincl', 'theta', 'incl', 'lc_min', 'lc_max', 'lc_boost']
+    # N_save_par = len(save_par)
+    
+    # # arr = np.ndarray((N_tot, N_save_par))
+    # # c_arr = ((ctypes.c_double * N_save_par) * N_tot)()
+    
+    
+    # ulxlc.libc.lc_boost(ulxlc.lc_t, ulxlc.lc_nt, ulxlc.lc_flux, N_tot, N_save_par)
+    # # assert c_arr = 
 
 # def test_ulxlc_model_bad_param():
-    # ulxlc = ULXLC()
-    # ulxlc.set_params('a', phase, theta, incl, dincl, beta, dopulse)
-    # ulxlc.set_params(-5, phase, theta, incl, dincl, beta, dopulse)
-    # ulxlc.set_params(period, phase, 95, incl, dincl, beta, dopulse)
-    # ulxlc.ulxlc_model()
+#     ulxlc = ULXLC()
+#     ulxlc.set_params('a', phase, theta, incl, dincl, beta, dopulse)
+#     ulxlc.set_params(-5, phase, theta, incl, dincl, beta, dopulse)
+#     ulxlc.set_params(period, phase, 95, incl, dincl, beta, dopulse)
+#     ulxlc.ulxlc_model()
 
                    
     

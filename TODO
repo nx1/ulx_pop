@@ -1,3 +1,50 @@
+====
+TODO
+====
+[ ]
+[ ] XLF - Add effect of Precession
+[ ] Remake dincl vs i vs classifications plot
+[ ]
+
+
+
+
+
+Paper
+-----
+[ ] Check reference to XLF
+[ ] I guess what we need to know is whether, as eRASS will observe the local Universe with a mixture of Zs, what the impact will be on any inferences we draw.
+[ ] Contact Greg and ask how MT is assumed to proceed for high mass companions and RLOF (non thermal)
+[ ] Mention based on the number of transients wrt to P_wind and P_sup that we can distinguish the them apart
+[ ] Be clearer about population sampling proceedure.
+[ ] remove stuff regarding precession in the xlf if i've not yet got the figure in.
+
+Matt Corrections Week 7/12/2020:
+
+[ ] Introduction - WE NEED TO MAKE IT CLEAR THAT ERASS CAN DISTINGUISH THE MECHANISMS - WE DON'T MAKE ANY MENTION OF THIS IN THE RESULTS OR THEREAFTER
+[ ] Sec 2.5 - Remake the incl, dincl plot vs classifications.
+[ ] Are we still including an appendix?
+[ ] Figures out of order wrt to the text
+[ ] Consider Earnshaw propellor effect
+
+Code
+----
+Plots
+-----
+[ ] XLF - Remove WD systems (Maybe join with 'ulx subpopulation' from other sims)
+[ ] XLF - show effect of precession (Panel 4)
+[ ] XLF - Show total (BH + NS) (Panel 5)
+[ ] XLF - Investigate different %_BH (Panel 5)
+[ ] XLF - Compare to actual (Tim Roberts) (Panel 5)
+
+[ ] trans vs bh ratio change dincl to delta i max, change 21 --> 20 and make it cleanrer.
+
+
+REMAKE THE PLOT WITH ONLY SOURCES WITH DUTY CYCLES
+
+
+
+====
 DONE
 ====
 [x] Recreate all systems dataframe with eta = 0.2
@@ -58,42 +105,11 @@ DONE
 [x] Add reference to Lei et al wrt to precession
 [x] Check reference to SS433
 [x] Check duty cycle for GX 339-4
-
-====
-TODO
-====
-
-Code
-----
-[ ] - Re-calculate LMXRB duty cycle limit.
-    [ ] Calculate effective temperature for secondaries.
-    [ ] Account for moving about on the HRD
-    [ ] Calculate a disc temperature
-    [ ] Re-do sims with the new duty cycle systems
-
-
-
-
-Plots
------
-[ ] XLF - Remove WD systems (Maybe join with 'ulx subpopulation' from other sims)
-[ ] XLF - show effect of precession (Panel 4)
-[ ] XLF - Show total (BH + NS) (Panel 5)
-[ ] XLF - Investigate different %_BH (Panel 5)
-[ ] XLF - Compare to actual (Tim Roberts) (Panel 5)
-
-
-
-REMAKE THE PLOT WITH ONLY SOURCES WITH DUTY CYCLES
-
-
-Paper
------
-[ ] Look into DIM with regard to a secondary being massive enough to cause a star to exceed the hydrogen ionisation threshold
-[ ] Check reference to XLF
-[ ] I guess what we need to know is whether, as eRASS will observe the local Universe with a mixture of Zs, what the impact will be on any inferences we draw.
-[ ] Contact Greg and ask how MT is assumed to proceed for high mass companions and RLOF (non thermal)
-[ ] Mention based on the number of transients wrt to P_wind and P_sup that we can distinguish the them apart
+[x] Look into DIM with regard to a secondary being massive enough to cause a star to exceed the hydrogen ionisation threshold
+[x] Re-run erass + ADT sims with new lmxrb criteria
+[x] Include precessional angle cuts for MC classifications table.
+[x] Make plot showing how we can constrain bh ratio by % transients
+[x] Check LMXRB criteria
 
 
 
@@ -400,8 +416,8 @@ Matt Meeting 26/5/20
 2. Matt moved some stuff about in the paper.
 3. Make sure you can rederive things eg eq (6) (Zeta)
 4. Make sure you're confident on the things you're writing are correct
-
 5. The lower limit we put of Zeta = 2 may need some looking at
+
 it's a bit position of the outer photospheric readius.
 
 B = 10^13 is a magnetar.
@@ -1353,21 +1369,9 @@ $T_{\mathrm{eff}} < 7000K$ having the possibilty of displaying recurrent outburs
 
 
 
+12/02/2020
+----------
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+% of population observed = N_total_systems / 500
 
