@@ -1,0 +1,44 @@
+"""
+
+"""
+
+double sample_curve(double lc_t[], double lc_f[], double lc_period, int N_samp, double interval, double period){
+
+        return L[]
+
+
+        }
+    
+    
+
+            k_t = lc_period / period
+int[]       idx =                         [24, 57, 93, 102, 115, 125, 156, 178]
+double[]    lc_flux = sample_curve(idx) = [2.34, 33.4, 23.2, 12.0, 23.0, 23.0, 32.5, 25.7]
+
+sample_time_days
+lc_sample_times
+lc_sample_indexs
+lc_sample_
+
+
+day     L
+0       1e39
+6*30    4.3e39 
+12*30   8.3e38
+
+
+
+
+f(theta, inclination, dincl, Lx, P, phase)
+
+if theta > 45 && theta <= 90:
+    c = 4
+else:
+    incination = 0
+    ulxlc()
+    get_ulx_lim()
+    inclination = inclination
+    ulxlc()
+    c = classify()
+    if c == 1:
+        sample_curve()

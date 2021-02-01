@@ -14,6 +14,73 @@ ctypes module.
 """
 import ctypes
 import numpy as np
+import pandas as pd
+
+N_sys = 500     #Number of systems, must be the same as in C code.
+N_double_arr = N_sys * ctypes.c_double
+eight_int_arr = 8 * ctypes.c_int
+
+class MC_input(ctypes.Structure):
+    _fields_ = [("id", N_double_arr),
+                ("theta", N_double_arr),
+                ("inclination", N_double_arr),
+                ("dincl", N_double_arr),
+                ("Lx", N_double_arr),
+                ("period", N_double_arr),
+                ("phase", N_double_arr)]
+    
+    @classmethod
+    def from_df(cls, df_sampled, dincl_max, period):
+        N_sys = len(df_sampled)
+        N_double_arr = N_sys * ctypes.c_double
+        
+        c_id     = (N_double_arr)(*df_sampled.index.values)
+        c_theta  = (N_double_arr)(*df_sampled['theta_half_deg'].values)
+        c_incl   = (N_double_arr)(*np.random.randint(low=0, high=91, size=N_sys))
+        c_dincl  = (N_double_arr)(*np.random.randint(low=0, high=dincl_max, size=N_sys))
+        c_Lx     = (N_double_arr)(*df_sampled['Lx1'].values)
+        c_period = (N_double_arr)(*df_sampled[period].values)
+        
+        c_phase  = (N_double_arr)(*np.random.random(size=N_sys))
+        
+        return cls(c_id, c_theta, c_incl, c_dincl, c_Lx, c_period, c_phase)
+        
+        
+    
+class MC_output(ctypes.Structure):
+    _fields_ = [("N_alive", ctypes.c_int),
+                ("N_dead", ctypes.c_int),
+                ("N_transient", ctypes.c_int),
+                ("N_alive_unsimmed", ctypes.c_int),
+                ("N_alive_tot", ctypes.c_int),
+                ("N_ulx", eight_int_arr),
+                ("N_not_ulx", eight_int_arr),
+                ("N_new", eight_int_arr),
+                ("N_dip", eight_int_arr),
+                ("N_delta_ulx", eight_int_arr),
+                ("N_transients", eight_int_arr)]
+    
+    @classmethod
+    def initialize(cls):
+        eight_int_arr = 8 * ctypes.c_int
+        
+        # Output params
+        c_N_alive = 0
+        c_N_dead = 0
+        c_N_transient = 0
+        c_N_alive_unsimmed = 0
+        c_N_alive_tot = 0
+        
+        c_N_ulx        = (eight_int_arr)(*np.zeros(8, dtype=int))
+        c_N_not_ulx    = (eight_int_arr)(*np.zeros(8, dtype=int))
+        c_N_new        = (eight_int_arr)(*np.zeros(8, dtype=int))
+        c_N_dip        = (eight_int_arr)(*np.zeros(8, dtype=int))
+        c_N_delta_ulx  = (eight_int_arr)(*np.zeros(8, dtype=int))
+        c_N_transients = (eight_int_arr)(*np.zeros(8, dtype=int))
+        
+        return cls(c_N_alive, c_N_dead, c_N_transient, c_N_alive_unsimmed,
+                   c_N_alive_tot, c_N_ulx, c_N_not_ulx, c_N_new, c_N_dip,
+                   c_N_delta_ulx, c_N_transients)
 
 class ULXLC:
     def __init__(self, lc_nt=5000, lc_timestep=0.01):
@@ -51,8 +118,8 @@ class ULXLC:
         return min(self.lc_flux)
     
     def xlf_calc_L_prec(self,  Lx_prec, Lxs, thetas, incls, dincls, N):
-         # Random indexs to sample from the lc 
-        lc_idx = (ctypes.c_int*self.lc_nt)(*np.random.randint(self.lc_nt, size=N))
+        # Random indexes to sample from the lc (since C rand() is awful.)
+        lc_idx = (ctypes.c_int*N)(*np.random.randint(self.lc_nt, size=N))
         self.libc.xlf_calc_L_prec(self.lc_t, self.lc_nt, self.lc_flux, lc_idx, Lx_prec, Lxs, thetas, incls, dincls, N)
     
     def calc_lc_flux_scaling_constant(self, lc_zero_incl_max_flux, Lx):
@@ -73,6 +140,18 @@ class ULXLC:
         self.libc.ulxlc_model(self.lc_t, self.lc_nt, self.lc_flux, self.params, 7)
         return self.lc_flux
     
-    
-        
-    
+    def sim(self, s_id, theta, incl, dincl, Lx, period, phase, N):
+        """
+        Parameters
+        ----------
+        s_id    : array
+        theta : array
+        incl : array
+        dincl : array
+        Lx : array
+        P : array
+        phase : array
+        N : int
+            array length
+        """
+        self.libc.sim(s_id, theta, incl, dincl, Lx, period, phase, N)

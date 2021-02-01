@@ -45,14 +45,16 @@ import os
 import time
 import matplotlib.pyplot as plt
 import ctypes
+import subprocess
 
 sys.path.insert(0, '../src')
 
 
-from ulxlc import ULXLC
+from ulxlc import ULXLC, MC_input, MC_output
 from constants import params_default, incl_default
 
 os.chdir('../src')
+
 
 
 @pytest.fixture
@@ -271,18 +273,32 @@ def test_xlf_calc_L_prec(ulxlc):
     c_dincls  = (ctypes.c_double * N)(*np.random.randint(low=0, high=46, size=N))
     
     ulxlc.xlf_calc_L_prec(c_Lx_prec, c_Lx, c_thetas, c_incls, c_dincls, N)
+    
     for n in range(N):
-        assert c_Lx[n] != 0.0
+        assert c_Lx_prec[n] != 0.0
+
+def test_sim(ulxlc):
+    N_sys = 500     #Number of systems, must be the same as in C code.
+    N_double_arr = N_sys * ctypes.c_double
+    
+    # Input params
+    c_id     = (N_double_arr)(*np.random.randint(low=0, high=9000000, size=N_sys))
+    c_theta  = (N_double_arr)(*np.random.randint(low=7, high=90, size=N_sys))
+    c_incl   = (N_double_arr)(*np.random.randint(low=0, high=91, size=N_sys))
+    c_dincl  = (N_double_arr)(*np.random.randint(low=0, high=46, size=N_sys))
+    c_Lx     = (N_double_arr)(*np.random.normal(loc=2e39, scale=1e38, size=N_sys))
+    c_period = (N_double_arr)(*np.random.randint(low=1, high=1000, size=N_sys))
+    c_phase  = (N_double_arr)(*np.random.random(size=N_sys))
 
 
-def test_randint(ulxlc):
-    high = 4
-    N = 50
-    for n in range(N):
-        r = ulxlc.libc.randint(high)
-
-        assert r<high
-        assert r>=0
+    # Pass to params to structs
+    inp = MC_input(c_id, c_theta, c_incl, c_dincl, c_Lx, c_period, c_phase)
+    out = MC_output.initialize()
+    
+    ulxlc.libc.sim(ctypes.byref(inp), ctypes.byref(out))
+    
+    
+    
     
 
 # def test_calc_scaling_constant_grid():

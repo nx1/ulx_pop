@@ -7,4 +7,4 @@
 
 
 ulxlcmodxspec: ulxlc_run.c ulxlcbase.c
-	gcc -g ulxlcbase.c ulxlc_run.c -L /home/x1/cfitsio/lib -lcfitsio -lm -lnsl -l sqlite3
+	gcc -g ulxlcbase.c ulxlc_shared.c -L /home/x1/cfitsio/lib -lcfitsio -lm -lnsl #-l sqlite3

@@ -14,6 +14,9 @@
    <http://www.gnu.org/licenses/>.
 
     Copyright 2016 Thomas Dauser, Remeis Observatory & ECAP
+    
+    To compile as shared library:
+    gcc -shared -Wl,-soname,ulxlc -o ulxlc_shared.so -fPIC ulxlcbase.c ulxlc_shared.c -L /home/x1/cfitsio/lib -lcfitsio -lm -lnsl
 	
 	Modifcations 2020 by Norman Khan
 	params[0] =	50.0;	// period
@@ -26,14 +29,11 @@
 	
 */
 
-
-
 #include "ulxlcmod.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <math.h>
-#include <sqlite3.h>
 #include <stdbool.h> 
 
 /** global parameters, which can be used for several calls of the model */
@@ -314,11 +314,7 @@ double min(double* arr, int len){
 	return(t);
 }
 
-int randint(int N){
-	// Return random integert between 0 to N-1
-	srand(time(NULL));					// Initialise random seed
-	return (rand() % ((int) N));
-}
+
 
 double calc_Lx_prec(double Lx, double lc_max_flux_zero_incl, double lc_flux){
     // Calculate randomly sampled luminosity from light curve
@@ -382,9 +378,6 @@ void lc_boost(const double* t, const int nt, double* photar, double c_arr[][6], 
     double lc_min;
     double lc_max_flux_zero_incl;
     double lc_boost;
-    
-    // double c_arr[N_tot][N_save_par];
-    
 
     for(int dincl=0;dincl<46;dincl++){
         parameter[4] = dincl;
@@ -454,3 +447,336 @@ int classify_curve(double lc_ulx_lim, double lc_max_flux, double lc_min_flux){
 	}
     return classification;
 }
+
+void print_params(double parameter[], int DEBUG){
+	if (DEBUG){
+		printf( "period = %.2f \t phase = %.2f \t theta = %.2f \t incl = %.2f \t dincl = %.2f \t beta = %.2f \t dopulse = %.2f \n", parameter[0], parameter[1], parameter[2], parameter[3], parameter[4], parameter[5], parameter[6]);
+	}
+}
+
+
+#define N_sys 500
+
+struct system{
+	double id;
+	double theta;
+	double inclination;
+	double dincl;
+	double Lx;
+	double period;
+	double phase;
+};
+
+struct MC_input{
+	double s_id[N_sys];
+	double s_theta[N_sys];
+	double s_inclination[N_sys];
+	double s_dincl[N_sys];
+	double s_Lx[N_sys];
+	double s_period[N_sys];
+    double s_phase[N_sys];
+};
+
+
+struct MC_output{
+	int N_alive;
+	int N_dead;
+	int N_transient;
+	int N_alive_unsimmed;
+	int N_alive_tot;
+	
+	int N_ulx[8];
+	int N_not_ulx[8];
+	int N_new[8];
+	int N_dip[8];
+	int N_delta_ulx[8];
+	int N_transients[8];
+};
+
+
+void print_system(struct MC_input *inp, int i){
+	printf("i=%d \t id=%.0f \t  theta=%.2f \t  incl=%.2f \t  dincl=%.2f \t  Lx=%.2e \t  period=%.2f \t  phase=%.2f \t \n", i, inp->s_id[i], inp->s_theta[i], inp->s_inclination[i], inp->s_dincl[i], inp->s_Lx[i], inp->s_period[i], inp->s_phase[i]);
+}
+
+void print_MC_input(struct MC_input *inp){
+	printf("MC_input: \n");
+	printf("---------: \n");
+	for (int i=0; i<N_sys;i++){
+		print_system(inp, i);
+	}
+}
+
+void print_MC_output(struct MC_output *out){
+	printf("MC_output: \n");
+	printf("---------: \n");
+	printf("N_alive=%d \n", out->N_alive);
+	printf("N_dead=%d \n", out->N_dead);
+	printf("N_transient=%d \n", out->N_transient);
+	printf("N_alive_unsimmed=%d \n", out->N_alive_unsimmed);
+	printf("N_alive_tot=%d \n", out->N_alive_tot);
+	printf("\n");
+	printf("Transient classification eRASS Evolution: \n");
+	for (int i=0; i<8;i++){
+		printf("i=%d \t N_ulx[i]=%d \t N_not_ulx[i]=%d \t N_new[i]=%d \t N_dip[i]=%d \t N_delta_ulx[i]=%d \t N_transients[i]=%d \n", i, out->N_ulx[i], out->N_not_ulx[i], out->N_new[i], out->N_dip[i], out->N_delta_ulx[i], out->N_transients[i]);
+	}
+}
+
+int sim(struct MC_input *inp, struct MC_output *out){
+
+	int DEBUG = 0; //0 or 1 for print statements
+    
+	double PERIOD_DEFAULT = 50.0;
+	double BETA_DEFAULT = 0.3;
+	double L_ULX = 1E39;
+	
+    // ULXLC
+	// LC Parameters
+	double lc_par[7];
+	lc_par[0] = PERIOD_DEFAULT; // period
+	lc_par[1] = NAN;			// phase
+	lc_par[2] = NAN;		  	// theta
+	lc_par[3] = 0;   	 	  	// incl
+	lc_par[4] = NAN;		  	// dincl
+	lc_par[5] = BETA_DEFAULT; 	// beta
+	lc_par[6] = 0;			  	// dopulse
+
+    // Setup Curve
+	int    lc_nt = 5000;         			// Length of time series
+	float  lc_timestep = 0.01; 				// Timestep in seconds
+	float  lc_duration = lc_timestep*lc_nt;	// Lightcurve duration
+	double lc_t[lc_nt];		   				// Time array
+	double lc_flux[lc_nt];     				// Photon detection Array (Flux)
+
+    // lightcurve properties
+	double lc_period = lc_par[0];
+	double lc_zero_incl_max_flux;
+	double lc_max_flux;
+	double lc_min_flux;
+	double lc_max_L;
+	double lc_min_L;
+	double lc_flux_scaling_constant;
+	double lc_P_time_scaling_constant; // c * time_in_days = time_on_curve
+	double lc_ulx_lim;
+	int    lc_classification; 		   // 0 = Dead, 1 = Transient, 2 = Dead, 3 = Alive with theta > 45
+	
+	// eRASS
+	// Sample parameters
+	int	   erass_s_period_cutoff = 99999;  // Treat sources that are over a wind period length as persistent sources
+	int    erass_N_cycles = 8;	        		// Number of cycles
+	int    erass_sample_interval = 30*6;	    // Sampling interval in days
+	
+	//Curve Sampling
+	int    erass_t_samp[erass_N_cycles];		// Sample time in days
+	double erass_lc_samp[erass_N_cycles];		// Sample time in curve space
+	int    erass_lc_samp_idx[erass_N_cycles];	// Sample indexs in curve space
+	double erass_lc_samp_flux[erass_N_cycles];	// Sample flux in curve space
+	double erass_lc_samp_L[erass_N_cycles];		// Sample luminosity in erg s^-1
+	int    erass_lc_is_ulx[erass_N_cycles];		// Is sampled luminosity above 1e39?
+	
+	int erass_lc_obs_as_ulx;				    // Has the source been observed as a ulx?
+	int erass_lc_first_transient_cycle;			// Cycle at which lightcurve was found to be transient (if not found then -1)
+	int erass_lc_transient_classification; 		// 0: from moved up to ULX L        1: Moved down from ulx L
+	
+	// MC output
+	// ULX Counting params
+	out->N_alive     = 0;
+	out->N_dead      = 0;
+	out->N_transient = 0;
+	out->N_alive_unsimmed = 0;
+	out->N_alive_tot = 0;
+	
+	// Initialize counting arrays
+	for (int i=0; i<erass_N_cycles; i++){
+		out->N_ulx[i] = 0;
+		out->N_not_ulx[i] = 0;
+		out->N_new[i] = 0;
+		out->N_dip[i] = 0;
+		out->N_delta_ulx[i] = 0;
+		out->N_transients[i] = 0;
+	}
+	
+	// Initialize time array
+	for (int i=0; i<lc_nt; i++){
+		lc_t[i] = lc_timestep*i;
+	}
+
+    // DEBUGGING INFORMATION
+    if (DEBUG){
+        printf("DEBUG MODE ON \n");
+		printf("------------- \n \n");
+		
+		printf("Setup Parameters: \n");
+		printf("PERIOD_DEFAULT = %.2f \t BETA_DEFAULT = %.2f \n", PERIOD_DEFAULT, BETA_DEFAULT);
+		printf("lc_nt = %d \t lc_timestep = %.2f \n", lc_nt, lc_timestep);
+		printf("erass_s_period_cutoff = %d \t erass_sample_interval = %d \n", erass_s_period_cutoff, erass_sample_interval);
+		printf("\n \n");
+		
+		print_MC_input(inp);
+		print_MC_output(out);
+	}
+    
+	
+	
+    // Loop over all systems
+	for (int N=0;N<N_sys;N++){
+		if (DEBUG){
+			printf("====================== Loop Start N=%d ====================\n", N);
+		}
+
+		if (inp->s_theta[N] > 45){
+			if (DEBUG){
+				printf("inp->s_theta[N] = %.2f is > 45 , lc_classification=3 \n \n", inp->s_theta[N]);
+			}
+			lc_classification = 3;
+		}
+		
+		else{
+			lc_par[1] = inp->s_phase[N];	// phase
+			lc_par[2] =	inp->s_theta[N];	// theta
+			lc_par[3] =	0;	        // incl
+			lc_par[4] =	inp->s_dincl[N]; // dincl
+			
+			print_params(lc_par, DEBUG);
+			
+			// Run the lightcurve model.
+			ulxlc_model(lc_t, lc_nt, lc_flux, lc_par, 7);
+
+			// 0 Inclination is treated as maximum possible Lx (Looking straight down the windcone)
+			if (lc_par[3]==0.0){
+				// Calculate Flux normalisation
+				lc_zero_incl_max_flux = max(lc_flux, lc_nt);
+				lc_flux_scaling_constant = inp->s_Lx[N] / lc_zero_incl_max_flux; // Curve Normalisation constant
+				lc_ulx_lim = L_ULX / lc_flux_scaling_constant;
+				
+				if (DEBUG){
+					printf("inp->s_Lx[N] = %.2e \t lc_zero_incl_max_flux = %.2f \t lc_flux_scaling_constant = %.2e \t lc_ulx_lim = %.2e \n \n", inp->s_Lx[N], lc_zero_incl_max_flux, lc_flux_scaling_constant, lc_ulx_lim);
+				}
+				
+			}
+			
+			lc_par[3] =	inp->s_inclination[N];	// incl
+			
+			
+			print_params(lc_par, DEBUG);
+
+			
+			// Run the lightcurve model.
+			ulxlc_model(lc_t, lc_nt, lc_flux, lc_par, 7);
+			
+			// Classify the lightcurve as alive/dead/transient
+			lc_max_flux = max(lc_flux, lc_nt);
+			lc_min_flux = min(lc_flux, lc_nt);
+			lc_classification = classify_curve(lc_ulx_lim, lc_max_flux, lc_min_flux);
+			lc_max_L    =  lc_max_flux * lc_flux_scaling_constant;
+			lc_min_L    =  lc_min_flux * lc_flux_scaling_constant;
+			
+			if (DEBUG){
+				printf("lc_max_flux = %.2f \t lc_min_flux = %.2f \t lc_max_L = %.2e \t lc_min_L = %.2e  \t lc_classification = %d \n", lc_max_flux, lc_min_flux, lc_max_L, lc_min_L, lc_classification);
+			}
+
+
+			// Lightcurve is transient & P_wind or P_sup is below limit (and rolled during ourburst for lmxrb systems)
+			if ((lc_classification == 1) & (inp->s_period[N] < erass_s_period_cutoff) ){ 
+
+				// Calculate time scaling constant
+				lc_P_time_scaling_constant = lc_period / inp->s_period[N]; // Time scaling constant
+				
+				erass_lc_first_transient_cycle = -1;
+				erass_lc_transient_classification = -1;
+				erass_lc_obs_as_ulx = 0;
+
+				if (DEBUG){
+					printf("lc_classification = %d (transient), performing erass sampling \n", lc_classification);
+					printf("s_period[N] = %.2f \t lc_P_time_scaling_constant = %.2f \n", inp->s_period[N], lc_P_time_scaling_constant);
+				}
+
+				// Sample the lightcurve
+				for (int c=0; c<erass_N_cycles; c++){
+						erass_t_samp[c] = c * erass_sample_interval; 					 	   // Sample time in days
+						erass_lc_samp[c] = erass_t_samp[c] * lc_P_time_scaling_constant; 	   // Sample time in curve space
+						erass_lc_samp[c] = fmod(erass_lc_samp[c], lc_period); 		     	   // To account for overflowing times
+						erass_lc_samp_idx[c] = binary_search(erass_lc_samp[c], lc_t, lc_nt);   // Find corresponding indexs on the curve
+						erass_lc_samp_flux[c] = lc_flux[erass_lc_samp_idx[c]]; 				   // Find corresponding L on curve
+						erass_lc_samp_L[c] = lc_flux_scaling_constant * erass_lc_samp_flux[c]; // Find corresponding L in ergs^-1
+						erass_lc_is_ulx[c] = erass_lc_samp_flux[c] > lc_ulx_lim;			   // Is the source a ulx?
+
+						// If we are past cycle 0 check transient status
+						if ((c>0) & (erass_lc_first_transient_cycle==-1)){
+							int prev = erass_lc_is_ulx[c] - erass_lc_is_ulx[c-1];
+							if (prev!=0){ // If there was a change in ulx status, identify cycle as transient.
+								erass_lc_first_transient_cycle = c;
+								erass_lc_obs_as_ulx = 1;
+							}
+							if (prev == 1){ // Source moved upto ulx luminosity
+								out->N_new[c]++;
+							}
+							else if (prev == -1){ // Source moved down from ulx luminosity
+								out->N_dip[c]++;
+							}
+						}
+						
+						// Update other quantities
+						if (erass_lc_is_ulx[c] == 0){
+							out->N_not_ulx[c]++;
+						}
+						else if (erass_lc_is_ulx[c] == 1){
+							out->N_ulx[c]++;
+							if (c == 0){
+								out->N_new[c]++;
+							}
+						}
+						
+						
+						out->N_delta_ulx[c] = out->N_new[c] - out->N_dip[c];
+						if (c>0)
+							out->N_transients[c] = out->N_new[c] + out->N_dip[c];
+						
+						if (DEBUG){
+							printf("Cycle %d / %d \t erass_t_samp[c] = %5d \t erass_lc_samp[c] = %.2f \t erass_lc_samp_idx[c] = %5d \t erass_lc_samp_flux[c] = %.2e \t erass_lc_samp_L[c] = %.2e \t erass_lc_is_ulx[c] = %d \n", c+1, erass_N_cycles, erass_t_samp[c], erass_lc_samp[c], erass_lc_samp_idx[c], erass_lc_samp_flux[c], erass_lc_samp_L[c], erass_lc_is_ulx[c]);
+						}
+				}
+				
+			}
+		}
+		
+		// Add classifications to totals
+		if      (lc_classification == 0){out->N_dead++;}
+		else if (lc_classification == 1){out->N_transient++;}
+		else if (lc_classification == 2){out->N_alive++;}
+		else if (lc_classification == 3){out->N_alive_unsimmed++;}
+		
+		out->N_alive_tot = out->N_alive + out->N_alive_unsimmed;
+		
+	    if (DEBUG){	
+		    printf("\n");
+			print_system(inp, N);
+			
+		    printf("\n");
+		    
+		    printf("Lightcurve Information: \n");
+		    printf("----------------------- \n");
+		    printf("lc_nt: %d \n", lc_nt);
+		    printf("lc_timestep: %.2f seconds \n", lc_timestep);
+		    printf("lc_duration: %.2f seconds \n", lc_duration);	
+		    printf("lc_period: %.2f seconds \n", lc_period);
+		    printf("lc_zero_incl_max_flux: %.2f units\n", lc_zero_incl_max_flux);
+		    printf("lc_max_flux: %.2f units\n", lc_max_flux);
+		    printf("lc_min_flux: %.2f units\n", lc_min_flux);
+		    printf("lc_flux_scaling_constant: %.2e  erg s^-1\n", lc_flux_scaling_constant);
+		    printf("lc_P_time_scaling_constant: %.2e s\n", lc_P_time_scaling_constant);
+		    printf("lc_ulx_lim: %.2f units \n", lc_ulx_lim);
+		    printf("lc_classification: %d \n", lc_classification);
+			printf("erass_lc_first_transient_cycle: %d \n", erass_lc_first_transient_cycle);
+			
+		    printf("\n");
+			
+			print_MC_output(out);
+
+		    printf("====================== Loop End N=%d ======================\n\n\n", N);
+        }
+	}
+
+	
+	return 0;
+}
+

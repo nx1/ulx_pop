@@ -26,7 +26,7 @@ import pandas as pd
 
 import matplotlib.pyplot as plt
 
-from constants import G, c, Myr, R_sol, M_sol, L_sol, sigma, NS_SPIN, BH_SPIN, NS_ISCO, BH_ISCO, epsilon, beta, eta
+from constants import G, c, Myr, R_sol, M_sol, L_sol, sigma, NS_SPIN, BH_SPIN, NS_ISCO, BH_ISCO, epsilon, beta, eta, set_latex_font
 
 
 def startrack():
@@ -154,8 +154,9 @@ class Population:
         self.df['theta_half_deg'] = self.df['theta_deg'] / 2 # Half opening angle (theta / 2)
         
         # `Cotangent of the opening angle of the wind cone'
-        self.df['zeta'] = np.tan((np.pi/2) - np.arccos(1 - (73/(self.df['mdot_ratio']**2))))
-        self.df['zeta'] = np.where(self.df['zeta'] <= 2, 2, self.df['zeta'])
+        mdot_min = 26.295739668527474 # If mdot is below this value then zeta is < 2 (lower limit)
+        self.df['zeta'] = self.df['mdot_ratio'].apply(lambda x: np.tan((np.pi/2) - np.arccos(1 - (73/(x**2)))) if x > mdot_min else 2)
+        
     
         # General Relativity stuff
         self.df['R_g']           = (G * self.df['M_a']*M_sol) / c**2 # Gravitational radii
@@ -192,7 +193,15 @@ class Population:
                                     (self.df['dMmt_b'] > self.df['dMwind_b']) &
                                     (self.df['T_eff_b'] < 7000) &
                                     (self.df['M_b'] < 5), 1, 0)
-        
+    
+    def filter_non_bh_ns(self):
+        """Only include BH/NS systems."""
+        self.df = self.df[(self.df['K_a']==13) | (self.df['K_a']==14)]
+    
+    def filter_non_thermal_or_nuclear_mt(self):
+        """ Remove systems that aren't thermal or nuclear mass transfer."""
+        self.df = self.df[(self.df['mttype'] == 1.0) | (self.df['mttype'] == 4.0)]
+    
     def calc_sub_populations(self):
         logging.debug('Calculating subpopulation')
         self.df_ulx = self.df[self.df['Lx1'] > 1e39]
@@ -200,7 +209,7 @@ class Population:
         #self.df_ulx_opening_angle_le_45 = self.df_ulx[self.df_ulx['theta_half_deg'] <= 45]
         #self.df_ulx_P_wind_l_4_years = self.df_ulx_opening_angle_le_45[self.df_ulx_opening_angle_le_45['P_wind_days'] < 365*4]
         #self.df_ulx_P_sup_l_4_years = self.df_ulx_opening_angle_le_45[self.df_ulx_opening_angle_le_45['P_sup_days'] < 365*4]
-        
+
     def filter_df_ulx_by_Z(self, Z):
         if self.df_ulx_Z_subset != Z:
             logging.debug('Population not filtered by Z')
@@ -276,26 +285,45 @@ class Population:
         gb = self.gb_sys(df)
         df_sys_avg = gb.mean().reset_index()
         return df_sys_avg
-
-    def sample_ulxs(self, bh_ratio, size=500):
-        logging.debug('Sampling ulxs bh_ratio=%s size=%s', bh_ratio, size)
-        try:
-            self.ulx_bh_samp_weights
-            self.binary_dict
-        except AttributeError:
-            self.calc_ulx_sampling_weights()
-            self.calc_ulx_binary_dict()
-        
+    
+    def sample_systems(self, bh_ratio, size=500, subset='ulx', return_df=False):
         N_bh = int(size*bh_ratio)
         N_ns = size-N_bh
         
-        sampled_bh = np.random.choice(self.ulx_bh_samp_weights.index, size=N_bh, p=self.ulx_bh_samp_weights.values)
-        sampled_ns = np.random.choice(self.ulx_ns_samp_weights.index, size=N_ns, p=self.ulx_ns_samp_weights.values)
-        
+        if subset=='all':
+            try:
+                self.all_bh_samp_weights
+                self.all_ns_samp_weights
+                self.all_binary_dict
+            except AttributeError:
+                self.df_all_ns, self.df_all_bh = self.split_ns_bh(self.df)
+                gb = self.gb_sys(self.df)
+                self.all_binary_dict = gb.groups
+                self.all_bh_samp_weights = self.calc_sampling_weights(self.df_all_bh)
+                self.all_ns_samp_weights = self.calc_sampling_weights(self.df_all_ns)
+                
+            sampled_bh = np.random.choice(self.all_bh_samp_weights.index, size=N_bh, p=self.all_bh_samp_weights.values)
+            sampled_ns = np.random.choice(self.all_ns_samp_weights.index, size=N_ns, p=self.all_ns_samp_weights.values)
+
+        if subset=='ulx':
+            try:
+                self.ulx_bh_samp_weights
+                self.binary_dict
+            except AttributeError:
+                self.calc_ulx_sampling_weights()
+                self.calc_ulx_binary_dict()
+            
+            sampled_bh = np.random.choice(self.ulx_bh_samp_weights.index, size=N_bh, p=self.ulx_bh_samp_weights.values)
+            sampled_ns = np.random.choice(self.ulx_ns_samp_weights.index, size=N_ns, p=self.ulx_ns_samp_weights.values)
+            
         sampled_ulxs_idum_iidd_pairs = np.concatenate((sampled_bh, sampled_ns))
-        
         sampled_indexs = np.array([np.random.choice(self.binary_dict[sampled_ulxs_idum_iidd_pairs[i]]) for i in range(size)])
-        return sampled_indexs
+        
+        if return_df:
+            df_sampled = self.df.loc[sampled_indexs]
+            return df_sampled
+        else:
+            return sampled_indexs
 
 
     def pivot_binaries_count(self, df):

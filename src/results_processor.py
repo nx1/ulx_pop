@@ -363,21 +363,11 @@ class ResultsProcessor:
         self.table_create_transient()
         self.table_create_erass_mc_sampled_systems()
         self.table_create_erass_mc_results()
-        
-        # Get columns needed for simulation
-        logging.debug('Getting simulation columns')
-        sim_cols = ['theta_half_deg', 'Lx1', 'P_wind_days', 'P_sup_days', 'idum_run', 'iidd_old', 'lmxrb']
-        
-        # Delete large dataframes to save memory
-        # del(self.pop.df)
-        
+
         logging.debug('Checking population Z')
         self.pop.filter_df_ulx_by_Z(Z)
-
-        # Filter population df to only have columns we are interested in to save memory
-        logging.debug('Filtering out unused columns')
-        self.pop.df_ulx = self.pop.df_ulx[sim_cols]
         
+
         # Create run info dataframe for storing id, size etc..
         logging.debug('Creating info table')
         df_info = pd.DataFrame()
@@ -397,9 +387,21 @@ class ResultsProcessor:
         
         # Sample Systems
         logging.debug('Sampling systems, inclinations and dincl')
-        sampled_indexs = self.pop.sample_ulxs(bh_ratio, size=size)
+        sampled_indexs = self.pop.sample_systems(bh_ratio, size=size, subset='ulx')
         selected_inclinations = np.random.randint(0, 91, size=size)
         selected_dincls = np.random.randint(0, dincl_cutoff, size=size)
+        
+        # Get columns needed for simulation
+        logging.debug('Getting simulation columns')
+        sim_cols = ['theta_half_deg', 'Lx1', 'P_wind_days', 'P_sup_days', 'idum_run', 'iidd_old', 'lmxrb']
+        
+        # Delete large dataframes to save memory
+        # del(self.pop.df)
+        
+        # Filter population df to only have columns we are interested in to save memory
+        logging.debug('Filtering out unused columns')
+        self.pop.df_ulx = self.pop.df_ulx[sim_cols]
+        
         
         # Get sampled systems from populations df
         logging.debug('Retrieving sampled systems')
@@ -486,7 +488,7 @@ class ResultsProcessor:
             print(i)
             for bh_ratio in np.arange(0, 1.05, 0.05):
                 
-                selected_systems = self.pop.sample_ulxs(bh_ratio, size=size)
+                selected_systems = self.pop.sample_systems(bh_ratio, size=size, subset='ulx')
                 selected_dincls = np.random.randint(0, dincl_cutoff, size=size)
                 selected_inclinations = np.random.randint(0, 91, size=size)
                 selected_keys = list(zip(selected_systems, selected_dincls, selected_inclinations))
@@ -1082,7 +1084,7 @@ class Plotter:
         fig, ax = plt.subplots(nrows=len(bhs), ncols=1, sharex=True, figsize=(2.5,7))
         plt.subplots_adjust(hspace=0)
         for i, bh in enumerate(bhs):
-            idx = self.pop.sample_ulxs(bh, size=500)
+            idx = self.pop.sample_systems(bh, size=500, subset='ulx')
             df_sampled = self.pop.df.loc[idx]
             thetas = df_sampled['theta_half_deg'].values
             
@@ -1457,10 +1459,7 @@ class Plotter:
 if __name__ == "__main__":
     # logging.basicConfig(level=logging.DEBUG)
     # logging.basicConfig(level=0)
-    
-    
-    
-    
+
     # Load population
     df = populations.startrack_v2_mt_1_all()
     pop = populations.Population(df)

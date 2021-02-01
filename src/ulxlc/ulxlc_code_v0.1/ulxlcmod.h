@@ -50,6 +50,9 @@ typedef struct{
 	int dopulse;     // pulse(=1) or lightcurve(=0)?
 } inp_param;
 
+
+
+
 typedef struct{
 	double* ang;
 	int nang;
