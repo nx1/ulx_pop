@@ -1,0 +1,318 @@
+
+For each system, we provided to ULXLC the following parameters:
+	$\theta / 2$, $i$, $\Delta i$, $L_{x}$, $P$, $\phi$, $\Beta = 0.3$
+	$i$, $\Delta i$ and $\phi$ are sampled from uniform distributions with the following minimums and maxima:
+	$0^\circ \le \Delta i \le \Delta i_{\mathrm{max}}$
+	$0^\circ \le  i \le 90^\circ$
+	$0 \le  \phi \le 1.0$
+	
+	
+Lightcurves were then generated with 5000 data points, a timestep of 0.01, and a default period of 50, as to create a single
+cycle/pulse of the lightcurve. For each system, two curves are generated, one at $i=0$ which is scaled so that the maximum of the
+lighcurve was equal to $L_{x}$, and one at abitrary (input) inclination which is scaled by the same factor the 0 inclination curve.
+
+Systems with $theta / 2 > 45^{\circ}$ were classified as being alive without needing to simulate lightcurves, while systems
+identified as being transient were subjected to further analysis.
+
+
+
+
+
+
+
+
+
+
+\results section
+
+One observational quantity of interest is the percentage of \textit{transient} to observed sources (i.e $\perctransobs$), this quantity appears to be relatively
+independent by our duty cycle parameter $d$, and if we use our largest prior for the maximum precessional angle $\Delta i_{\rm max} = 45^{\circ}$,
+we find that adjusting our black hole ratio results in distinct 1-sigma error regions by cycle eight for both precession mechanisms
+(see figure \ref{fig:trans_alive_p_wind_45} & \ref{fig:trans_alive_p_sup_45}).
+ 
+
+
+\begin{figure} \includegraphics[trim={10 0 0 0}, clip]{figures/erass-Z=all-dincl=46-P=P_wind_days-perc_trans_obs.pdf}
+    \caption{$d=1.0$}
+    \label{fig:trans_obs_p_wind_45}
+\end{figure}
+
+\begin{figure} \includegraphics[trim={10 0 0 0}, clip]{figures/erass-Z=all-dincl=46-P=P_sup_days-perc_trans_obs.pdf}
+    \caption{$d=1.0$}
+    \label{fig:trans_obs_p_sup_45}
+\end{figure}
+
+
+
+ Table
+\ref{tab:erass_identified_transients} indicates the percentage of objects
+correctly identified as being transient by \erass \ at the end of the 8 cycles $( \sum_{c=1}^{8}N^{\rm trans}_c )$. We observe that using the relation for $P_{\mathrm{wind}}$, only around $\sim
+15-25\%$ of the transient population was identified, while using the relation
+for $P_{\mathrm{sup}}$ we see around $\sim 65\%$ of transient sources were identified (noting that this value does not appear to change
+substantially with
+$\%_{\mathrm{BH}}$.) The full table of results is provided in the additional content.
+
+
+
+
+
+
+
+
+
+Figure \ref{fig:classification_i_dincl} illustrates the relative distributions
+of the numbers in each class as a function of inclination and precessional
+angle for a subset of systems sampled over all metallicities. {\bf BUT HOW DO YOU MAKE THIS - DO YOU NOT RESAMPLE MANY TIMES?} 
+
+%simulated across
+%a uniform grid of inclinations and precession angles %$\Delta i  \in \mathbb{Z},
+%0^\circ \le \Delta i \le 45^{\circ}$ and inclinations $i %\in \mathbb{Z},
+%0^\circ \le i \le 90^\circ$. 
+
+
+\begin{figure*}
+    \includegraphics[scale=0.85]{figures/dincl_i_classifications_percent.eps}
+    \caption{Distribution of sources in each of our light curve classifications from simulating over a
+    uniform grid of inclinations (right) and precessional angle (left). This plot was created by sampling over all metallicities and we note that this
+    plot does not factor in the duty cycle (i.e. it assumes $d$ = 1). \textcolor{red}{REMAKE THIS}}
+    \label{fig:classification_i_dincl}
+\end{figure*}
+
+
+\noindent From Figure \ref{fig:classification_i_dincl}, we observe that, for our
+subset of beamed ($\theta / 2 \le 45^{\circ}$) sources, there are no
+\textit{alive} systems at inclinations above $79^{\circ}$ while no
+\textit{dead} systems are found below inclinations of $28^{\circ}$.
+Conversely, \textit{transient} systems are found across the entire range of
+inclinations and precessional angles (excluding $\Delta i = 0^{\circ}$),
+however are more likely to be found at mid-inclinations $(i \sim 45^{\circ}$)
+and with large precessional angles ($\Delta i \sim 45^{\circ}$), as expected. 
+
+
+
+
+
+\subsection{Comparison to observations} 
+
+%As we have established in the previous sections, beaming combined with
+%precession is expected to be observationally different in NS and BHs.
+%Observationally, it is only possible to obtain numerical constraints on the
+%number of alive and transient systems as classified in section
+%\ref{sec:MC_method}. In this section we aim to evaluate %if the relative ratio
+%of alive to transient systems may serve as an indicator of the underlying
+%population demographic.
+
+
+
+constraints from xmm newton
+%spectral shape which we define as an absorbed power-law spectrum 
+%with $N_{H}=2.4 \times 10^{21} \ cm^{-2}$  and $\Gamma=2.2$, as determined from 
+%Gladstone, Roberts & Done (2009).
+
+
+
+We performed simulations spanning 
+$\%_{\mathrm {BH}}$ from 0\% (all NSs) to 100\% (all BHs) in steps of 25\%
+while also varying the metallicity of our parent population (Z = 0.02, \ 0.002
+and \ 0.0002) and investigated duty cycles $d=0.1, \ 0.2, \ 0.3$ and $1.0$, finally
+we investigated the effect of different maximum precessional angles of $\Delta
+i_{\mathrm{max}}=20^{\circ}$ and $45^{\circ}$. We use the same sampling prescription outlined
+in section \ref{sec:MC_method} throughout the remainder of this work.
+Figure \ref{fig:ADT} shows one such set of results for $\Delta i_{\mathrm{max}} = 20^{\circ}$, $Z = 0.002$, $d=0.2$ and for a range of black hole population percentages.
+
+
+
+
+
+		%-----------------------------------------------------------
+		\section{Summary and conclusions} 
+		%-----------------------------------------------------------
+	
+
+		We computed various statistical characteristics of the expected eRASS AGN sample, including their luminosity- and redshift distributions, and the magnitude distributions of their optical counterparts.
+	
+		The eROSITA all-sky survey will produce an unprecedented sample of about $3$~million X-ray selected AGN.
+		With a median redshift of $z\approx1$, approximately $40\,\%$ of the eRASS objects will be located between redshifts $z=1$ and $z=2$ (Fig.~\ref{fig:N_z}).
+		We predict that about $10^4-10^5$ AGN beyond redshift $z=3$ and about $2\,000-30\,000$ AGN beyond redshift $z=4$, the exact numbers depending on the behavior of the AGN XLF in the high-redshift and high-luminosity regimes (Fig.~\ref{fig:N_Lz}).
+		
+		The eRASS AGN sample will open the possibility of studying the growth of supermassive black holes, their co-evolution with host galaxies and dark matter halos, and their relation to the large-scale structure to unprecedented detail, and potentially, it may also help to constrain cosmological parameters \citep{Kolodzig2013,Huetsi2013}.
+		Importantly, it will permit one to conduct these studies beyond redshift $z=1$, which is poorly covered by the current optical surveys.
+		
+		To fully exploit this potential of eRASS, an extensive optical support will be critical.
+		One of the main goals of optical follow-up will be to provide redshifts for eRASS AGN, but its importance will reach far beyond this, including, for example,  studies of the co-evolution of supermassive black holes and their host galaxies
+		(see \citealp{Kolodzig2013} for a discussion of the different goals of optical follow-ups and their requirements and prospects).
+		With the capabilities of the currently available facilities and their time allocation strategies, measuring of optical  spectra for the entire sample of the $\sim3$~million objects does not appear to be achievable on realistic timescales.
+		However upcoming hardware and survey programs and proposals, for instance, 4MOST \citep{deJong2012} and WEAVE \citep{WEAVE}, can make this task more realistic, especially for some limited areas of sky.
+		Furthermore, introducing mutliband photometry and other improvements of the photometric redshift measurement techniques will make determining of photometric redshifts  for large samples of eRASS AGN possible \citep{Salvato2011,Saglia2012}.
+
+
+
+		%..................................................................................................................
+		\subsection{Luminosity distribution} \label{ssec:LumDis}
+		%''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+		
+		Luminosity distributions of detected AGN are shown in Fig.~\ref{fig:N_L}.
+		In the soft band they peak at $\sim10^{44}\mathrm{\,erg\;s^{-1}}$, with only a small difference between the extragalactic sky sample ($\approx10^{44.0}\mathrm{\,erg\;s^{-1}}$) and the ecliptic poles ($\approx10^{43.8}\mathrm{\,erg\;s^{-1}}$).
+		The peak in the hard band occurs at $\approx10^{44.4}\mathrm{\,erg\;s^{-1}}$.
+		The median values differ by less than $1\,\%$ from the corresponding peak values.
+		Comparing these with the values of $L_\ast$ from the Table~\ref{tab:LDDE_BestFit},
+		the location of the peak is defined by the $L_\ast$ luminosity and does not strongly depend on the survey sensitivity.
+		A change of the latter by two orders of magnitude changes the position of the peak only by $\sim0.5\;\mathrm{dex}$. %($10^{-15} - 10^{-13}\;\mathrm{erg\;s^{-1}\,cm^{-2}}$)
+		Hence, our predictions for the luminosity distribution are very robust against moderate changes of the survey sensitivity.
+		From the top panel of Fig.~\ref{fig:N_L} one can see that the luminosity distribution in the soft band changes only marginally at high luminosity ($\ga10^{44}\mathrm{\,erg\;s^{-1}}$) if we exclude the high-redshift cutoff of the XLF.
+		
+		From the cumulative luminosity distributions of the extragalactic sky (right panels of Fig.~\ref{fig:N_L}) about $10\,\%$ (vertical dashed lines) of the detected AGN will have luminosities higher than $\sim10^{45}\mathrm{\,erg\;s^{-1}}$.
+		This large  sample of luminous AGN ($\sim3\times10^5$ in full redshift range) will improve the constraints on the high-luminosity end of the XLF.
+		For comparison, the AGN sample of H05 had about $\sim100$ AGN with a luminosity higher than $\sim10^{45}\mathrm{\,erg\;s^{-1}}$.
+		
+		In the top panel of Fig.~\ref{fig:N_fb} the luminosity distribution of the brightest $10\,\%$ (those with the highest flux, blue curve) and the faintest $10\,\%$ (lowest flux, red) do not differ much from each other and from the distribution of the total sample (black).
+		We note that the luminosity distribution of objects detected in the half-year survey is well represented by that of the brightest $10\,\%$ of the sources.
+			
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+number of previously detected sources that dipped below the ULX luminosity $\Ndip$. 
+
+ to see if the source had been observed crossing past the 1e39 ULX threshold, with sources moving
+from 
+
+var Name		    | Latex					  																	| Shortcut										  					  Shape		Description												Observable?		
+N_sys       		| $N_{\rm sys}$\\																			| \newcommand{\Nsys}{N_{\rm sys}}       	 						| INT	|	Number of systems (500)								|	False
+N_alive 			| 																							| 				 													| INT	|	Number of alive systems (simulated)					|	False
+N_transient			| $N_{\rm T}$\\																				| \newcommand{\Ntransient}{N_{\rm T}}								| INT	| 	Number of transient systems							|	False
+N_dead 				| $N_{\rm D}$\\																				|  																	| INT	| 	Number of dead systems								|	False
+N_alive_unsimmed	|               																			| 																	| INT	| 	Number of alive systems (not simulated)				|	False
+N_alive_tot			| $N_{\rm A}$\\																				| \newcommand{\Nalive}{N_{\rm A}}									| INT	| 	Number of alive systems (N_alive+N_alive_unsimmed)	|	True
+					|																							| 							
+L            	 	| 																							|       															| [8] 	|	Luminosity											|	True		
+is_ulx       	 	| 																							| 				      												| [8] 	|	Is the source a above 1e39							|	True		
+					|																							| 							
+N_ulx        	 	| $N_{\rm ulx}(c)$\\																		| \newcommand{\Nulx}{N_{\rm ulx}(c)}        						| [8] 	|	Number of sources above 1e39 in specific cycle		|	True		
+N_not_ulx    	 	| $\lnot N_{\rm ulx}(c)$\\																	| \newcommand{\Nnotulx}{\lnot \Nulx}    							| [8] 	|	Number of sources below 1e39 in specific cycle		|	False		
+N_new        	 	| $N_{\rm new}(c)$\\																		| \newcommand{\Nnew}{N_{\rm new}(c)}        						| [8] 	|	Number of new sources in specific cycle				| 	True		
+N_dip        	 	| $N_{\rm dip}(c)$\\																		| \newcommand{\Ndip}{N_{\rm dip}(c)}        						| [8] 	|	Number of dipping sources in specific cycle			| 	True		
+N_delta_ulx  	 	| $\Delta N_{\rm ulx}(c)$\\																	| \newcommand{\Ndeltaulx}{\Delta N_{\rm ulx}(c)}  					| [8] 	|	Change in number of sources in cycle				|	True		
+N_transients 	 	| $N_{\rm t}(c)$\\																			| \newcommand{\Ntransients}{N_{\rm t}(c)} 							| [8] 	|	Number of transients detected in cycle				| 	True		
+N_alives	 	 	| $N_{\rm a}(c) = $\\																		| \newcommand{\Nalives}{N_{\rm a}(c)} 								| [8] 	|	Number of alives detected in cycle					| 	True		
+N_obs				| $N_{\rm obs}(c)$\\																		| \newcommand{\Nobs}{N_{\rm obs}(c)} 		                        | [8] 	|	Number of observed systems detected in cycle		| 	True		
+
+
+N_new_cum 	 	 	| $\sum_{c=1}^{8}N_{\rm new}(c)$\\															| \newcommand{\Nnewcum}{\csum \Nnew} 	 							| [8] 	|	Number of new sources (cumulative)					| 	True		
+N_dip_cum 		 	| $\sum_{c=1}^{8}N_{\rm dip}(c)$\\															| \newcommand{\Ndipcum}{\csum \Ndip} 								| [8] 	|	Number of dipping sources (cumulative)				| 	True		
+N_transients_cum 	| $\sum_{c=1}^{8}N_{\rm t}(c)$\\															| \newcommand{\Ntransientscum}{\csum \Ntransients}					| [8] 	|	Number of transient sources (cumulative)			| 	True		
+N_obs_cum			| $\sum_{c=1}^{8}N_{\rm obs}(c) = N_{A} + \sum_{c=1}^{8}N_{\rm new}(c)$\\ 					| \newcommand{\Nobscum}{\csum \Nobs}								| [8] 	|	Number of observed sources (cumulative)				| 	True		
+N_alive_cum      	| $\sum_{c=1}^{8}N_{\rm a}(c) = \sum_{c=1}^{8}N_{obs}(c) - \sum_{c=1}^{8}N_{\rm t}(c)$\\	| \newcommand{\Nalivecum}{\csum \Nalives}			     			| [8] 	|	Number of alive sources (cumulative) (/w class) 	| 	True		
+perc_obs_samp 	 	| $(\sum_{c=1}^{8}N_{\rm obs}(c) / N_{\rm sys}) \times 100$\\								| \newcommand{\percobssamp}{\Nobscum / \Nsys} 						| [8] 	|	% of underlying ULXs that were observed 			| 	False		
+perc_obs_det 	 	| $(\sum_{c=1}^{8}N_{\rm obs}(c) / (N_{\rm A} + N_{\rm T})) \times 100$\\					| \newcommand{\percobsdet}{\Nobscum / (\Nalive + \Ntransient)} 		| [8] 	|	% of potentially observable ULXs that were observed	|	False		
+perc_trans_det 	 	| $\sum_{c=1}^{8}N_{\rm t}(c) / N_{\rm T}$\\												| \newcommand{\perctransdet}{\Nobscum / \Ntransient} 				| [8] 	|	% of underlying transient systems identified		| 	False		
+perc_trans_alive 	| $\sum_{c=1}^{8}N_{\rm t}(c) / \sum_{c=1}^{8}N_{\rm a}(c)$\\								| \newcommand{\perctransalive}{\csum \Ntransients / \Nalives}		| [8] 	|	% Transient to alive								|	True		
+perc_trans_obs 	 	| $\sum_{c=1}^{8}N_{\rm t}(c) / \sum_{c=1}^{8}N_{\rm obs}(c)$\\								| \newcommand{\perctransobs}{\csum \Ntransients / \Nobs} 			| [8] 	|	% Transient to observed								|	True		
+
+\newcommand{\csum}{\sum_{c=1}^{8}}
+
+
+
+Number of new sources (cumulative)					
+Number of dipping sources (cumulative)				
+Number of transient sources (cumulative)			
+Number of observed sources (cumulative)				
+Number of alive sources (cumulative) (/w class) 	
+\% of underlying ULXs that were observed 			
+\% of potentially observable ULXs that were observed	
+\% of underlying transient systems identified		
+\% Transient to alive								
+\% Transient to observed								
+
+\begin{table}[h]
+\centering
+\label{tab:erass_counting_params}
+{\begin{tabular}{lll}
+\hline
+ Parameter          &  Description & Observable \\
+\hline
+$\Nulx$             & Number of sources above 10^{39} in cycle       \\
+$\Nnotulx$          & Number of sources below 10^{39} in cycle       \\
+$\Nnew$             & Number of new sources in cycle		         \\
+$\Ndip$             & Number of dipping sources in cycle	         \\
+$\Ndeltaulx$        & Change in number of sources in cycle			 \\
+$\Ntransients$      & Number of transients detected in cycle		 \\
+$\Nalives$          & Number of alive sources detected in cycle		 \\
+$\Nobs$             & Number of observed systems detected in cycle	 \\
+$\Nulx$             & 												 \\
+$\Nnotulx$          & 												 \\
+$\Nnew$             & 												 \\
+$\Ndip$             & 												 \\
+$\Ndeltaulx$        & 												 \\
+$\Ntransients$      & 												 \\
+$\Nalives$          & 												 \\
+$\Nobs$             & 												 \\
+$\Nnewcum$          & 												 \\
+$\Ndipcum$          & 												 \\
+$\Ntransientscum$   & 												 \\
+$\Nobscum   = \Nalive + \Nnewcum$         & \\
+$\Nalivecum = \csum [\Nobs - \Ntransients]$        & \\
+
+$\percobssamp$   	& \\
+$\percobsdet$   	& \\
+$\perctransdet$   	& \\
+$\perctransalive$   & \\
+$\perctransobs$   	& \\
+\hline
+\end{tabular}}
+\caption{}
+\end{table}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

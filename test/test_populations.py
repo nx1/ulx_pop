@@ -66,9 +66,6 @@ def test_calc_sampling_weights(pop):
 
 def test_calc_ulx_sampling_weights(pop):
     pop.calc_ulx_sampling_weights()
-    
-def test_calc_ulx_binary_dict(pop):
-    pop.calc_ulx_binary_dict()
 
 def test_calc_system_averages(pop):
     pop.calc_system_averages(pop.df)

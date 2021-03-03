@@ -1,0 +1,23 @@
+Paper:
+    
+  x - Fig1 - add numbers and add ergs
+  x - fig1 - LMXRB --> LMXB
+  x - fig1 - CHANGE ITALICS ON ERGS
+  x - Fig4 - XLF - Split transients 
+    - 609  - References   - XLF
+        - z (metallicity or redshift) depence of HMXRB in XLF --> infer things to high redshift
+        - Lehmer & Bretts
+        - Fragos (loads)
+
+  x - 874  - References   - Higher abundance of BHs (Z)
+  x - 875  - Wording      - `Correcting For'            
+  x - 894  - Explaination - Move this bit somewhere else
+  x - 922  - Explaination - Duty Cycle
+    - 963  - Explaination - Discuss the Malmquist bias wrt to eRASS. 
+    - 1035 - Explaination - Mention that the XLFs are time-averaged
+    - 1047 - Explaination -
+    - 1144 - Explaination - Expand, again talk about time-averaged vs snapshot
+    
+- The ULX population is likely to be a different mix of metallicities.
+- Greg (2019) used a toy model of the milky way where he used 50:50 ratio of two differnt metallicities
+

@@ -278,7 +278,7 @@ def test_xlf_calc_L_prec(ulxlc):
         assert c_Lx_prec[n] != 0.0
 
 def test_sim(ulxlc):
-    N_sys = 500     #Number of systems, must be the same as in C code.
+    N_sys = ulxlc.get_N_sys()     #Number of systems, must be the same as in C code.
     N_double_arr = N_sys * ctypes.c_double
     
     # Input params
