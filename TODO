@@ -1,31 +1,29 @@
 ====
 TODO
-====
-[ ]
-[ ] XLF - Add effect of Precession
+==== 
 [ ] Remake dincl vs i vs classifications plot
-[ ]
-
-
-
-
 
 Paper
 -----
-[ ] Check reference to XLF
-[ ] I guess what we need to know is whether, as eRASS will observe the local Universe with a mixture of Zs, what the impact will be on any inferences we draw.
 [ ] Contact Greg and ask how MT is assumed to proceed for high mass companions and RLOF (non thermal)
 [ ] Mention based on the number of transients wrt to P_wind and P_sup that we can distinguish the them apart
-[ ] Be clearer about population sampling proceedure.
-[ ] remove stuff regarding precession in the xlf if i've not yet got the figure in.
+Corrections Feb/March 2021:
+---------------------------
+  x - Fig1 - add numbers and add ergs
+  x - fig1 - LMXRB --> LMXB
+  x - fig1 - CHANGE ITALICS ON ERGS
+  x - Fig4 - XLF - Split transients 
+    - 609  - References   - XLF
+        - z (metallicity or redshift) depence of HMXRB in XLF --> infer things to high redshift
+        - Lehmer & Bretts
+        - Fragos (loads)
 
-Matt Corrections Week 7/12/2020:
-
-[ ] Introduction - WE NEED TO MAKE IT CLEAR THAT ERASS CAN DISTINGUISH THE MECHANISMS - WE DON'T MAKE ANY MENTION OF THIS IN THE RESULTS OR THEREAFTER
-[ ] Sec 2.5 - Remake the incl, dincl plot vs classifications.
-[ ] Are we still including an appendix?
-[ ] Figures out of order wrt to the text
-[ ] Consider Earnshaw propellor effect
+  x - 874  - References   - Higher abundance of BHs (Z)
+  x - 875  - Wording      - `Correcting For'            
+  x - 894  - Explaination - Move this bit somewhere else
+  x - 922  - Explaination - Duty Cycle
+  x - 963  - Explaination - Discuss the Malmquist bias wrt to eRASS. 
+ 
 
 Code
 ----
@@ -110,6 +108,14 @@ DONE
 [x] Include precessional angle cuts for MC classifications table.
 [x] Make plot showing how we can constrain bh ratio by % transients
 [x] Check LMXRB criteria
+[x] XLF - Add effect of Precession
+[x] Check reference to XLF
+[x] I guess what we need to know is whether, as eRASS will observe the local Universe with a mixture of Zs, what the impact will be on any inferences we draw.
+[x] Be clearer about population sampling proceedure.
+[x] remove stuff regarding precession in the xlf if i've not yet got the figure in.
+
+
+
 
 
 
@@ -1371,7 +1377,35 @@ $T_{\mathrm{eff}} < 7000K$ having the possibilty of displaying recurrent outburs
 
 12/02/2020
 ----------
-
-
 % of population observed = N_total_systems / 500
+
+
+Matt Corrections Week 7/12/2020:
+--------------------------------
+[ ] Introduction - WE NEED TO MAKE IT CLEAR THAT ERASS CAN DISTINGUISH THE MECHANISMS - WE DON'T MAKE ANY MENTION OF THIS IN THE RESULTS OR THEREAFTER
+[ ] Sec 2.5 - Remake the incl, dincl plot vs classifications.
+[ ] Are we still including an appendix?
+[ ] Figures out of order wrt to the text
+[ ] Consider Earnshaw propellor effect
+
+
+Corrections Feb/March 2021:
+---------------------------
+    - 1072 - Explaination - Mention that the XLFs are time-averaged
+    - 1047 - Explaination -
+    - 1144 - Explaination - Expand, again talk about time-averaged vs snapshot
+    
+- The ULX population is likely to be a different mix of metallicities.
+- Greg (2019) used a toy model of the milky way where he used 50:50 ratio of two differnt metallicities
+
+Proposal (Due 16th March 2021):
+    - Get in contact with Matt, Tim Roberts & Duncan.
+    - Go over Feedback from Chandra CxC 
+
+Marking PHYS1005:
+
+Bolometric Corrections:
+    - Yang's new email appears to work.
+
+Latex Equation Ripper.
 

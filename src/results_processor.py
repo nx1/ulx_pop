@@ -1097,8 +1097,7 @@ class Plotter:
             plt.savefig('../reports/figures/%_BH_vs_theta.png', dpi=1000)
             plt.savefig('../reports/figures/%_BH_vs_theta.eps')
             
-    
-    
+
     def bar_classifications_Z(self):
         piv = self.rp.table_classifications_pivot(margins=False)
         piv.plot(kind='bar')

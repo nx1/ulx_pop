@@ -21,6 +21,8 @@ from ulxlc import ULXLC
 from constants import set_latex_font, params_default
 
 def calc_cum_hist(data, bins):
+    """Calculate cumulative histogram.
+    Sometimes known as the survival function."""
     hist = np.histogram(data, bins=bins)[0]
     hist_cum = np.cumsum(hist)
     hist_surv = sum(hist) - hist_cum
@@ -52,8 +54,9 @@ def calc_Lx_prec(df_sampled, ulxlc, N):
     Lx_prec = np.ctypeslib.as_array(c_Lx_prec)
     return Lx_prec
 
+
 def main(pop, N=500, N_mc=10000, save=False):    
-    duty_cycle = 0.3
+    duty_cycle = 0.2
     p_BH = 0.5
     dincl_max = 45
     bh_ratios = [0, 0.25, 0.5, 0.75, 1.0]

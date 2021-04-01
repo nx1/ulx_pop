@@ -267,12 +267,13 @@ def test_calc_Lx_prec(ulxlc):
 def test_xlf_calc_L_prec(ulxlc):
     N = 5
     c_Lx_prec = (ctypes.c_double * N)()
+    c_lc_classification = (ctypes.c_double * N)()
     c_Lx      = (ctypes.c_double * N)(*np.random.normal(loc=2e39, scale=1e38, size=N))
     c_thetas  = (ctypes.c_double * N)(*np.random.randint(low=2.25e-01, high=46, size=N))
     c_incls   = (ctypes.c_double * N)(*np.random.randint(low=0, high=91, size=N))
     c_dincls  = (ctypes.c_double * N)(*np.random.randint(low=0, high=46, size=N))
     
-    ulxlc.xlf_calc_L_prec(c_Lx_prec, c_Lx, c_thetas, c_incls, c_dincls, N)
+    ulxlc.xlf_calc_L_prec(c_Lx_prec, c_lc_classification, c_Lx, c_thetas, c_incls, c_dincls, N)
     
     for n in range(N):
         assert c_Lx_prec[n] != 0.0

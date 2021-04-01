@@ -315,6 +315,25 @@ double min(double* arr, int len){
 }
 
 
+int classify_curve(double lc_ulx_lim, double lc_max_flux, double lc_min_flux){
+	// 0 : dead
+	// 1 : transient
+	// 2 : alive
+	int classification;
+	
+	if (lc_min_flux > lc_ulx_lim){
+        classification = 2;
+	}
+    else if (lc_max_flux < lc_ulx_lim){
+        classification = 0;
+	}
+    else if (lc_ulx_lim < lc_max_flux && lc_ulx_lim > lc_min_flux){
+        classification = 1;
+	}
+    return classification;
+}
+
+
 
 double calc_Lx_prec(double Lx, double lc_max_flux_zero_incl, double lc_flux){
     // Calculate randomly sampled luminosity from light curve
@@ -326,7 +345,8 @@ double calc_Lx_prec(double Lx, double lc_max_flux_zero_incl, double lc_flux){
     return Lx_prec;
 }
 
-void xlf_calc_L_prec(const double* t, const int nt, double* photar, int lc_idx[], double Lx_prec[], double Lx[], double theta[], double incl[], double dincl[], int N){
+
+void xlf_calc_L_prec(const double* t, const int nt, double* photar, int lc_idx[], double Lx_prec[], double lc_classification[], double Lx[], double theta[], double incl[], double dincl[], int N){
     // ULXLC parameters
 	double parameter[7];
 	parameter[0] =	50.0;	// period
@@ -337,24 +357,36 @@ void xlf_calc_L_prec(const double* t, const int nt, double* photar, int lc_idx[]
 	parameter[5] = 0.3;	    // beta
 	parameter[6] = 0;		// dopulse
 	
+    double L_ULX = 1E39;
+
 	double lc_flux;
 	double lc_max_flux_zero_incl;
-	
-	
+    double lc_max_flux;
+    double lc_min_flux;
+    double fsc;
+    double lc_ulx_lim;
+
     for(int n=0;n<N;n++){
         parameter[2] = theta[n];
-        if (parameter[2] > 45){
+        if (parameter[2] > 45){ // If opening angle > 45 then assume the same luminosity
             Lx_prec[n] = Lx[n];
+            lc_classification[n] = 3;
         }
         else{
-            parameter[4] = dincl[n];
-            parameter[3] = 0;
+            parameter[4] = dincl[n]; //dincl
+            parameter[3] = 0;       // inclination
             ulxlc_model(t, nt, photar, parameter, 7);
             lc_max_flux_zero_incl = max(photar, nt);
             parameter[3] = incl[n];
             ulxlc_model(t, nt, photar, parameter, 7);
-			lc_flux = photar[lc_idx[n]];
-            Lx_prec[n] = calc_Lx_prec(Lx[n], lc_max_flux_zero_incl, lc_flux);
+            lc_max_flux = max(photar, nt);        // Maximum flux
+            lc_min_flux = min(photar, nt);        // Minimum flux
+            lc_flux = photar[lc_idx[n]];          // Flux at random point on lc
+            fsc =  Lx[n] / lc_max_flux_zero_incl; // Flux scaling constant
+			lc_ulx_lim = L_ULX / fsc;             // lc ULX lim
+
+            Lx_prec[n] = lc_flux*fsc;             // New luminosity
+            lc_classification[n] = classify_curve(lc_ulx_lim, lc_max_flux, lc_min_flux); // Curve classification
         }
         
     }
@@ -429,25 +461,6 @@ int grid_ulxlc_model(double theta[], double Lx[], int N, const double* t, const 
     }
 }
 
-
-int classify_curve(double lc_ulx_lim, double lc_max_flux, double lc_min_flux){
-	// 0 : dead
-	// 1 : transient
-	// 2 : alive
-	int classification;
-	
-	if (lc_min_flux > lc_ulx_lim){
-        classification = 2;
-	}
-    else if (lc_max_flux < lc_ulx_lim){
-        classification = 0;
-	}
-    else if (lc_ulx_lim < lc_max_flux && lc_ulx_lim > lc_min_flux){
-        classification = 1;
-	}
-    return classification;
-}
-
 void print_params(double parameter[], int DEBUG){
 	if (DEBUG){
 		printf( "period = %.2f \t phase = %.2f \t theta = %.2f \t incl = %.2f \t dincl = %.2f \t beta = %.2f \t dopulse = %.2f \n", parameter[0], parameter[1], parameter[2], parameter[3], parameter[4], parameter[5], parameter[6]);
@@ -492,6 +505,12 @@ struct MC_output{
 	int N_delta_ulx[8];
 	int N_transients[8];
 };
+
+int get_N_sys(){
+	int n_sys;
+	n_sys = N_sys;
+	return n_sys;
+}
 
 
 void print_system(struct MC_input *inp, int i){
@@ -561,7 +580,7 @@ int sim(struct MC_input *inp, struct MC_output *out){
 	
 	// eRASS
 	// Sample parameters
-	int	   erass_s_period_cutoff = 99999;  // Treat sources that are over a wind period length as persistent sources
+	int	   erass_s_period_cutoff = 99999;  		// Treat sources that are over a wind period length as persistent sources
 	int    erass_N_cycles = 8;	        		// Number of cycles
 	int    erass_sample_interval = 30*6;	    // Sampling interval in days
 	

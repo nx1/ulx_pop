@@ -65,12 +65,14 @@ class MC_output(ctypes.Structure):
         eight_int_arr = 8 * ctypes.c_int
         
         # Output params
+        # Classification counts
         c_N_alive = 0
         c_N_dead = 0
         c_N_transient = 0
         c_N_alive_unsimmed = 0
         c_N_alive_tot = 0
         
+        # eRASS evolution
         c_N_ulx        = (eight_int_arr)(*np.zeros(8, dtype=int))
         c_N_not_ulx    = (eight_int_arr)(*np.zeros(8, dtype=int))
         c_N_new        = (eight_int_arr)(*np.zeros(8, dtype=int))
@@ -81,6 +83,33 @@ class MC_output(ctypes.Structure):
         return cls(c_N_alive, c_N_dead, c_N_transient, c_N_alive_unsimmed,
                    c_N_alive_tot, c_N_ulx, c_N_not_ulx, c_N_new, c_N_dip,
                    c_N_delta_ulx, c_N_transients)
+    
+    def _collect_counts(self):
+        res = {}
+        res['N_alive'] = self.N_alive
+        res['N_dead'] = self.N_dead
+        res['N_transient'] = self.N_transient
+        res['N_alive_unsimmed'] = self.N_alive_unsimmed
+        res['N_alive_tot'] = self.N_alive_tot
+        return res
+    
+    def _collect_erass_evolution(self):
+        res = {}
+        res['N_ulx']        = np.array(self.N_ulx)
+        res['N_not_ulx']    = np.array(self.N_not_ulx)
+        res['N_new']        = np.array(self.N_new)
+        res['N_dip']        = np.array(self.N_dip)
+        res['N_delta_ulx']  = np.array(self.N_delta_ulx)
+        res['N_transients'] = np.array(self.N_transients)
+        
+        res['N_new_cum']        = np.cumsum(res['N_new'])
+        res['N_dip_cum']        = np.cumsum(res['N_dip'])
+        res['N_transients_cum'] = np.cumsum(res['N_transients'])
+        return res
+    
+    def collect(self):
+        self.res_counts = self._collect_counts()
+        self.res_erass  = self._collect_erass_evolution()
 
 class ULXLC:
     def __init__(self, lc_nt=5000, lc_timestep=0.01):
@@ -98,7 +127,7 @@ class ULXLC:
         self.libc.min.restype = ctypes.c_double   
         self.libc.lc_boost.restype = ctypes.c_double
         self.libc.calc_Lx_prec.restype= ctypes.c_double
-        
+    
     def set_params(self, period, phase, theta, incl, dincl, beta, dopulse):
         self.params= (ctypes.c_double * 7)(period, phase, theta, incl, dincl, beta, dopulse)
         
@@ -111,16 +140,20 @@ class ULXLC:
     def set_dincl(self, dincl):
         self.params[4] = dincl
     
+    def get_N_sys(self):
+        N_sys = self.libc.get_N_sys()
+        return N_sys
+    
     def get_lc_max(self):
         return max(self.lc_flux)
     
     def get_lc_min(self):
         return min(self.lc_flux)
     
-    def xlf_calc_L_prec(self,  Lx_prec, Lxs, thetas, incls, dincls, N):
+    def xlf_calc_L_prec(self, Lx_prec, lc_classification, Lxs, thetas, incls, dincls, N):
         # Random indexes to sample from the lc (since C rand() is awful.)
         lc_idx = (ctypes.c_int*N)(*np.random.randint(self.lc_nt, size=N))
-        self.libc.xlf_calc_L_prec(self.lc_t, self.lc_nt, self.lc_flux, lc_idx, Lx_prec, Lxs, thetas, incls, dincls, N)
+        self.libc.xlf_calc_L_prec(self.lc_t, self.lc_nt, self.lc_flux, lc_idx, Lx_prec, lc_classification, Lxs, thetas, incls, dincls, N)
     
     def calc_lc_flux_scaling_constant(self, lc_zero_incl_max_flux, Lx):
         lc_flux_scaling_constant = Lx / lc_zero_incl_max_flux;

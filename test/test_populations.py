@@ -22,7 +22,7 @@ def test_load_population():
 
 @pytest.fixture
 def pop():
-    df = populations.startrack_v2_mt_1_all(nrows=1000)
+    df = populations.startrack_v2_mt_1_all(nrows=100000)
     pop = populations.Population(df) 
     return pop
 
@@ -70,14 +70,36 @@ def test_calc_ulx_sampling_weights(pop):
 def test_calc_system_averages(pop):
     pop.calc_system_averages(pop.df)
 
+
 def test_sample_systems(pop):
     np.random.seed(500)
     p_bh = 0.5
     N = 500
-    sampled_indexs2 = pop.sample_systems(p_bh, size=N, subset='ulx')
-    sampled_indexs3 = pop.sample_systems(p_bh, size=N, subset='all')
+    sampled_indexs2 = pop.sample_systems(p_bh, size=N, subset='ulx') # Sample ULXs only
+    sampled_indexs3 = pop.sample_systems(p_bh, size=N, subset='all') # Sample all
     assert len(sampled_indexs2)==N
     assert len(sampled_indexs3)==N
+    
+    with pytest.raises(KeyError):
+        pop.sample_systems(0.0,subset='bad_subset')
+
+    df_samp = pop.sample_systems(0.0,subset='all', return_df=True)   
+    assert 14 not in df_samp['K_a'].value_counts()
+    assert df_samp['Lx1'].min() < 1e39
+
+    df_samp = pop.sample_systems(1.0,subset='all', return_df=True)
+    assert 13 not in df_samp['K_a'].value_counts()
+    assert df_samp['Lx1'].min() < 1e39
+
+    df_samp = pop.sample_systems(0.0, return_df=True)
+    assert 14 not in df_samp['K_a'].value_counts()
+    assert df_samp['Lx1'].min() > 1e39
+
+    df_samp = pop.sample_systems(1.0, return_df=True)
+    assert 13 not in df_samp['K_a'].value_counts()
+    assert df_samp['Lx1'].min() > 1e39
+
+
 
 def test_pivot_binaries_count(pop):
     pop.pivot_binaries_count(pop.df)

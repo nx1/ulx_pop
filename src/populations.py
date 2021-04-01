@@ -104,14 +104,7 @@ class Population:
         self.calc_columns()
         self.calc_sub_populations()
         
-        # XLF settings
-        self.bin_min = 38
-        self.bin_max = 44
-        self.bin_width = 0.25
-        self.bins = np.arange(self.bin_min, self.bin_max, self.bin_width)
-        self.nbins = len(self.bins)
-        self.bin_centers = 0.5 * (self.bins[:-1] + self.bins[1:])
-        
+        self.sample_subset_last = None
         self.df_ulx_Z_subset = 'all'
         
     def calc_columns(self):
@@ -275,10 +268,14 @@ class Population:
         self.ulx_ns_samp_weights = self.calc_sampling_weights(self.df_ulx_ns)
     
     
-    def calc_ulx_binary_dict(self):
-        logging.debug('Calculating ulx binary dictionary')
-        gb = self.gb_sys(self.df_ulx)
-        self.binary_dict = gb.groups
+    def calc_binary_dict(self, df):
+        """
+        Calculate dictionary of iidd idum groups
+        """
+        logging.debug('Calculating binary dictionary')
+        gb = self.gb_sys(df)
+        binary_dict = gb.groups
+        return binary_dict
         
     def calc_system_averages(self, df):
         logging.debug('Calculating system_averages')
@@ -289,35 +286,26 @@ class Population:
     def sample_systems(self, bh_ratio, size=500, subset='ulx', return_df=False):
         N_bh = int(size*bh_ratio)
         N_ns = size-N_bh
-        
-        if subset=='all':
-            try:
-                self.all_bh_samp_weights
-                self.all_ns_samp_weights
-                self.all_binary_dict
-            except AttributeError:
-                self.df_all_ns, self.df_all_bh = self.split_ns_bh(self.df)
-                gb = self.gb_sys(self.df)
-                self.all_binary_dict = gb.groups
-                self.all_bh_samp_weights = self.calc_sampling_weights(self.df_all_bh)
-                self.all_ns_samp_weights = self.calc_sampling_weights(self.df_all_ns)
-                
-            sampled_bh = np.random.choice(self.all_bh_samp_weights.index, size=N_bh, p=self.all_bh_samp_weights.values)
-            sampled_ns = np.random.choice(self.all_ns_samp_weights.index, size=N_ns, p=self.all_ns_samp_weights.values)
 
-        if subset=='ulx':
-            try:
-                self.ulx_bh_samp_weights
-                self.binary_dict
-            except AttributeError:
-                self.calc_ulx_sampling_weights()
-                self.calc_ulx_binary_dict()
+        if subset=='all':
+            df = self.df
+        elif subset=='ulx':
+            df = self.df_ulx
+        else:
+            raise KeyError(f'{subset} is not a valid subset')
+
+        if subset != self.sample_subset_last:
+            self.binary_dict = self.calc_binary_dict(df)
+            df_ns, df_bh = self.split_ns_bh(df)
+            self.bh_samp_weights = self.calc_sampling_weights(df_bh)
+            self.ns_samp_weights = self.calc_sampling_weights(df_ns)
+            self.sample_subset_last = subset
+
+        sampled_bh = np.random.choice(self.bh_samp_weights.index, size=N_bh, p=self.bh_samp_weights.values)
+        sampled_ns = np.random.choice(self.ns_samp_weights.index, size=N_ns, p=self.ns_samp_weights.values)
             
-            sampled_bh = np.random.choice(self.ulx_bh_samp_weights.index, size=N_bh, p=self.ulx_bh_samp_weights.values)
-            sampled_ns = np.random.choice(self.ulx_ns_samp_weights.index, size=N_ns, p=self.ulx_ns_samp_weights.values)
-            
-        sampled_ulxs_idum_iidd_pairs = np.concatenate((sampled_bh, sampled_ns))
-        sampled_indexs = np.array([np.random.choice(self.binary_dict[sampled_ulxs_idum_iidd_pairs[i]]) for i in range(size)])
+        sampled_idum_iidd_pairs = np.concatenate((sampled_bh, sampled_ns))
+        sampled_indexs = np.array([np.random.choice(self.binary_dict[sampled_idum_iidd_pairs[i]]) for i in range(size)])
         
         if return_df:
             df_sampled = self.df.loc[sampled_indexs]
