@@ -26,8 +26,8 @@ def create_param_dict(v, grid):
        dict = {'N_mc':10000, 'N_sys':500  }
     """
     param_dict = {} 
+    
     # Populate param_dict
-
     for i in range(len(grid)):
         param_name = grid_params[i]
         param_dict[param_name] = v[i]
@@ -91,24 +91,15 @@ if __name__=='__main__':
     # Initialize ULXLC
     ulxlc = ULXLC()
     N_sys = ulxlc.get_N_sys()
-
-    # XLF Settings
-    bin_min = 38
-    bin_max = 43
-    bin_width = 0.25
-    bins = np.arange(bin_min, bin_max, bin_width)
-    nbins = len(bins)
-    bin_centers = 0.5 * (bins[:-1] + bins[1:])
-
-
+ 
     # Grid to iterate over
-    grid_xlf = {'N_mc'      : [1000],
+    grid_xlf = {'N_mc'      : [100],
                 'N_sys'     : [N_sys],
                 'Z'         : ['all', 0.02, 0.002, 0.0002],
                 'bh_ratio'  : [0.0, 0.25, 0.5, 0.75, 1.00],
-                'dincl_max' : [46, 21],
+                'dincl_max' : [46,21],
                 'duty_cycle': [0.2],
-                'pop_subset': ['all', 'ulx']} 
+                'pop_subset': ['all']} 
 
     # subset of sampled population to save L for
     save_subsets = ['all', 'ns', 'bh', 'lmxrb', 'alive', 'trans']
@@ -147,7 +138,7 @@ if __name__=='__main__':
             iters+=1
             continue
 
-        # Load population while checking for already loaded 
+        # Load population while checking if already loaded 
         if Z_last != d['Z']:
             pop = load_population(d)
             pop.df = pop.df[['Unnamed: 0', 'original_row', 't', 'dt', 'K_a', 'K_b', 'L_a', 'L_b', 'mttype', 'Lxmt', 'Lx', 'idum_run', 'iidd_old', 'Z', 'Lx_iso', 'b', 'Lx1','theta_half_deg', 'lmxrb']]
@@ -155,12 +146,14 @@ if __name__=='__main__':
       
         # Create dictionary for storing N_mc x N_sys luminosities
         Ls = {}
-
+        
+        # populate dictionary with arrays
         for k in save_subsets:
             for L in grid_L:
                 key = f'{L}-{k}'
                 Ls[key] = np.ndarray((d['N_mc'], d['N_sys']), dtype=np.float)
 
+        # Sample N_mc times
         for i in tqdm(range(d['N_mc'])):
             # sample systems
             df_sampled = pop.sample_systems(d['bh_ratio'],
@@ -188,13 +181,15 @@ if __name__=='__main__':
             df_sampled['Lx1_prec_vis']      = np.where(df_sampled['vis_d']==True,   # Luminosity /w precession + duty cycle
                                                        df_sampled['Lx1_prec'],
                                                        0)
+            # iterate over all luminosities
+            
             for L in grid_L:
                 for k in save_subsets:
                     df = df_sampled.copy()
                     if k=='all':
                         pass
                     elif k=='ns':
-                        df[L] = np.where(df_sampled['K_a']==13, df_sampled[L], 0)
+                        df[L] = np.where(df['K_a']==13, df[L], 0)
                     elif k=='bh':
                         df[L] = np.where(df_sampled['K_a']==14, df_sampled[L], 0)
                     elif k=='lmxrb':

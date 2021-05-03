@@ -346,7 +346,16 @@ double calc_Lx_prec(double Lx, double lc_max_flux_zero_incl, double lc_flux){
 }
 
 
+void print_params(double parameter[], int DEBUG){
+	if (DEBUG){
+		printf( "period = %.2f \t phase = %.2f \t theta = %.2f \t incl = %.2f \t dincl = %.2f \t beta = %.2f \t dopulse = %.2f \n", parameter[0], parameter[1], parameter[2], parameter[3], parameter[4], parameter[5], parameter[6]);
+	}
+}
+
 void xlf_calc_L_prec(const double* t, const int nt, double* photar, int lc_idx[], double Lx_prec[], double lc_classification[], double Lx[], double theta[], double incl[], double dincl[], int N){
+
+    int DEBUG = 0;          // enable or disable print statments
+
     // ULXLC parameters
 	double parameter[7];
 	parameter[0] =	50.0;	// period
@@ -384,9 +393,16 @@ void xlf_calc_L_prec(const double* t, const int nt, double* photar, int lc_idx[]
             lc_flux = photar[lc_idx[n]];          // Flux at random point on lc
             fsc =  Lx[n] / lc_max_flux_zero_incl; // Flux scaling constant
 			lc_ulx_lim = L_ULX / fsc;             // lc ULX lim
-
             Lx_prec[n] = lc_flux*fsc;             // New luminosity
             lc_classification[n] = classify_curve(lc_ulx_lim, lc_max_flux, lc_min_flux); // Curve classification
+            
+            if (DEBUG){
+                printf("n = %d / %d \n", n, N);
+                print_params(parameter, DEBUG);
+                printf("lc_idx[n]=%d \t lx_prec[n]=%.2e \t lc_classification[n]=%f \t Lx[n]=%.2e \t theta[n]=%.2f \t incl[n]=%.2f \t dincl[n]=%.2f \n",lc_idx[n], Lx_prec[n], lc_classification[n], Lx[n], theta[n], incl[n], dincl[n]);
+                printf("lc_max_flux_zero_incl=%.2f \t lc_max_flux=%.2f \t lc_min_flux=%.2f \t lc_flux=%.2f \t fsc=%.2e \n", lc_max_flux_zero_incl, lc_max_flux, lc_min_flux, lc_flux, fsc);
+            }
+
         }
         
     }
@@ -459,12 +475,6 @@ int grid_ulxlc_model(double theta[], double Lx[], int N, const double* t, const 
             }
         }
     }
-}
-
-void print_params(double parameter[], int DEBUG){
-	if (DEBUG){
-		printf( "period = %.2f \t phase = %.2f \t theta = %.2f \t incl = %.2f \t dincl = %.2f \t beta = %.2f \t dopulse = %.2f \n", parameter[0], parameter[1], parameter[2], parameter[3], parameter[4], parameter[5], parameter[6]);
-	}
 }
 
 
