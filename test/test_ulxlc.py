@@ -95,6 +95,8 @@ def test_calc_flux_scaling_constant(ulxlc):
     ulxlc.set_inclination(incl_default)
     ulxlc.ulxlc_model()
     lc_fsc = ulxlc.calc_lc_flux_scaling_constant(lc_zero_incl_max_flux, 1.3e39)
+
+    lc_max_flux = ulxlc.get_lc_max()
     assert lc_fsc == pytest.approx(3.69e+37, 0.1e37)
 
 def test_calc_lc_ulx_lim(ulxlc):

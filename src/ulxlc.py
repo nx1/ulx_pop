@@ -28,25 +28,25 @@ class MC_input(ctypes.Structure):
                 ("Lx", N_double_arr),
                 ("period", N_double_arr),
                 ("phase", N_double_arr)]
-    
+
     @classmethod
     def from_df(cls, df_sampled, dincl_max, period):
         N_sys = len(df_sampled)
         N_double_arr = N_sys * ctypes.c_double
-        
+
         c_id     = (N_double_arr)(*df_sampled.index.values)
         c_theta  = (N_double_arr)(*df_sampled['theta_half_deg'].values)
-        c_incl   = (N_double_arr)(*np.random.randint(low=0, high=91, size=N_sys))
+        c_incl   = (N_double_arr)(*np.arccos(np.random.random(size=N_sys))*180/np.pi)
         c_dincl  = (N_double_arr)(*np.random.randint(low=0, high=dincl_max, size=N_sys))
         c_Lx     = (N_double_arr)(*df_sampled['Lx1'].values)
         c_period = (N_double_arr)(*df_sampled[period].values)
-        
+
         c_phase  = (N_double_arr)(*np.random.random(size=N_sys))
-        
+
         return cls(c_id, c_theta, c_incl, c_dincl, c_Lx, c_period, c_phase)
-        
-        
-    
+
+
+
 class MC_output(ctypes.Structure):
     _fields_ = [("N_alive", ctypes.c_int),
                 ("N_dead", ctypes.c_int),
@@ -59,11 +59,11 @@ class MC_output(ctypes.Structure):
                 ("N_dip", eight_int_arr),
                 ("N_delta_ulx", eight_int_arr),
                 ("N_transients", eight_int_arr)]
-    
+
     @classmethod
     def initialize(cls):
         eight_int_arr = 8 * ctypes.c_int
-        
+
         # Output params
         # Classification counts
         c_N_alive = 0
@@ -71,7 +71,7 @@ class MC_output(ctypes.Structure):
         c_N_transient = 0
         c_N_alive_unsimmed = 0
         c_N_alive_tot = 0
-        
+
         # eRASS evolution
         c_N_ulx        = (eight_int_arr)(*np.zeros(8, dtype=int))
         c_N_not_ulx    = (eight_int_arr)(*np.zeros(8, dtype=int))

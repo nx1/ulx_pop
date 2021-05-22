@@ -354,7 +354,7 @@ void print_params(double parameter[], int DEBUG){
 
 void xlf_calc_L_prec(const double* t, const int nt, double* photar, int lc_idx[], double Lx_prec[], double lc_classification[], double Lx[], double theta[], double incl[], double dincl[], int N){
 
-    int DEBUG = 0;          // enable or disable print statments
+    int DEBUG = 1;          // enable or disable print statments
 
     // ULXLC parameters
 	double parameter[7];
